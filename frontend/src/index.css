@@ -88,8 +88,32 @@ a, button, [role="button"] { cursor: pointer; }
 /* Utility classes */
 .font-serif    { font-family: 'Cormorant Garamond', serif; }
 .font-sans-alt { font-family: 'Outfit', sans-serif; }
-.font-wordmark { font-family: 'Manrope', 'Outfit', sans-serif; font-weight: 800; letter-spacing: 0.14em; }
+.font-wordmark { font-family: 'Manrope', 'Outfit', sans-serif; font-weight: 500; letter-spacing: 0.32em; }
+.font-wordmark-sub { font-family: 'Manrope', 'Outfit', sans-serif; font-weight: 400; letter-spacing: 0.46em; }
 .font-mono-alt { font-family: 'JetBrains Mono', monospace; }
+
+/* Editorial uppercase headline utility — refined serif in all-caps with generous tracking */
+.headline-editorial {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.045em;
+    line-height: 0.98;
+}
+.headline-editorial em, .headline-editorial .accent {
+    color: var(--gold);
+    font-style: normal;
+    font-weight: 400;
+}
+
+/* Sans-serif uppercase headline (alt when serif is not desired) */
+.headline-sans {
+    font-family: 'Manrope', 'Outfit', sans-serif;
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    line-height: 1.15;
+}
 
 .nav-label {
     font-family: 'Manrope', 'Outfit', sans-serif;

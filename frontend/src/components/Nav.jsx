@@ -83,15 +83,17 @@ export default function Nav() {
       } ${scrolled ? "border-b border-[var(--line)]" : "border-b border-transparent"}`}
     >
       <div className="max-w-[1500px] mx-auto px-6 md:px-10 h-[80px] flex items-center justify-between gap-6">
-        {/* Brand */}
-        <Link to="/" data-testid="brand-logo" className="flex items-center gap-3 group shrink-0">
+        {/* Brand — CAREMANTO SOLUTIONS, VIVID / DGI-style stacked wordmark */}
+        <Link to="/" data-testid="brand-logo" className="flex items-center gap-4 group shrink-0">
           <BrandMark />
-          <span
-            data-testid="brand-wordmark"
-            className="font-wordmark text-[19px] md:text-[22px] leading-none text-[var(--ink)]"
-          >
-            CAREMANTO
-          </span>
+          <div className="flex flex-col leading-none" data-testid="brand-wordmark">
+            <span className="font-wordmark text-[17px] md:text-[19px] text-[var(--ink)]">
+              CAREMANTO
+            </span>
+            <span className="font-wordmark-sub text-[9px] md:text-[10px] text-[var(--ink)]/80 mt-[6px]">
+              SOLUTIONS
+            </span>
+          </div>
         </Link>
 
         {/* Desktop nav */}
