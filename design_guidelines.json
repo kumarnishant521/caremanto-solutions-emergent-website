@@ -1,0 +1,140 @@
+{
+  "brand_name": "Caremanto Solutions",
+  "tagline": "Redefining Spaces",
+  "theme": "Dark Luxury Editorial (Archetype 5)",
+  "colors": {
+    "background_primary": "#0A0B0E",
+    "background_secondary": "#14151A",
+    "background_tertiary": "#1C1E26",
+    "text_primary": "#F4F3ED",
+    "text_secondary": "#A1A1AA",
+    "accent_primary": "#C8A97E",
+    "accent_hover": "#DFBC8E",
+    "border_subtle": "rgba(255, 255, 255, 0.1)",
+    "border_strong": "rgba(255, 255, 255, 0.2)",
+    "overlay_glass": "rgba(10, 11, 14, 0.6)"
+  },
+  "typography": {
+    "font_heading": "Cormorant Garamond, serif",
+    "font_body": "Outfit, sans-serif",
+    "font_mono": "JetBrains Mono, monospace",
+    "scales": {
+      "h1": "text-5xl sm:text-6xl md:text-7xl lg:text-[6rem] tracking-tighter leading-[0.9]",
+      "h2": "text-4xl sm:text-5xl lg:text-6xl tracking-tight leading-none",
+      "h3": "text-2xl sm:text-3xl lg:text-4xl tracking-tight",
+      "body_lg": "text-lg md:text-xl font-light leading-relaxed",
+      "body": "text-base font-light leading-relaxed",
+      "overline": "text-xs uppercase tracking-[0.2em]"
+    }
+  },
+  "layouts": {
+    "hero": {
+      "description": "Kinetic hero with large masked line-by-line reveal of the tagline. A monumental architectural shot with a subtle parallax effect on scroll.",
+      "structure": "100vh height. Text positioned centrally or left-aligned with a massive H1. Image acts as a rich, cinematic background layer (using react-spring-parallax or framer-motion) with an overlay of bg-black/40."
+    },
+    "navigation": {
+      "description": "Fixed/Sticky top nav with a Crystal Glass effect. Contains dropdown menus.",
+      "dropdowns": {
+        "Interiors": ["Residential", "Commercial", "Hospitality", "Retail Design", "Bespoke Furniture"],
+        "Restoration & Renovation": ["Heritage Restoration", "Facade Renewal", "Structural Renovation", "Adaptive Reuse", "Modernization"]
+      },
+      "style": "backdrop-blur-xl bg-[#0A0B0E]/70 border-b border-white/10. NO purely transparent backgrounds for dropdown menus; menus must have solid or heavy glass background."
+    },
+    "marquee": {
+      "description": "Slow editorial marquee band acting as a section separator.",
+      "style": "font-heading italic text-4xl text-accent_primary/80 py-8 border-y border-white/10. Use react-fast-marquee. Items separated by an elegant geometric dot."
+    },
+    "manifesto_chapters": {
+      "description": "Numbered philosophy section.",
+      "style": "Bento or staggered asymmetric grid. Massive numbers (e.g., '01', '02') in font-mono or font-heading, text-8xl opacity-20. Delicate body text next to it."
+    },
+    "works_grid": {
+      "description": "Filterable project grid with editorial photography treatment.",
+      "style": "Generous negative space. Images have clipped frames (aspect-video or aspect-[4/5]). Spotlight hover effect on project cards."
+    },
+    "admin_dashboard": {
+      "description": "Admin panel for managing projects and leads.",
+      "style": "High-contrast dark mode using Shadcn UI. Sharp edges (rounded-none or rounded-sm max). Flat backgrounds, 1px subtle borders. Vibrant accent for primary actions."
+    }
+  },
+  "motion": {
+    "scroll": "Lenis for smooth momentum scrolling.",
+    "reveal": "Framer Motion. Use a mask-image technique or overflow-hidden div wrappers for line-by-line text reveals on load.",
+    "hover": "Subtle image scaling (scale 1.05) inside overflow-hidden containers. Text color transitions.",
+    "parallax": "Use Framer Motion's useScroll and useTransform to create subtle Y-axis translation on hero and massive section images."
+  },
+  "image_urls": {
+    "hero": {
+      "url": "https://images.pexels.com/photos/33685863/pexels-photo-33685863.jpeg",
+      "description": "Sleek modern interior featuring marble walls and wooden staircase"
+    },
+    "interiors_1": {
+      "url": "https://images.pexels.com/photos/34688219/pexels-photo-34688219.jpeg",
+      "description": "Spacious modern living room with elegant sofas"
+    },
+    "interiors_2": {
+      "url": "https://images.pexels.com/photos/33685861/pexels-photo-33685861.jpeg",
+      "description": "Luxurious modern interior featuring marble floors"
+    },
+    "restoration_1": {
+      "url": "https://images.pexels.com/photos/7389533/pexels-photo-7389533.jpeg",
+      "description": "Low angle view of a historic brick building"
+    },
+    "restoration_2": {
+      "url": "https://images.pexels.com/photos/36054139/pexels-photo-36054139.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "description": "A historic building under restoration"
+    },
+    "architectural_details_1": {
+      "url": "https://images.pexels.com/photos/31500951/pexels-photo-31500951.jpeg",
+      "description": "Dynamic black and white photo showcasing abstract architectural curves"
+    },
+    "architectural_details_2": {
+      "url": "https://images.unsplash.com/photo-1665779736808-047a6bbf43a0?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1OTV8MHwxfHNlYXJjaHw0fHxhcmNoaXRlY3R1cmFsJTIwZGV0YWlscyUyMG1pbmltYWxpc3R8ZW58MHx8fHwxNzg0MjAxOTUwfDA&ixlib=rb-4.1.0&q=85",
+      "description": "close-up of a minimalist building"
+    }
+  },
+  "component_path": "src/components/ui",
+  "accessibility": {
+    "contrast": "Ensure all text against the #0A0B0E background has at least a 4.5:1 contrast ratio. Use the text_primary and accent colors appropriately.",
+    "focus": "focus:ring-1 focus:ring-accent_primary focus:outline-none",
+    "motion": "Respect prefers-reduced-motion for the parallax and line-by-line reveals."
+  },
+  "testing_attributes": {
+    "nav_dropdown_interiors": "nav-dropdown-interiors",
+    "nav_dropdown_restoration": "nav-dropdown-restoration",
+    "hero_cta": "hero-cta-button",
+    "contact_form_submit": "contact-form-submit-button",
+    "admin_login_submit": "admin-login-submit-button",
+    "project_filter_btn": "project-filter-button"
+  },
+  "instructions_to_main_agent": [
+    "Commit fully to the dark luxury editorial theme. No generic gradient backgrounds. Rely on high-contrast typography, deep blacks, and crisp 1px borders.",
+    "Use Framer Motion for the hero line-by-line reveal. Wrap each line of text in an overflow-hidden span, and animate the inner span from translateY(100%) to 0.",
+    "Implement Lenis for smooth scrolling globally.",
+    "For the Dropdown Nav, use Shadcn NavigationMenu or DropdownMenu but heavily customize it. Ensure the dropdown background is solid (#0A0B0E) or heavily blurred. DO NOT leave it transparent.",
+    "In 'Our Works', use clipped aspect ratios for images and apply a hover state where the image subtly scales up while the container stays fixed (overflow-hidden).",
+    "For the Marquee, use react-fast-marquee. Set the speed slow, and use the heading font (Cormorant Garamond) in italic to create an elegant editorial separator.",
+    "The admin panel should be separate (e.g. /admin) and use Shadcn components styled with sharp borders and flat colors, avoiding excessive rounded corners.",
+    "Include data-testid attributes on all interactive elements.",
+    "DO NOT output standard centered text layouts. Stagger elements. Use bento grids with wide gaps (gap-8 or gap-12).",
+    "DO NOT use Inter for any headings."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "You tend to converge toward generic, 'on distribution' outputs. In frontend design, this creates what users call the 'AI slop' aesthetic. Avoid this: make creative, distinctive frontends that surprise and delight.",
+    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients.",
+    "Don't make generic centered layouts, simplistic gradients, and uniform styling.",
+    "Create depth through layered design elements with z-index hierarchy.",
+    "Use glass-morphism effects with backdrop filters (12-24px blur).",
+    "You MUST NOT apply universal transition. Eg: transition: all. This results in breaking transforms. Always add transitions for specific interactive elements like button, input excluding transforms.",
+    "You MUST NOT center align the app container, ie do not add .App { text-align: center; } in the css file. This disrupts the human natural reading flow of text.",
+    "Always use modern button styles like pill-shaped, or sharp button with interaction animations & color relevant to the app style.",
+    "NEVER: use AI assistant Emoji characters like 🤖🧠💭💡🔮🎯 etc for icons.",
+    "Every interaction needs micro-animations - hover states, transitions, parallax effects, and entrance animations. Static = dead.",
+    "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap.",
+    "Subtle grain textures, noise overlays, custom cursors, selection states, and loading animations: separates good from extraordinary.",
+    "Main agent relies on these image URLs. Missing categories (especially sponsor logos) = main agent will use placeholder text which is FORBIDDEN.",
+    "Prioritize using pre-existing components from src/components/ui when applicable.",
+    "Create new components that match the style and conventions of existing components when needed.",
+    "Use sonner for toasts. Sonner component are located in /app/src/components/ui/sonner.tsx"
+  ]
+}
