@@ -1,12 +1,49 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { NAV_CATEGORIES, GALLERY_TAXONOMY } from "../lib/api";
+import { NAV_CATEGORIES } from "../lib/api";
+import CMLogo from "./CMLogo";
 
-const links = [
-  { label: "Studio", to: "/studio" },
-  { label: "Approach", to: "/approach" },
-];
+/**
+ * Header + primary navigation
+ * Order per spec:
+ *   HOME · PORTFOLIO · INTERIOR PROJECTS ▾ · SERVICES – RESTORATION & RENOVATION ▾ · PROCESS · ABOUT US
+ * Consult CTA retained on the right (lead capture).
+ */
+
+// Brand mark — if user has dropped /public/caremanto-logo.(svg|png) it'll
+// be used; else falls back to CMLogo placeholder.
+function BrandMark() {
+  const [logo, setLogo] = useState(null); // "svg" | "png" | null
+  useEffect(() => {
+    let cancelled = false;
+    const tryLoad = (ext) =>
+      new Promise((res) => {
+        const img = new Image();
+        img.onload = () => res(ext);
+        img.onerror = () => res(null);
+        img.src = `/caremanto-logo.${ext}`;
+      });
+    (async () => {
+      const found = (await tryLoad("svg")) || (await tryLoad("png"));
+      if (!cancelled) setLogo(found);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (logo) {
+    return (
+      <img
+        src={`/caremanto-logo.${logo}`}
+        alt="Caremanto"
+        className="w-[42px] h-[42px] object-contain"
+      />
+    );
+  }
+  return <CMLogo size={42} className="text-[var(--ink)]" />;
+}
+
+const RESTORATION_SHORT = "Services – Restoration & Renovation";
 
 export default function Nav() {
   const [scrolled, setScrolled] = useState(false);
@@ -32,13 +69,7 @@ export default function Nav() {
     setMobileOpen(false);
   };
 
-  const goGallery = (axis, value) => {
-    const params = new URLSearchParams();
-    if (axis && value) params.set(axis, value);
-    nav(`/gallery${params.toString() ? `?${params.toString()}` : ""}`);
-    setOpen(null);
-    setMobileOpen(false);
-  };
+  const active = (path) => loc.pathname === path;
 
   return (
     <header
@@ -47,159 +78,106 @@ export default function Nav() {
         scrolled ? "border-b border-white/10" : "border-b border-transparent"
       }`}
     >
-      <div className="max-w-[1440px] mx-auto px-6 md:px-10 h-[72px] flex items-center justify-between">
-        <Link to="/" data-testid="brand-logo" className="flex items-center gap-3 group">
-          <span className="w-8 h-8 flex items-center justify-center border border-[var(--gold)]/60">
-            <span className="font-serif italic text-[var(--gold)] text-lg leading-none">C</span>
+      <div className="max-w-[1500px] mx-auto px-6 md:px-10 h-[80px] flex items-center justify-between gap-6">
+        {/* Brand */}
+        <Link to="/" data-testid="brand-logo" className="flex items-center gap-3 group shrink-0">
+          <BrandMark />
+          <span
+            data-testid="brand-wordmark"
+            className="font-wordmark text-[19px] md:text-[22px] leading-none text-[var(--ink)]"
+          >
+            CAREMANTO
           </span>
-          <div className="leading-tight">
-            <div className="font-serif text-[17px] tracking-wide">Caremanto</div>
-            <div className="overline text-[9px] mt-[2px] text-[var(--muted)] tracking-[0.3em]">Solutions</div>
-          </div>
         </Link>
 
-        <nav className="hidden lg:flex items-center gap-10">
-          {Object.values(NAV_CATEGORIES).map((cat) => (
-            <div
-              key={cat.slug}
-              className="relative"
-              onMouseEnter={() => setOpen(cat.slug)}
-              onMouseLeave={() => setOpen(null)}
-            >
-              <button
-                data-testid={`nav-dropdown-${cat.slug}`}
-                data-open={open === cat.slug}
-                onClick={() => goWorks(cat.slug)}
-                className="nav-link overline text-[11px] text-[var(--ink)] flex items-center gap-2"
-              >
-                {cat.label}
-                <svg width="9" height="9" viewBox="0 0 10 10" fill="none" className={`transition-transform duration-300 ${open === cat.slug ? "rotate-180" : ""}`}>
-                  <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1"/>
-                </svg>
-              </button>
-              <AnimatePresence>
-                {open === cat.slug && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 8 }}
-                    transition={{ duration: 0.28, ease: [0.2, 0.7, 0.15, 1] }}
-                    className="dropdown-panel absolute top-full left-1/2 -translate-x-1/2 mt-4 min-w-[280px] py-4"
-                    data-testid={`dropdown-panel-${cat.slug}`}
-                  >
-                    <div className="px-5 pb-3 overline text-[10px] text-[var(--muted)]">
-                      {cat.label} — Practices
-                    </div>
-                    {cat.items.map((item, i) => (
-                      <button
-                        key={item}
-                        data-testid={`dropdown-item-${cat.slug}-${i}`}
-                        onClick={() => goWorks(cat.slug, item)}
-                        className="w-full text-left px-5 py-2.5 font-serif text-[19px] text-[var(--ink)] hover:text-[var(--gold)] transition-colors flex items-center justify-between group"
-                      >
-                        <span>{item}</span>
-                        <span className="text-[var(--gold)] opacity-0 group-hover:opacity-100 transition-opacity">→</span>
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          ))}
+        {/* Desktop nav */}
+        <nav className="hidden xl:flex items-center gap-7 2xl:gap-9">
+          <Link to="/" data-testid="nav-home" className={`nav-link nav-label ${active("/") ? "text-[var(--gold)]" : ""}`}>Home</Link>
+          <Link to="/works" data-testid="nav-portfolio" className={`nav-link nav-label ${active("/works") ? "text-[var(--gold)]" : ""}`}>Portfolio</Link>
 
-          {links.map((l) => (
-            <Link
-              key={l.to}
-              to={l.to}
-              data-testid={`nav-link-${l.label.toLowerCase()}`}
-              className="nav-link overline text-[11px]"
-            >
-              {l.label}
-            </Link>
-          ))}
-
-          {/* Gallery dropdown — two-column (Spaces | Segments) */}
+          {/* Interior Projects */}
           <div
             className="relative"
-            onMouseEnter={() => setOpen("gallery")}
+            onMouseEnter={() => setOpen("interiors")}
             onMouseLeave={() => setOpen(null)}
           >
             <button
-              data-testid="nav-dropdown-gallery"
-              data-open={open === "gallery"}
-              onClick={() => goGallery()}
-              className="nav-link overline text-[11px] text-[var(--ink)] flex items-center gap-2"
+              data-testid="nav-dropdown-interiors"
+              data-open={open === "interiors"}
+              onClick={() => goWorks("interiors")}
+              className="nav-link nav-label flex items-center gap-2"
             >
-              Gallery
-              <svg width="9" height="9" viewBox="0 0 10 10" fill="none" className={`transition-transform duration-300 ${open === "gallery" ? "rotate-180" : ""}`}>
-                <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1"/>
-              </svg>
+              Interior Projects
+              <Chevron open={open === "interiors"} />
             </button>
-            <AnimatePresence>
-              {open === "gallery" && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 8 }}
-                  transition={{ duration: 0.28, ease: [0.2, 0.7, 0.15, 1] }}
-                  className="dropdown-panel absolute top-full right-0 mt-4 min-w-[520px] py-5 grid grid-cols-2 gap-2"
-                  data-testid="dropdown-panel-gallery"
+            <DropdownPanel open={open === "interiors"} align="center" testid="dropdown-panel-interiors">
+              <PanelHeader label="Interior Projects — Practices" />
+              {NAV_CATEGORIES.interiors.items.map((item, i) => (
+                <PanelItem
+                  key={item}
+                  data-testid={`dropdown-item-interiors-${i}`}
+                  onClick={() => goWorks("interiors", item)}
                 >
-                  <div className="px-5">
-                    <div className="overline text-[10px] text-[var(--muted)] mb-2">By Space</div>
-                    {GALLERY_TAXONOMY.spaces.map((s, i) => (
-                      <button
-                        key={s}
-                        data-testid={`dropdown-gallery-space-${i}`}
-                        onClick={() => goGallery("space", s)}
-                        className="w-full text-left py-1.5 font-serif text-[17px] text-[var(--ink)] hover:text-[var(--gold)] transition-colors"
-                      >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="px-5 border-l border-white/10">
-                    <div className="overline text-[10px] text-[var(--muted)] mb-2">By Work</div>
-                    {GALLERY_TAXONOMY.segments.map((s, i) => (
-                      <button
-                        key={s}
-                        data-testid={`dropdown-gallery-segment-${i}`}
-                        onClick={() => goGallery("segment", s)}
-                        className="w-full text-left py-1.5 font-serif text-[17px] text-[var(--ink)] hover:text-[var(--gold)] transition-colors"
-                      >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  {item}
+                </PanelItem>
+              ))}
+            </DropdownPanel>
           </div>
 
-          <Link to="/works" data-testid="nav-link-works" className="nav-link overline text-[11px]">
-            Our Works
-          </Link>
+          {/* Services · Restoration & Renovation */}
+          <div
+            className="relative"
+            onMouseEnter={() => setOpen("restoration")}
+            onMouseLeave={() => setOpen(null)}
+          >
+            <button
+              data-testid="nav-dropdown-restoration"
+              data-open={open === "restoration"}
+              onClick={() => goWorks("restoration")}
+              className="nav-link nav-label flex items-center gap-2 whitespace-nowrap"
+            >
+              {RESTORATION_SHORT}
+              <Chevron open={open === "restoration"} />
+            </button>
+            <DropdownPanel open={open === "restoration"} align="center" wide testid="dropdown-panel-restoration">
+              <PanelHeader label="Services — Restoration & Renovation" />
+              {NAV_CATEGORIES.restoration.items.map((item, i) => (
+                <PanelItem
+                  key={item}
+                  data-testid={`dropdown-item-restoration-${i}`}
+                  onClick={() => goWorks("restoration", item)}
+                >
+                  {item}
+                </PanelItem>
+              ))}
+            </DropdownPanel>
+          </div>
+
+          <Link to="/approach" data-testid="nav-process" className={`nav-link nav-label ${active("/approach") ? "text-[var(--gold)]" : ""}`}>Process</Link>
+          <Link to="/studio" data-testid="nav-about" className={`nav-link nav-label ${active("/studio") ? "text-[var(--gold)]" : ""}`}>About Us</Link>
 
           <Link
             to="/contact"
             data-testid="nav-cta"
-            className="ml-2 btn-pill text-[11px] py-[10px] px-5"
+            className="ml-2 btn-pill text-[10px] py-[10px] px-5"
           >
             Consult
           </Link>
         </nav>
 
+        {/* Mobile toggle */}
         <button
           data-testid="mobile-menu-toggle"
           onClick={() => setMobileOpen((v) => !v)}
-          className="lg:hidden w-10 h-10 flex flex-col items-center justify-center gap-[5px] border border-white/15"
+          className="xl:hidden w-11 h-11 flex flex-col items-center justify-center gap-[5px] border border-white/15 hover:border-[var(--gold)] transition-colors"
           aria-label="Menu"
         >
-          <span className={`w-4 h-[1px] bg-[var(--ink)] transition-transform ${mobileOpen ? "translate-y-[3px] rotate-45" : ""}`}/>
-          <span className={`w-4 h-[1px] bg-[var(--ink)] transition-transform ${mobileOpen ? "-translate-y-[3px] -rotate-45" : ""}`}/>
+          <span className={`w-4 h-[1.5px] bg-[var(--ink)] transition-transform ${mobileOpen ? "translate-y-[3px] rotate-45" : ""}`}/>
+          <span className={`w-4 h-[1.5px] bg-[var(--ink)] transition-transform ${mobileOpen ? "-translate-y-[3px] -rotate-45" : ""}`}/>
         </button>
       </div>
 
+      {/* Mobile drawer */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
@@ -207,62 +185,120 @@ export default function Nav() {
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.4, ease: [0.2, 0.7, 0.15, 1] }}
-            className="lg:hidden overflow-hidden border-t border-white/10 bg-[var(--bg-0)]/95 backdrop-blur-xl"
+            className="xl:hidden overflow-hidden border-t border-white/10 bg-[var(--bg-0)]/97 backdrop-blur-xl"
           >
             <div className="px-6 py-8 space-y-6">
-              {Object.values(NAV_CATEGORIES).map((cat) => (
-                <div key={cat.slug}>
-                  <button
-                    onClick={() => goWorks(cat.slug)}
-                    data-testid={`mobile-cat-${cat.slug}`}
-                    className="overline text-[var(--gold)] text-[10px] mb-3 block"
-                  >
-                    {cat.label} →
-                  </button>
-                  <div className="grid grid-cols-1 gap-2 pl-1">
-                    {cat.items.map((it, i) => (
-                      <button
-                        key={it}
-                        data-testid={`mobile-item-${cat.slug}-${i}`}
-                        onClick={() => goWorks(cat.slug, it)}
-                        className="text-left font-serif text-[22px] text-[var(--ink)]/85 hover:text-[var(--gold)] transition"
-                      >
-                        {it}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-              <div className="hairline" />
-              {links.map((l) => (
-                <Link key={l.to} to={l.to} className="font-serif text-[22px] block">{l.label}</Link>
-              ))}
-              <div className="hairline" />
+              <Link to="/" data-testid="mobile-home" className="nav-label block text-[13px]">Home</Link>
+              <Link to="/works" data-testid="mobile-portfolio" className="nav-label block text-[13px]">Portfolio</Link>
+
               <div>
-                <button onClick={() => goGallery()} className="overline text-[var(--gold)] text-[10px] mb-3 block">
-                  Gallery →
+                <button
+                  onClick={() => goWorks("interiors")}
+                  data-testid="mobile-cat-interiors"
+                  className="nav-label text-[var(--gold)] text-[11px] mb-3 block"
+                >
+                  Interior Projects →
                 </button>
-                <div className="grid grid-cols-2 gap-x-6 gap-y-1 pl-1">
-                  <div>
-                    <div className="overline text-[9px] text-[var(--muted)] mb-2">By Space</div>
-                    {GALLERY_TAXONOMY.spaces.map((s) => (
-                      <button key={s} onClick={() => goGallery("space", s)} className="block text-left font-serif text-[17px] py-1">{s}</button>
-                    ))}
-                  </div>
-                  <div>
-                    <div className="overline text-[9px] text-[var(--muted)] mb-2">By Work</div>
-                    {GALLERY_TAXONOMY.segments.map((s) => (
-                      <button key={s} onClick={() => goGallery("segment", s)} className="block text-left font-serif text-[17px] py-1">{s}</button>
-                    ))}
-                  </div>
+                <div className="grid grid-cols-1 gap-1 pl-1">
+                  {NAV_CATEGORIES.interiors.items.map((it, i) => (
+                    <button
+                      key={it}
+                      data-testid={`mobile-item-interiors-${i}`}
+                      onClick={() => goWorks("interiors", it)}
+                      className="text-left font-serif text-[22px] text-[var(--ink)]/90 hover:text-[var(--gold)] transition py-1"
+                    >
+                      {it}
+                    </button>
+                  ))}
                 </div>
               </div>
-              <Link to="/works" className="font-serif text-[22px] block">Our Works</Link>
-              <Link to="/contact" className="btn-gold w-fit">Request Consultation</Link>
+
+              <div>
+                <button
+                  onClick={() => goWorks("restoration")}
+                  data-testid="mobile-cat-restoration"
+                  className="nav-label text-[var(--gold)] text-[11px] mb-3 block"
+                >
+                  Services · Restoration & Renovation →
+                </button>
+                <div className="grid grid-cols-1 gap-1 pl-1">
+                  {NAV_CATEGORIES.restoration.items.map((it, i) => (
+                    <button
+                      key={it}
+                      data-testid={`mobile-item-restoration-${i}`}
+                      onClick={() => goWorks("restoration", it)}
+                      className="text-left font-serif text-[22px] text-[var(--ink)]/90 hover:text-[var(--gold)] transition py-1"
+                    >
+                      {it}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="hairline" />
+              <Link to="/approach" data-testid="mobile-process" className="nav-label block text-[13px]">Process</Link>
+              <Link to="/studio" data-testid="mobile-about" className="nav-label block text-[13px]">About Us</Link>
+              <Link to="/contact" className="btn-gold w-fit mt-2">Request Consultation</Link>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
     </header>
+  );
+}
+
+/* ---------------- Sub-components ---------------- */
+
+function Chevron({ open }) {
+  return (
+    <svg width="9" height="9" viewBox="0 0 10 10" fill="none" className={`transition-transform duration-300 ${open ? "rotate-180" : ""}`}>
+      <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1"/>
+    </svg>
+  );
+}
+
+function DropdownPanel({ open, align = "center", wide = false, testid, children }) {
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 8 }}
+          transition={{ duration: 0.28, ease: [0.2, 0.7, 0.15, 1] }}
+          data-testid={testid}
+          className={`dropdown-panel absolute top-full mt-4 py-4 ${
+            wide ? "min-w-[380px]" : "min-w-[260px]"
+          } ${
+            align === "left" ? "left-0" :
+            align === "right" ? "right-0" :
+            "left-1/2 -translate-x-1/2"
+          }`}
+        >
+          {children}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function PanelHeader({ label }) {
+  return (
+    <div className="px-5 pb-3 overline text-[10px] text-[var(--muted)]">
+      {label}
+    </div>
+  );
+}
+
+function PanelItem({ children, onClick, ...rest }) {
+  return (
+    <button
+      onClick={onClick}
+      {...rest}
+      className="w-full text-left px-5 py-2.5 font-serif text-[19px] text-[var(--ink)] hover:text-[var(--gold)] transition-colors flex items-center justify-between group"
+    >
+      <span>{children}</span>
+      <span className="text-[var(--gold)] opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+    </button>
   );
 }

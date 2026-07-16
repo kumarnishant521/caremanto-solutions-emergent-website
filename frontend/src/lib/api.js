@@ -21,25 +21,25 @@ export const formatApiError = (detail) => {
 
 export const NAV_CATEGORIES = {
   interiors: {
-    label: "Interiors",
+    label: "Interior Projects",
     slug: "interiors",
     items: [
       "Residential",
       "Commercial",
-      "Hospitality",
       "Retail Design",
-      "Bespoke Furniture",
+      "Hospitality",
     ],
   },
   restoration: {
-    label: "Restoration & Renovation",
+    label: "Services · Restoration & Renovation",
     slug: "restoration",
     items: [
+      "Restoration & Renovations",
+      "Structural Renovations & Facade Renewal",
+      "Sound Proofing",
+      "Water-Proofing",
       "Heritage Restoration",
-      "Facade Renewal",
-      "Structural Renovation",
-      "Adaptive Reuse",
-      "Modernization",
+      "Modernisation",
     ],
   },
 };

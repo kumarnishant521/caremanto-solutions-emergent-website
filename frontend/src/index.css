@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* ---- Fonts: Cormorant Garamond (headline serif) + Outfit (body sans) ---- */
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=Outfit:wght@200;300;400;500;600&family=JetBrains+Mono:wght@300;400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=Outfit:wght@200;300;400;500;600&family=Manrope:wght@500;700;800&family=JetBrains+Mono:wght@300;400&display=swap');
 
 :root {
     --bg-0: #0A0B0E;
@@ -74,7 +74,18 @@ a, button, [role="button"] { cursor: pointer; }
 /* Utility classes */
 .font-serif    { font-family: 'Cormorant Garamond', serif; }
 .font-sans-alt { font-family: 'Outfit', sans-serif; }
+.font-wordmark { font-family: 'Manrope', 'Outfit', sans-serif; font-weight: 800; letter-spacing: 0.14em; }
 .font-mono-alt { font-family: 'JetBrains Mono', monospace; }
+
+/* Nav label — bold tracked sans, uppercase */
+.nav-label {
+    font-family: 'Manrope', 'Outfit', sans-serif;
+    font-weight: 500;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink);
+}
 
 .overline {
     font-family: 'Outfit', sans-serif;
