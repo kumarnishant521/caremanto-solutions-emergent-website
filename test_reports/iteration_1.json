@@ -1,0 +1,25 @@
+{
+  "summary": "First-run E2E validation for Caremanto Solutions. Backend: 15/15 pytest cases pass (auth cookie, admin 401 gating, projects/gallery/leads CRUD + persistence, taxonomy update). Frontend: home hero 'Redefining spaces with quiet authority.' renders (no more black placeholder), all three nav dropdowns (Interiors, Restoration & Renovation, Gallery with By Space + By Work) open and expose all data-testids, /works filter chips + card->detail navigation works, /gallery renders 8 seeded photos with filter chip, /studio + /approach load, /contact form submits and shows 'Thank you' state, /admin unauth redirects to /admin/login, admin login with seeded credentials succeeds and dashboard shows Projects/Gallery/Leads/Settings tabs.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Global", "issues": ["/api/auth/me returns 401 on every public page load (AuthProvider probes session without checking storage first). Not a bug — just noisy console. Consider suppressing 401 log for the me endpoint or gating the call."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_caremanto.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "CORS_ORIGINS='*' combined with allow_credentials=True in server.py is technically invalid per the CORS spec — browsers would reject credentialed requests when origin is wildcard. It currently works because the frontend calls the same origin (ingress proxies /api). Recommend setting CORS_ORIGINS to the explicit preview URL for safety.",
+    "Rate limiting / brute-force lockout on /api/auth/login is NOT implemented (auth_testing.md playbook recommends lockout after 5 failed attempts). Not blocking but should be added before production.",
+    "send_notification_email failures are logged but swallowed silently — good for UX, but consider surfacing failure count to admin dashboard."
+  ],
+  "updated_files": ["/app/backend/tests/test_caremanto.py"],
+  "success_rate": {"backend": "100% (15/15)", "frontend": "100% of critical flows"},
+  "test_credentials": "admin@caremanto.com / Caremanto@2026",
+  "seed_data_creation": "Backend auto-seeds 6 sample projects, 8 gallery photos and admin user on startup. Tests create/delete TEST_-prefixed resources and restore taxonomy after mutation.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend fully green. Admin console visually verified. If regression needed, run: pytest /app/backend/tests/test_caremanto.py -v. Emergent email delivery is NOT verified end-to-end — only /api/leads persistence."
+}
