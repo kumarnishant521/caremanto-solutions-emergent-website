@@ -10,8 +10,10 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await api.get("/auth/me");
-        setUser(data);
+        // Suppress 401 console noise on public pages — expected when not signed in
+        const { data } = await api.get("/auth/me", { validateStatus: (s) => s < 500 || s === 401 });
+        if (data && data.role) setUser(data);
+        else setUser(null);
       } catch {
         setUser(null);
       } finally {
