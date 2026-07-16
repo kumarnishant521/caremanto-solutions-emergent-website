@@ -1,22 +1,66 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Link } from "react-router-dom";
 
-// Warm cinematic hero — luxury interior (marble corridor)
-const HERO_IMG =
-  "https://images.pexels.com/photos/33685863/pexels-photo-33685863.jpeg?auto=compress&cs=tinysrgb&w=1920";
+/* ---------------------------------------------------------------------
+ * HERO SLIDESHOW
+ *   • 6 curated images   (4 residential + 2 commercial ≈ 70 / 30)
+ *   • ~4.8 s hold  +  ~1.8 s cross-fade  =  ~6.6 s per slide
+ *   • Every image drifts (Ken-Burns) continuously so the scene feels alive
+ *   • A soft dark overlay + editorial bottom-fade guarantees the copy
+ *     stays legible on any photograph.
+ *
+ * Swap real project shots by replacing the `src` values below.
+ * ------------------------------------------------------------------- */
+const HERO_IMAGES = [
+  { src: "https://images.pexels.com/photos/33685863/pexels-photo-33685863.jpeg?auto=compress&cs=tinysrgb&w=1920", kind: "residential" },
+  { src: "https://images.pexels.com/photos/34688219/pexels-photo-34688219.jpeg?auto=compress&cs=tinysrgb&w=1920", kind: "residential" },
+  { src: "https://images.pexels.com/photos/33685861/pexels-photo-33685861.jpeg?auto=compress&cs=tinysrgb&w=1920", kind: "residential" },
+  { src: "https://images.pexels.com/photos/1743229/pexels-photo-1743229.jpeg?auto=compress&cs=tinysrgb&w=1920",  kind: "commercial"  },
+  { src: "https://images.pexels.com/photos/1080696/pexels-photo-1080696.jpeg?auto=compress&cs=tinysrgb&w=1920",  kind: "residential" },
+  { src: "https://images.pexels.com/photos/380769/pexels-photo-380769.jpeg?auto=compress&cs=tinysrgb&w=1920",   kind: "commercial"  },
+];
+const SLIDE_HOLD_MS  = 4800;   // time an image is fully visible
+const CROSSFADE_MS   = 1800;   // duration of the fade between images
+
+/* Per-slide Ken-Burns origins keep the drift feeling organic. */
+const ORIGINS = ["center", "top left", "bottom right", "top right", "bottom left", "center"];
 
 export default function Hero() {
   const ref = useRef(null);
   const [ready, setReady] = useState(false);
+  const [active, setActive] = useState(0);
   const { scrollY } = useScroll();
-  const y = useTransform(scrollY, [0, 800], [0, 180]);
-  const scale = useTransform(scrollY, [0, 800], [1, 1.08]);
+  const y = useTransform(scrollY, [0, 800], [0, 140]);
 
+  // Preload the first two images so the cross-fade is silky from the start.
   useEffect(() => {
+    HERO_IMAGES.slice(0, 2).forEach((im) => { const i = new Image(); i.src = im.src; });
     const t = setTimeout(() => setReady(true), 120);
     return () => clearTimeout(t);
   }, []);
+
+  // Slideshow ticker — pauses when the tab is hidden to save cycles.
+  useEffect(() => {
+    if (typeof document !== "undefined" && document.hidden) return;
+    const id = setInterval(
+      () => setActive((p) => (p + 1) % HERO_IMAGES.length),
+      SLIDE_HOLD_MS + CROSSFADE_MS
+    );
+    return () => clearInterval(id);
+  }, []);
+
+  const slides = useMemo(
+    () =>
+      HERO_IMAGES.map((im, idx) => ({
+        ...im,
+        origin: ORIGINS[idx % ORIGINS.length],
+        // negative delays de-sync each image's Ken-Burns cycle so the
+        // motion never feels lock-stepped when two images cross-fade.
+        delay: `-${(idx * 3.3) % 14}s`,
+      })),
+    []
+  );
 
   return (
     <section
@@ -24,19 +68,42 @@ export default function Hero() {
       data-testid="hero-section"
       className="relative h-[100svh] min-h-[640px] w-full overflow-hidden bg-[#14100C] text-[var(--on-dark)]"
     >
-      {/* Parallax image */}
-      <motion.div style={{ y, scale }} className="absolute inset-0 will-change-transform">
-        <img
-          src={HERO_IMG}
-          alt="Warm residential interior"
-          className="w-full h-full object-cover"
-          loading="eager"
-        />
+      {/* ============================ SLIDESHOW LAYER ==================== */}
+      <motion.div style={{ y }} className="absolute inset-0 will-change-transform">
+        {slides.map((s, idx) => (
+          <div
+            key={s.src}
+            aria-hidden="true"
+            className="hero-slide"
+            data-active={idx === active ? "true" : "false"}
+            style={{
+              // eslint-disable-next-line
+              transitionDuration: `${CROSSFADE_MS}ms`,
+            }}
+          >
+            <img
+              src={s.src}
+              alt=""
+              loading={idx < 2 ? "eager" : "lazy"}
+              className="hero-slide__img"
+              style={{
+                transformOrigin: s.origin,
+                animationDelay: s.delay,
+              }}
+            />
+          </div>
+        ))}
       </motion.div>
-      {/* Cinematic warm-dark overlay for text legibility */}
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(20,16,12,0.55)_0%,rgba(20,16,12,0.30)_35%,rgba(20,16,12,0.72)_78%,rgba(20,16,12,0.88)_92%,var(--bg-0)_100%)]" />
 
-      {/* Frame corners in bronze */}
+      {/* Uniform darkening overlay for text contrast (~42 % black). */}
+      <div className="absolute inset-0 bg-black/40 pointer-events-none z-[1]" />
+      {/* Editorial bottom fade → merges into the cream page below. */}
+      <div
+        className="absolute inset-0 pointer-events-none z-[1]
+                   bg-[linear-gradient(180deg,rgba(20,16,12,0.15)_0%,rgba(20,16,12,0.05)_35%,rgba(20,16,12,0.45)_75%,rgba(20,16,12,0.80)_92%,var(--bg-0)_100%)]"
+      />
+
+      {/* Frame corners */}
       <div className="absolute inset-8 md:inset-12 pointer-events-none z-[2]">
         <span className="absolute top-0 left-0 w-6 h-[1px] bg-[var(--gold-hi)]" />
         <span className="absolute top-0 left-0 w-[1px] h-6 bg-[var(--gold-hi)]" />
@@ -48,7 +115,7 @@ export default function Hero() {
         <span className="absolute bottom-0 right-0 w-[1px] h-6 bg-[var(--gold-hi)]" />
       </div>
 
-      {/* Content */}
+      {/* ============================ FOREGROUND ========================= */}
       <div className="relative z-10 h-full flex flex-col justify-end pb-24 md:pb-28 px-6 md:px-14 max-w-[1440px] mx-auto">
         <div className="flex items-center gap-3 mb-6">
           <span className="w-10 h-[1px] bg-[var(--gold-hi)]" />
@@ -83,7 +150,7 @@ export default function Hero() {
           </div>
         </div>
 
-        {/* Meta strip */}
+        {/* Meta strip (static — unaffected by the slideshow) */}
         <div className="mt-14 md:mt-16 grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10 border-t border-[var(--on-dark)]/15 pt-6">
           {[
             ["01", "Residential"],
@@ -99,7 +166,7 @@ export default function Hero() {
         </div>
       </div>
 
-      {/* scroll cue */}
+      {/* Scroll cue */}
       <div className="absolute bottom-6 right-8 z-10 flex items-center gap-3 text-[var(--on-dark-soft)]">
         <span className="text-[10px] tracking-[0.28em] uppercase">Scroll</span>
         <span className="block w-6 h-[1px] bg-[var(--on-dark-soft)] relative overflow-hidden">
