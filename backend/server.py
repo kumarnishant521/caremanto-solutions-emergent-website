@@ -113,9 +113,9 @@ class LoginIn(BaseModel):
 class GalleryPhotoIn(BaseModel):
     title: Optional[str] = ""
     description: Optional[str] = ""
-    space: str            # e.g. "Bathroom", "Bedroom" — free-form string
-    segment: str          # e.g. "Furniture", "TV Units" — free-form string
-    image: str            # image url
+    category: str                     # one of the 4 main tabs
+    subcategory: Optional[str] = ""   # nested filter (only for the two nested categories)
+    image: str
     is_sample: bool = False
 
 class GalleryPhoto(GalleryPhotoIn):
@@ -123,8 +123,8 @@ class GalleryPhoto(GalleryPhotoIn):
     created_at: str
 
 class TaxonomyIn(BaseModel):
-    spaces: List[str]
-    segments: List[str]
+    categories: List[str]
+    subcategories: dict  # { "Home Spaces & Corners": [...], "Commercial Spaces": [...] }
 
 # ------------------------------------------------------------------ email
 async def send_notification_email(subject: str, html: str, reply_to: Optional[str] = None):
@@ -287,8 +287,20 @@ async def delete_lead(lid: str, _admin=Depends(get_current_admin)):
 
 # ------------------------------------------------------------------ routes: gallery
 DEFAULT_TAXONOMY = {
-    "spaces": ["Bathroom", "Bedroom", "Kitchen", "Living Room", "Dining", "Foyer", "Study", "Balcony", "Outdoor"],
-    "segments": ["Furniture", "TV Units", "Wardrobe", "Modular Kitchen", "False Ceiling", "Lighting", "Flooring", "Wall Finishes", "Doors & Partitions"],
+    "categories": [
+        "Our Work",
+        "Home Spaces & Corners",
+        "Bespoke Custom Made Furniture",
+        "Commercial Spaces",
+    ],
+    "subcategories": {
+        "Home Spaces & Corners": [
+            "Kitchen", "Bathrooms", "Bedrooms", "Hall", "Balcony", "Dry Area",
+        ],
+        "Commercial Spaces": [
+            "Office Spaces", "Retail Design", "Hospitality",
+        ],
+    },
 }
 
 @api.get("/gallery/taxonomy")
@@ -298,8 +310,14 @@ async def get_taxonomy():
 
 @api.put("/admin/gallery/taxonomy")
 async def update_taxonomy(body: TaxonomyIn, _admin=Depends(get_current_admin)):
-    value = {"spaces": [s.strip() for s in body.spaces if s.strip()],
-             "segments": [s.strip() for s in body.segments if s.strip()]}
+    value = {
+        "categories": [s.strip() for s in body.categories if s and s.strip()],
+        "subcategories": {
+            k.strip(): [x.strip() for x in v if x and x.strip()]
+            for k, v in (body.subcategories or {}).items()
+            if k and k.strip()
+        },
+    }
     await db.settings.update_one(
         {"key": "gallery_taxonomy"},
         {"$set": {"key": "gallery_taxonomy", "value": value}},
@@ -308,12 +326,12 @@ async def update_taxonomy(body: TaxonomyIn, _admin=Depends(get_current_admin)):
     return value
 
 @api.get("/gallery", response_model=List[GalleryPhoto])
-async def list_gallery(space: Optional[str] = None, segment: Optional[str] = None):
+async def list_gallery(category: Optional[str] = None, subcategory: Optional[str] = None):
     q: dict = {}
-    if space:
-        q["space"] = space
-    if segment:
-        q["segment"] = segment
+    if category:
+        q["category"] = category
+    if subcategory:
+        q["subcategory"] = subcategory
     docs = await db.gallery.find(q, {"_id": 0}).sort("created_at", -1).to_list(2000)
     return docs
 
@@ -427,22 +445,35 @@ SAMPLE_PROJECTS = [
 ]
 
 SAMPLE_GALLERY = [
-    {"title": "Marble Vanity Study", "description": "", "space": "Bathroom", "segment": "Wall Finishes",
-     "image": "https://images.pexels.com/photos/33685861/pexels-photo-33685861.jpeg", "is_sample": True},
-    {"title": "Bedroom in Ivory", "description": "", "space": "Bedroom", "segment": "Furniture",
-     "image": "https://images.pexels.com/photos/34688219/pexels-photo-34688219.jpeg", "is_sample": True},
-    {"title": "Kitchen Volume", "description": "", "space": "Kitchen", "segment": "Modular Kitchen",
-     "image": "https://images.pexels.com/photos/33685863/pexels-photo-33685863.jpeg", "is_sample": True},
-    {"title": "Media Console", "description": "", "space": "Living Room", "segment": "TV Units",
-     "image": "https://images.pexels.com/photos/31500951/pexels-photo-31500951.jpeg", "is_sample": True},
-    {"title": "Concealed Wardrobe", "description": "", "space": "Bedroom", "segment": "Wardrobe",
-     "image": "https://images.pexels.com/photos/33685861/pexels-photo-33685861.jpeg", "is_sample": True},
-    {"title": "Foyer Ceiling", "description": "", "space": "Foyer", "segment": "False Ceiling",
-     "image": "https://images.pexels.com/photos/33685863/pexels-photo-33685863.jpeg", "is_sample": True},
-    {"title": "Balcony Bench", "description": "", "space": "Balcony", "segment": "Furniture",
-     "image": "https://images.pexels.com/photos/7389533/pexels-photo-7389533.jpeg", "is_sample": True},
-    {"title": "Study Lighting", "description": "", "space": "Study", "segment": "Lighting",
-     "image": "https://images.pexels.com/photos/36054139/pexels-photo-36054139.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940", "is_sample": True},
+    # Home Spaces & Corners
+    {"title": "Marble Vanity Study", "description": "", "category": "Home Spaces & Corners", "subcategory": "Bathrooms",
+     "image": "https://images.pexels.com/photos/6438752/pexels-photo-6438752.jpeg?auto=compress&cs=tinysrgb&w=1400", "is_sample": True},
+    {"title": "Bedroom in Ivory", "description": "", "category": "Home Spaces & Corners", "subcategory": "Bedrooms",
+     "image": "https://images.pexels.com/photos/34688219/pexels-photo-34688219.jpeg?auto=compress&cs=tinysrgb&w=1400", "is_sample": True},
+    {"title": "Kitchen Volume", "description": "", "category": "Home Spaces & Corners", "subcategory": "Kitchen",
+     "image": "https://images.pexels.com/photos/2062431/pexels-photo-2062431.jpeg?auto=compress&cs=tinysrgb&w=1400", "is_sample": True},
+    {"title": "Living Hall", "description": "", "category": "Home Spaces & Corners", "subcategory": "Hall",
+     "image": "https://images.pexels.com/photos/1080696/pexels-photo-1080696.jpeg?auto=compress&cs=tinysrgb&w=1400", "is_sample": True},
+    {"title": "Balcony Bench", "description": "", "category": "Home Spaces & Corners", "subcategory": "Balcony",
+     "image": "https://images.pexels.com/photos/7389533/pexels-photo-7389533.jpeg?auto=compress&cs=tinysrgb&w=1400", "is_sample": True},
+    {"title": "Dry Utility Corner", "description": "", "category": "Home Spaces & Corners", "subcategory": "Dry Area",
+     "image": "https://images.pexels.com/photos/2724749/pexels-photo-2724749.jpeg?auto=compress&cs=tinysrgb&w=1400", "is_sample": True},
+
+    # Bespoke Custom Made Furniture (no sub-filters)
+    {"title": "Walnut Console", "description": "", "category": "Bespoke Custom Made Furniture", "subcategory": "",
+     "image": "https://images.pexels.com/photos/6969831/pexels-photo-6969831.jpeg?auto=compress&cs=tinysrgb&w=1400", "is_sample": True},
+    {"title": "Concealed Wardrobe", "description": "", "category": "Bespoke Custom Made Furniture", "subcategory": "",
+     "image": "https://images.pexels.com/photos/33685861/pexels-photo-33685861.jpeg?auto=compress&cs=tinysrgb&w=1400", "is_sample": True},
+    {"title": "Media Console", "description": "", "category": "Bespoke Custom Made Furniture", "subcategory": "",
+     "image": "https://images.pexels.com/photos/31500951/pexels-photo-31500951.jpeg?auto=compress&cs=tinysrgb&w=1400", "is_sample": True},
+
+    # Commercial Spaces
+    {"title": "Atelier Workroom", "description": "", "category": "Commercial Spaces", "subcategory": "Office Spaces",
+     "image": "https://images.pexels.com/photos/380769/pexels-photo-380769.jpeg?auto=compress&cs=tinysrgb&w=1400", "is_sample": True},
+    {"title": "Boutique Interior", "description": "", "category": "Commercial Spaces", "subcategory": "Retail Design",
+     "image": "https://images.pexels.com/photos/291762/pexels-photo-291762.jpeg?auto=compress&cs=tinysrgb&w=1400", "is_sample": True},
+    {"title": "Hotel Lobby", "description": "", "category": "Commercial Spaces", "subcategory": "Hospitality",
+     "image": "https://images.pexels.com/photos/1743229/pexels-photo-1743229.jpeg?auto=compress&cs=tinysrgb&w=1400", "is_sample": True},
 ]
 
 async def seed_admin_and_samples():
@@ -472,7 +503,14 @@ async def seed_admin_and_samples():
         await db.projects.insert_many(docs)
         logger.info(f"Seeded {len(docs)} sample projects")
 
-    # Sample gallery seed
+    # Sample gallery seed — auto-migrate old-schema samples (space/segment fields)
+    stale = await db.gallery.count_documents({"space": {"$exists": True}})
+    if stale > 0:
+        await db.gallery.delete_many({"is_sample": True})
+        # Also nuke stale taxonomy if it uses old shape
+        await db.settings.delete_one({"key": "gallery_taxonomy"})
+        logger.info(f"Migrated stale gallery samples (removed {stale} old-schema docs)")
+
     g_count = await db.gallery.count_documents({})
     if g_count == 0:
         now = datetime.now(timezone.utc).isoformat()
@@ -483,7 +521,7 @@ async def seed_admin_and_samples():
     # Indexes
     await db.users.create_index("email", unique=True)
     await db.projects.create_index([("category", 1), ("created_at", -1)])
-    await db.gallery.create_index([("space", 1), ("segment", 1), ("created_at", -1)])
+    await db.gallery.create_index([("category", 1), ("subcategory", 1), ("created_at", -1)])
     await db.leads.create_index("created_at")
     await db.settings.create_index("key", unique=True)
 

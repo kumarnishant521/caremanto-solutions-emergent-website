@@ -45,26 +45,14 @@ export const NAV_CATEGORIES = {
 };
 
 export const GALLERY_TAXONOMY = {
-  spaces: [
-    "Bathroom",
-    "Bedroom",
-    "Kitchen",
-    "Living Room",
-    "Dining",
-    "Foyer",
-    "Study",
-    "Balcony",
-    "Outdoor",
+  categories: [
+    "Our Work",
+    "Home Spaces & Corners",
+    "Bespoke Custom Made Furniture",
+    "Commercial Spaces",
   ],
-  segments: [
-    "Furniture",
-    "TV Units",
-    "Wardrobe",
-    "Modular Kitchen",
-    "False Ceiling",
-    "Lighting",
-    "Flooring",
-    "Wall Finishes",
-    "Doors & Partitions",
-  ],
+  subcategories: {
+    "Home Spaces & Corners": ["Kitchen", "Bathrooms", "Bedrooms", "Hall", "Balcony", "Dry Area"],
+    "Commercial Spaces": ["Office Spaces", "Retail Design", "Hospitality"],
+  },
 };
