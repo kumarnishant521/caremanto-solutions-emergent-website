@@ -36,11 +36,11 @@ function BrandMark() {
       <img
         src={`/caremanto-logo.${logo}`}
         alt="Caremanto"
-        className="w-[42px] h-[42px] object-contain"
+        className="w-[58px] h-[58px] md:w-[62px] md:h-[62px] object-contain"
       />
     );
   }
-  return <CMLogo size={42} className="cm-logo-color text-[var(--ink)]" />;
+  return <CMLogo size={44} className="cm-logo-color text-[var(--ink)]" />;
 }
 
 const RESTORATION_SHORT = "Services – Restoration & Renovation";

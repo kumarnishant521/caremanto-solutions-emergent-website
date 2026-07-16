@@ -163,10 +163,13 @@ a, button, [role="button"] { cursor: pointer; }
     -webkit-backdrop-filter: blur(8px);
 }
 .nav-over-hero .nav-label,
-.nav-over-hero .font-wordmark { color: var(--on-dark); }
+.nav-over-hero .font-wordmark,
+.nav-over-hero .font-wordmark-sub { color: var(--on-dark); }
 .nav-over-hero .btn-pill { border-color: var(--on-dark); color: var(--on-dark); }
 .nav-over-hero .btn-pill:hover { background: var(--on-dark); color: var(--dark-0); }
 .nav-over-hero .cm-logo-color { color: var(--on-dark); }
+/* Brand mark image is originally black — invert it against the dark hero so it reads as light */
+.nav-over-hero [data-testid="brand-logo"] img { filter: invert(1) brightness(1.08); }
 
 .nav-link { position: relative; }
 .nav-link::after {
