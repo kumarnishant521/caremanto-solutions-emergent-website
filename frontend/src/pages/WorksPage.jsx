@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api, NAV_CATEGORIES } from "../lib/api";
+import { worksProjects } from "../lib/realProjects";
 import { ProjectCard } from "../components/FeaturedWorks";
 import { Rise } from "../components/Rise";
 
@@ -13,15 +14,21 @@ export default function WorksPage() {
 
   useEffect(() => {
     setLoading(true);
-    const q = category === "all" ? "" : `?category=${category}`;
-    api.get(`/projects${q}`)
-      .then((r) => setProjects(r.data))
+    // Real project photography always takes priority — merge with any DB
+    // projects that aren't already represented.
+    const real = worksProjects();
+    api.get("/projects")
+      .then((r) => {
+        const ids = new Set(real.map((p) => p.id));
+        const extras = (r.data || []).filter((p) => !ids.has(p.id));
+        setProjects([...real, ...extras]);
+      })
+      .catch(() => setProjects(real))
       .finally(() => setLoading(false));
-  }, [category]);
+  }, []);
 
-  const filtered = sub === "all"
-    ? projects
-    : projects.filter((p) => p.subcategory === sub);
+  const scoped = category === "all" ? projects : projects.filter((p) => p.category === category);
+  const filtered = sub === "all" ? scoped : scoped.filter((p) => p.subcategory === sub);
 
   const setCat = (c) => {
     const p = new URLSearchParams();
