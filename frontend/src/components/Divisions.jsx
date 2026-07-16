@@ -3,20 +3,22 @@ import { Rise } from "./Rise";
 
 const PRACTICE = [
   {
-    tag: "01 / Interiors",
-    title: "Residential, hospitality & commercial interiors.",
-    body: "From private residences to boutique hospitality, our interior practice is a study in restraint — considered material palettes, quiet lighting, and an editorial approach to composition.",
+    tag: "01 / INTERIORS",
+    title: "RESIDENTIAL · HOSPITALITY · COMMERCIAL INTERIORS",
+    body:
+      "FROM PRIVATE RESIDENCES TO BOUTIQUE HOSPITALITY, OUR INTERIOR PRACTICE IS A STUDY IN RESTRAINT — CONSIDERED MATERIAL PALETTES, QUIET LIGHTING, AND AN EDITORIAL APPROACH TO COMPOSITION.",
     image: "https://images.pexels.com/photos/33685861/pexels-photo-33685861.jpeg?auto=compress&cs=tinysrgb&w=1400",
     to: "/works?category=interiors",
-    cta: "Interior Portfolio",
+    cta: "INTERIOR PORTFOLIO",
   },
   {
-    tag: "02 / Restoration & Renovation",
-    title: "Heritage restoration and structural renewal.",
-    body: "A dedicated wing for the preservation and adaptation of older architecture — facade renewal, structural restoration, and the sensitive reuse of built heritage.",
+    tag: "02 / RESTORATION & RENOVATION",
+    title: "HERITAGE RESTORATION & STRUCTURAL RENEWAL",
+    body:
+      "A DEDICATED WING FOR THE PRESERVATION AND ADAPTATION OF OLDER ARCHITECTURE — FACADE RENEWAL, STRUCTURAL RESTORATION, AND THE SENSITIVE REUSE OF BUILT HERITAGE.",
     image: "https://images.pexels.com/photos/7389533/pexels-photo-7389533.jpeg?auto=compress&cs=tinysrgb&w=1400",
     to: "/works?category=restoration",
-    cta: "Restoration Portfolio",
+    cta: "RESTORATION PORTFOLIO",
   },
 ];
 
@@ -31,12 +33,18 @@ export default function Divisions() {
         <Rise>
           <div className="flex items-center gap-3 mb-8">
             <span className="w-10 h-[1px] bg-[var(--gold)]" />
-            <span className="overline">Two Wings, One Studio</span>
+            <span className="overline text-[var(--gold)]">TWO WINGS, ONE STUDIO</span>
           </div>
         </Rise>
         <Rise delay={90}>
-          <h2 className="font-serif text-[clamp(2.4rem,6vw,5.5rem)] tracking-[-0.02em] leading-[0.95] max-w-[1000px]">
-            A studio composed of two <span className="italic text-[var(--gold)]">complementary</span> practices.
+          <h2
+            data-testid="divisions-headline"
+            className="text-[var(--ink)] font-sans-alt uppercase font-medium max-w-[1100px]
+                       text-[clamp(1.25rem,2.15vw,1.9rem)]
+                       tracking-[0.15em] leading-[1.55]"
+            style={{ fontFamily: "'Montserrat', 'Manrope', 'Outfit', sans-serif" }}
+          >
+            A STUDIO COMPOSED OF TWO COMPLEMENTARY PRACTICES.
           </h2>
         </Rise>
 
@@ -55,10 +63,20 @@ export default function Divisions() {
                     {p.tag}
                   </span>
                 </div>
-                <h3 className="font-serif text-[28px] md:text-[38px] leading-[1.05] tracking-tight max-w-md mb-5">
+                <h3
+                  className="text-[var(--ink)] uppercase font-medium mb-5 max-w-md
+                             text-[clamp(1rem,1.5vw,1.35rem)]
+                             tracking-[0.14em] leading-[1.5]"
+                  style={{ fontFamily: "'Montserrat', 'Manrope', 'Outfit', sans-serif" }}
+                >
                   {p.title}
                 </h3>
-                <p className="text-[15px] md:text-[16px] leading-relaxed text-[var(--ink)]/80 max-w-md mb-6">
+                <p
+                  className="text-[var(--ink)]/75 mb-6 max-w-md
+                             text-[11px] md:text-[12px]
+                             tracking-[0.14em] leading-[1.9] uppercase"
+                  style={{ fontFamily: "'Montserrat', 'Manrope', 'Outfit', sans-serif" }}
+                >
                   {p.body}
                 </p>
                 <Link

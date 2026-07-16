@@ -43,7 +43,7 @@ function BrandMark() {
   return <CMLogo size={44} className="cm-logo-color text-[var(--ink)]" />;
 }
 
-const RESTORATION_SHORT = "Services – Restoration & Renovation";
+const RESTORATION_SHORT = "Services";
 
 export default function Nav() {
   const [scrolled, setScrolled] = useState(false);
@@ -194,8 +194,8 @@ export default function Nav() {
             className="xl:hidden overflow-hidden border-t border-[var(--line)] bg-[var(--bg-0)]/97 backdrop-blur-xl"
           >
             <div className="px-6 py-8 space-y-6">
-              <Link to="/" data-testid="mobile-home" className="nav-label block text-[13px]">Home</Link>
-              <Link to="/works" data-testid="mobile-portfolio" className="nav-label block text-[13px]">Portfolio</Link>
+              <Link to="/" data-testid="mobile-home" className="nav-label block text-[13px]">HOME</Link>
+              <Link to="/works" data-testid="mobile-portfolio" className="nav-label block text-[13px]">PORTFOLIO</Link>
 
               <div>
                 <button
@@ -203,7 +203,7 @@ export default function Nav() {
                   data-testid="mobile-cat-interiors"
                   className="nav-label text-[var(--gold)] text-[11px] mb-3 block"
                 >
-                  Interior Projects →
+                  INTERIOR PROJECTS →
                 </button>
                 <div className="grid grid-cols-1 gap-1 pl-1">
                   {NAV_CATEGORIES.interiors.items.map((it, i) => (
@@ -211,9 +211,11 @@ export default function Nav() {
                       key={it}
                       data-testid={`mobile-item-interiors-${i}`}
                       onClick={() => goWorks("interiors", it)}
-                      className="text-left font-serif text-[22px] text-[var(--ink)]/90 hover:text-[var(--gold)] transition py-1"
+                      className="text-left uppercase text-[var(--ink)]/85 hover:text-[var(--gold)] transition py-1
+                                 text-[12px] tracking-[0.18em]"
+                      style={{ fontFamily: "'Manrope', 'Outfit', sans-serif", fontWeight: 400 }}
                     >
-                      {it}
+                      {it.toUpperCase()}
                     </button>
                   ))}
                 </div>
@@ -225,7 +227,7 @@ export default function Nav() {
                   data-testid="mobile-cat-restoration"
                   className="nav-label text-[var(--gold)] text-[11px] mb-3 block"
                 >
-                  Services · Restoration & Renovation →
+                  SERVICES →
                 </button>
                 <div className="grid grid-cols-1 gap-1 pl-1">
                   {NAV_CATEGORIES.restoration.items.map((it, i) => (
@@ -233,18 +235,20 @@ export default function Nav() {
                       key={it}
                       data-testid={`mobile-item-restoration-${i}`}
                       onClick={() => goWorks("restoration", it)}
-                      className="text-left font-serif text-[22px] text-[var(--ink)]/90 hover:text-[var(--gold)] transition py-1"
+                      className="text-left uppercase text-[var(--ink)]/85 hover:text-[var(--gold)] transition py-1
+                                 text-[12px] tracking-[0.18em]"
+                      style={{ fontFamily: "'Manrope', 'Outfit', sans-serif", fontWeight: 400 }}
                     >
-                      {it}
+                      {it.toUpperCase()}
                     </button>
                   ))}
                 </div>
               </div>
 
               <div className="hairline" />
-              <Link to="/approach" data-testid="mobile-process" className="nav-label block text-[13px]">Process</Link>
-              <Link to="/studio" data-testid="mobile-about" className="nav-label block text-[13px]">About Us</Link>
-              <Link to="/contact" className="btn-gold w-fit mt-2">Request Consultation</Link>
+              <Link to="/approach" data-testid="mobile-process" className="nav-label block text-[13px]">PROCESS</Link>
+              <Link to="/studio" data-testid="mobile-about" className="nav-label block text-[13px]">ABOUT US</Link>
+              <Link to="/contact" className="btn-gold w-fit mt-2">REQUEST CONSULTATION</Link>
             </div>
           </motion.div>
         )}
@@ -290,7 +294,7 @@ function DropdownPanel({ open, align = "center", wide = false, testid, children 
 
 function PanelHeader({ label }) {
   return (
-    <div className="px-5 pb-3 overline text-[10px] text-[var(--muted)]">
+    <div className="px-5 pb-3 overline text-[10px] text-[var(--muted)] uppercase">
       {label}
     </div>
   );
@@ -301,9 +305,10 @@ function PanelItem({ children, onClick, ...rest }) {
     <button
       onClick={onClick}
       {...rest}
-      className="w-full text-left px-5 py-2.5 font-serif text-[19px] text-[var(--ink)] hover:text-[var(--gold)] transition-colors flex items-center justify-between group"
+      className="w-full text-left px-5 py-2 uppercase text-[12px] tracking-[0.18em] text-[var(--ink)]/85 hover:text-[var(--gold)] transition-colors flex items-center justify-between group"
+      style={{ fontFamily: "'Manrope', 'Outfit', sans-serif", fontWeight: 400 }}
     >
-      <span>{children}</span>
+      <span>{typeof children === "string" ? children.toUpperCase() : children}</span>
       <span className="text-[var(--gold)] opacity-0 group-hover:opacity-100 transition-opacity">→</span>
     </button>
   );

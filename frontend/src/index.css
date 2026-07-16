@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* ---- Fonts: Cormorant Garamond (serif) + Outfit (body) + Manrope (wordmark/labels) ---- */
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=Outfit:wght@200;300;400;500;600&family=Manrope:wght@500;700;800&family=JetBrains+Mono:wght@300;400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=Outfit:wght@200;300;400;500;600&family=Manrope:wght@500;700;800&family=Montserrat:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400&display=swap');
 
 /* ------------------------------------------------------------------ */
 /* Warm-neutral luxury palette                                        */
@@ -232,21 +232,29 @@ a, button, [role="button"] { cursor: pointer; }
 .btn-solid-light:hover { background: var(--gold); color: #fff; border-color: var(--gold); }
 
 /* ------------------------------------------------------------------ */
-/* Marquee                                                            */
+/* Marquee — sharp sans, uppercase, tight vertical rhythm             */
 /* ------------------------------------------------------------------ */
 .marquee-item {
-    font-family: 'Cormorant Garamond', serif;
-    font-style: italic;
-    font-size: clamp(2.25rem, 6vw, 4.5rem);
-    color: rgba(31, 26, 22, 0.9);
-    padding: 0 3rem;
-    line-height: 1.1;
+    font-family: 'Montserrat', 'Manrope', 'Outfit', sans-serif;
+    font-weight: 500;
+    font-style: normal;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: clamp(1.15rem, 2.2vw, 1.9rem);
+    color: var(--ink);
+    padding: 0 2.5rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
 }
 .marquee-dot {
     color: var(--gold);
-    padding: 0 1rem;
-    font-size: 1.5rem;
-    display: inline-flex; align-items: center;
+    padding: 0 1.4rem;
+    font-size: clamp(0.95rem, 1.7vw, 1.5rem);
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    transform: translateY(-0.03em);
 }
 
 /* ------------------------------------------------------------------ */
