@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { api } from "../lib/api";
+import { galleryImages as realGalleryImages } from "../lib/realProjects";
 import { Rise } from "../components/Rise";
 
 const OUR_WORK = "Our Work";
@@ -21,12 +22,20 @@ export default function GalleryPage() {
     api.get("/gallery/taxonomy").then((r) => setTaxonomy(r.data)).catch(() => {});
   }, []);
 
-  // Load photos — fetch all (client-side filter for smooth transitions)
+  // Load photos — real project photos take priority, then DB samples.
   useEffect(() => {
     setLoading(true);
     api.get("/gallery")
-      .then((r) => setAllPhotos(r.data))
-      .catch(() => setAllPhotos([]))
+      .then((r) => {
+        const real = realGalleryImages().map((p) => ({
+          ...p,
+          created_at: new Date().toISOString(),
+        }));
+        const dbIds = new Set(real.map((p) => p.id));
+        const dbRest = (r.data || []).filter((p) => !dbIds.has(p.id));
+        setAllPhotos([...real, ...dbRest]);
+      })
+      .catch(() => setAllPhotos(realGalleryImages()))
       .finally(() => setLoading(false));
   }, []);
 

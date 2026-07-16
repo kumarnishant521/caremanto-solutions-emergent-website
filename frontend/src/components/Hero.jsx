@@ -1,18 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Link } from "react-router-dom";
+import { heroImages as realHeroImages } from "../lib/realProjects";
 
 /* ---------------------------------------------------------------------
  * HERO SLIDESHOW
- *   • 6 curated images   (4 residential + 2 commercial ≈ 70 / 30)
- *   • ~4.8 s hold  +  ~1.8 s cross-fade  =  ~6.6 s per slide
- *   • Every image drifts (Ken-Burns) continuously so the scene feels alive
- *   • A soft dark overlay + editorial bottom-fade guarantees the copy
- *     stays legible on any photograph.
- *
- * Swap real project shots by replacing the `src` values below.
+ *   • Prefers real project photography from lib/realProjects.js
+ *   • Falls back to curated placeholders when there aren't enough real
+ *     images yet — the slideshow always cycles a full 6 slides.
+ *   • Aims for a ~70 / 30 residential / commercial mix once fully populated.
  * ------------------------------------------------------------------- */
-const HERO_IMAGES = [
+const PLACEHOLDERS = [
   { src: "https://images.pexels.com/photos/33685863/pexels-photo-33685863.jpeg?auto=compress&cs=tinysrgb&w=1920", kind: "residential" },
   { src: "https://images.pexels.com/photos/34688219/pexels-photo-34688219.jpeg?auto=compress&cs=tinysrgb&w=1920", kind: "residential" },
   { src: "https://images.pexels.com/photos/33685861/pexels-photo-33685861.jpeg?auto=compress&cs=tinysrgb&w=1920", kind: "residential" },
@@ -20,11 +18,19 @@ const HERO_IMAGES = [
   { src: "https://images.pexels.com/photos/1080696/pexels-photo-1080696.jpeg?auto=compress&cs=tinysrgb&w=1920",  kind: "residential" },
   { src: "https://images.pexels.com/photos/380769/pexels-photo-380769.jpeg?auto=compress&cs=tinysrgb&w=1920",   kind: "commercial"  },
 ];
-const SLIDE_HOLD_MS  = 4800;   // time an image is fully visible
-const CROSSFADE_MS   = 1800;   // duration of the fade between images
 
-/* Per-slide Ken-Burns origins keep the drift feeling organic. */
-const ORIGINS = ["center", "top left", "bottom right", "top right", "bottom left", "center"];
+const buildHeroImages = () => {
+  const real = realHeroImages();
+  if (real.length >= 6) return real.slice(0, 8);
+  // Real images first, then top-up with placeholders until we have 6.
+  const missing = 6 - real.length;
+  return [...real, ...PLACEHOLDERS.slice(0, missing)];
+};
+
+const HERO_IMAGES = buildHeroImages();
+const SLIDE_HOLD_MS  = 4800;
+const CROSSFADE_MS   = 1800;
+const ORIGINS = ["center", "top left", "bottom right", "top right", "bottom left", "center", "center", "top center"];
 
 export default function Hero() {
   const ref = useRef(null);
@@ -54,7 +60,7 @@ export default function Hero() {
     () =>
       HERO_IMAGES.map((im, idx) => ({
         ...im,
-        origin: ORIGINS[idx % ORIGINS.length],
+        origin: im.origin || ORIGINS[idx % ORIGINS.length],
         // negative delays de-sync each image's Ken-Burns cycle so the
         // motion never feels lock-stepped when two images cross-fade.
         delay: `-${(idx * 3.3) % 14}s`,
