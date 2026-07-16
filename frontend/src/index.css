@@ -2,40 +2,55 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ---- Fonts: Cormorant Garamond (headline serif) + Outfit (body sans) ---- */
+/* ---- Fonts: Cormorant Garamond (serif) + Outfit (body) + Manrope (wordmark/labels) ---- */
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=Outfit:wght@200;300;400;500;600&family=Manrope:wght@500;700;800&family=JetBrains+Mono:wght@300;400&display=swap');
 
+/* ------------------------------------------------------------------ */
+/* Warm-neutral luxury palette                                        */
+/*  bg-0 : cream off-white  (main canvas)                             */
+/*  bg-1 : soft warm beige  (secondary panels)                        */
+/*  bg-2 : deeper sand      (subtle accent surfaces)                  */
+/*  ink  : warm charcoal    (primary type + borders)                  */
+/*  gold : bronze           (accent — small doses)                    */
+/* ------------------------------------------------------------------ */
 :root {
-    --bg-0: #0A0B0E;
-    --bg-1: #14151A;
-    --bg-2: #1C1E26;
-    --ink:  #F4F3ED;
-    --muted:#A1A1AA;
-    --gold: #C8A97E;
-    --gold-hi: #DFBC8E;
-    --line: rgba(255, 255, 255, 0.10);
-    --line-strong: rgba(255, 255, 255, 0.22);
+    --bg-0: #F6F1E7;
+    --bg-1: #EEE6D5;
+    --bg-2: #E1D5BE;
+    --ink:  #1F1A16;
+    --ink-soft: #2C2621;
+    --muted:#6B615A;
+    --gold: #9C7A4E;
+    --gold-hi: #B9955F;
+    --line: rgba(31, 26, 22, 0.10);
+    --line-strong: rgba(31, 26, 22, 0.22);
 
-    /* shadcn tokens — anchored to our palette */
-    --background: 220 12% 5%;
-    --foreground: 45 22% 94%;
-    --card: 225 11% 9%;
-    --card-foreground: 45 22% 94%;
-    --popover: 225 11% 8%;
-    --popover-foreground: 45 22% 94%;
-    --primary: 45 22% 94%;
-    --primary-foreground: 220 12% 6%;
-    --secondary: 224 10% 12%;
-    --secondary-foreground: 45 22% 94%;
-    --muted-color: 224 10% 12%;
-    --muted-foreground: 240 5% 66%;
-    --accent: 34 40% 64%;
-    --accent-foreground: 220 12% 6%;
-    --destructive: 0 62% 44%;
-    --destructive-foreground: 45 22% 94%;
-    --border: 0 0% 100% / 0.10;
-    --input: 224 10% 14%;
-    --ring: 34 40% 64%;
+    /* Dark section (hero) — used to preserve the cinematic dark hero */
+    --dark-0: #14100C;
+    --dark-1: #1D1813;
+    --on-dark: #F5EEE0;
+    --on-dark-soft: rgba(245, 238, 224, 0.82);
+
+    /* shadcn tokens — anchored to warm palette */
+    --background: 39 45% 93%;
+    --foreground: 24 17% 10%;
+    --card: 39 41% 88%;
+    --card-foreground: 24 17% 10%;
+    --popover: 39 45% 96%;
+    --popover-foreground: 24 17% 10%;
+    --primary: 24 17% 12%;
+    --primary-foreground: 39 45% 96%;
+    --secondary: 39 30% 90%;
+    --secondary-foreground: 24 17% 12%;
+    --muted-color: 39 30% 90%;
+    --muted-foreground: 25 8% 40%;
+    --accent: 30 34% 46%;
+    --accent-foreground: 39 45% 96%;
+    --destructive: 6 65% 45%;
+    --destructive-foreground: 39 45% 96%;
+    --border: 24 17% 10% / 0.10;
+    --input: 39 30% 88%;
+    --ring: 30 34% 46%;
     --radius: 0.125rem;
 }
 
@@ -54,21 +69,20 @@ body {
     overflow-x: hidden;
 }
 
-::selection { background: var(--gold); color: var(--bg-0); }
+::selection { background: var(--gold); color: #fff; }
 
-/* Grain overlay layer (fixed, subtle) */
+/* Subtle grain — softer over cream */
 body::before {
     content: "";
     position: fixed;
     inset: 0;
     z-index: 1;
     pointer-events: none;
-    opacity: 0.06;
-    mix-blend-mode: overlay;
+    opacity: 0.045;
+    mix-blend-mode: multiply;
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
 }
 
-/* Custom cursor accent on interactive elements */
 a, button, [role="button"] { cursor: pointer; }
 
 /* Utility classes */
@@ -77,7 +91,6 @@ a, button, [role="button"] { cursor: pointer; }
 .font-wordmark { font-family: 'Manrope', 'Outfit', sans-serif; font-weight: 800; letter-spacing: 0.14em; }
 .font-mono-alt { font-family: 'JetBrains Mono', monospace; }
 
-/* Nav label — bold tracked sans, uppercase */
 .nav-label {
     font-family: 'Manrope', 'Outfit', sans-serif;
     font-weight: 500;
@@ -93,13 +106,13 @@ a, button, [role="button"] { cursor: pointer; }
     letter-spacing: 0.28em;
     text-transform: uppercase;
     color: var(--gold);
-    font-weight: 400;
+    font-weight: 500;
 }
 
 .hairline { height: 1px; background: var(--line); width: 100%; }
 .hairline-strong { height: 1px; background: var(--line-strong); width: 100%; }
 
-/* Masked reveal wrapper for hero — animate inner span from translateY(105%) to 0 */
+/* Masked reveal wrapper for hero */
 .reveal-mask { display: inline-block; overflow: hidden; vertical-align: bottom; line-height: 0.95; }
 .reveal-mask > span { display: inline-block; transform: translateY(105%); will-change: transform; }
 .reveal-mask.in > span { transform: translateY(0); transition: transform 1.05s cubic-bezier(0.2, 0.7, 0.15, 1); }
@@ -108,14 +121,29 @@ a, button, [role="button"] { cursor: pointer; }
 .reveal-mask.d3 > span { transition-delay: 0.35s; }
 .reveal-mask.d4 > span { transition-delay: 0.50s; }
 
-/* Reveal for headlines/paragraphs */
 .rise { opacity: 0; transform: translateY(24px); transition: opacity 0.9s ease, transform 0.9s cubic-bezier(0.2,0.7,0.15,1); }
 .rise.in { opacity: 1; transform: translateY(0); }
 
-/* Nav */
-.nav-blur { backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); background: rgba(10, 11, 14, 0.55); }
+/* ------------------------------------------------------------------ */
+/* Nav                                                                */
+/* Cream backdrop when scrolled; transparent while over dark hero.    */
+/* ------------------------------------------------------------------ */
+.nav-blur {
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    background: rgba(246, 241, 231, 0.82);
+}
+.nav-over-hero {
+    background: rgba(20, 16, 12, 0.35);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+.nav-over-hero .nav-label,
+.nav-over-hero .font-wordmark { color: var(--on-dark); }
+.nav-over-hero .btn-pill { border-color: var(--on-dark); color: var(--on-dark); }
+.nav-over-hero .btn-pill:hover { background: var(--on-dark); color: var(--dark-0); }
+.nav-over-hero .cm-logo-color { color: var(--on-dark); }
 
-/* Underline for nav links */
 .nav-link { position: relative; }
 .nav-link::after {
     content: ""; position: absolute; left: 0; bottom: -6px; height: 1px;
@@ -124,19 +152,23 @@ a, button, [role="button"] { cursor: pointer; }
 }
 .nav-link:hover::after, .nav-link[data-open="true"]::after { transform: scaleX(1); transform-origin: left; }
 
-/* Dropdown menu — solid glass, never transparent */
+/* Dropdown — cream glass on light theme */
 .dropdown-panel {
-    background: rgba(10, 11, 14, 0.94);
+    background: rgba(246, 241, 231, 0.96);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
     border: 1px solid var(--line);
+    box-shadow: 0 20px 60px rgba(31, 26, 22, 0.12);
 }
 
-/* Buttons */
+/* ------------------------------------------------------------------ */
+/* Buttons                                                            */
+/* ------------------------------------------------------------------ */
 .btn-pill {
     display: inline-flex; align-items: center; gap: 10px;
-    padding: 14px 28px; border-radius: 999px; font-size: 13px;
-    letter-spacing: 0.15em; text-transform: uppercase; font-weight: 400;
+    padding: 14px 28px; border-radius: 999px; font-size: 12px;
+    letter-spacing: 0.18em; text-transform: uppercase; font-weight: 500;
+    font-family: 'Manrope', 'Outfit', sans-serif;
     border: 1px solid var(--ink); color: var(--ink); background: transparent;
     transition: background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease;
 }
@@ -144,19 +176,42 @@ a, button, [role="button"] { cursor: pointer; }
 
 .btn-gold {
     display: inline-flex; align-items: center; gap: 10px;
-    padding: 14px 28px; border-radius: 999px; font-size: 13px;
-    letter-spacing: 0.15em; text-transform: uppercase; font-weight: 400;
-    background: var(--gold); color: var(--bg-0); border: 1px solid var(--gold);
+    padding: 14px 28px; border-radius: 999px; font-size: 12px;
+    letter-spacing: 0.18em; text-transform: uppercase; font-weight: 600;
+    font-family: 'Manrope', 'Outfit', sans-serif;
+    background: var(--ink); color: var(--bg-0); border: 1px solid var(--ink);
     transition: background-color 0.35s ease, border-color 0.35s ease;
 }
-.btn-gold:hover { background: var(--gold-hi); border-color: var(--gold-hi); }
+.btn-gold:hover { background: var(--gold); border-color: var(--gold); color: #fff; }
 
-/* Marquee text */
+.btn-outline-light {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 14px 28px; border-radius: 999px; font-size: 12px;
+    letter-spacing: 0.18em; text-transform: uppercase; font-weight: 500;
+    font-family: 'Manrope', 'Outfit', sans-serif;
+    border: 1px solid var(--on-dark); color: var(--on-dark); background: transparent;
+    transition: background-color 0.35s ease, color 0.35s ease;
+}
+.btn-outline-light:hover { background: var(--on-dark); color: var(--dark-0); }
+
+.btn-solid-light {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 14px 28px; border-radius: 999px; font-size: 12px;
+    letter-spacing: 0.18em; text-transform: uppercase; font-weight: 600;
+    font-family: 'Manrope', 'Outfit', sans-serif;
+    background: var(--on-dark); color: var(--dark-0); border: 1px solid var(--on-dark);
+    transition: background-color 0.35s ease, color 0.35s ease;
+}
+.btn-solid-light:hover { background: var(--gold); color: #fff; border-color: var(--gold); }
+
+/* ------------------------------------------------------------------ */
+/* Marquee                                                            */
+/* ------------------------------------------------------------------ */
 .marquee-item {
     font-family: 'Cormorant Garamond', serif;
     font-style: italic;
     font-size: clamp(2.25rem, 6vw, 4.5rem);
-    color: rgba(244, 243, 237, 0.86);
+    color: rgba(31, 26, 22, 0.9);
     padding: 0 3rem;
     line-height: 1.1;
 }
@@ -167,13 +222,16 @@ a, button, [role="button"] { cursor: pointer; }
     display: inline-flex; align-items: center;
 }
 
-/* Project card hover */
-.proj-card { position: relative; overflow: hidden; background: var(--bg-1); }
+/* ------------------------------------------------------------------ */
+/* Project cards / image cards                                        */
+/*   Text sits over the darkened bottom of the image, always in cream. */
+/* ------------------------------------------------------------------ */
+.proj-card { position: relative; overflow: hidden; background: var(--bg-2); }
 .proj-card img { transition: transform 1.2s cubic-bezier(0.2,0.7,0.15,1), filter 0.6s ease; }
 .proj-card:hover img { transform: scale(1.06); filter: brightness(0.9); }
 .proj-card::after {
     content: ""; position: absolute; inset: 0;
-    background: linear-gradient(180deg, transparent 50%, rgba(10,11,14,0.75) 100%);
+    background: linear-gradient(180deg, transparent 45%, rgba(20, 16, 12, 0.85) 100%);
     pointer-events: none;
 }
 
@@ -183,11 +241,11 @@ a, button, [role="button"] { cursor: pointer; }
     font-size: clamp(6rem, 13vw, 12rem);
     line-height: 0.8;
     color: transparent;
-    -webkit-text-stroke: 1px rgba(200, 169, 126, 0.35);
+    -webkit-text-stroke: 1px rgba(156, 122, 78, 0.45);
     letter-spacing: -0.02em;
 }
 
-/* Inputs */
+/* Inputs (public forms) */
 input, textarea, select {
     background: transparent;
     color: var(--ink);
@@ -201,40 +259,63 @@ input, textarea, select {
     width: 100%;
 }
 input:focus, textarea:focus, select:focus { border-color: var(--gold); }
-input::placeholder, textarea::placeholder { color: var(--muted); }
+input::placeholder, textarea::placeholder { color: rgba(31, 26, 22, 0.4); }
 
-/* Admin-panel — sharp edges */
-.admin-shell { background: var(--bg-0); color: var(--ink); min-height: 100vh; }
-.admin-card { background: var(--bg-1); border: 1px solid var(--line); }
+/* ------------------------------------------------------------------ */
+/* Admin console — kept intentionally DARK (working tool aesthetic).  */
+/* ------------------------------------------------------------------ */
+.admin-shell {
+    background: #14100C;
+    color: #F5EEE0;
+    min-height: 100vh;
+}
+.admin-shell .overline { color: var(--gold-hi); }
+.admin-shell .font-serif { color: #F5EEE0; }
+.admin-shell input, .admin-shell textarea, .admin-shell select {
+    color: #F5EEE0;
+    border-bottom-color: rgba(245, 238, 224, 0.2);
+}
+.admin-shell input::placeholder, .admin-shell textarea::placeholder {
+    color: rgba(245, 238, 224, 0.4);
+}
+.admin-card {
+    background: #1D1813;
+    border: 1px solid rgba(245, 238, 224, 0.08);
+}
 .admin-input {
-    background: var(--bg-2);
-    border: 1px solid var(--line-strong);
-    color: var(--ink);
+    background: #241D16;
+    border: 1px solid rgba(245, 238, 224, 0.14);
+    color: #F5EEE0;
     padding: 10px 12px;
     font-size: 14px;
     width: 100%;
+    border-bottom: 1px solid rgba(245, 238, 224, 0.14);
 }
-.admin-input:focus { border-color: var(--gold); outline: none; }
+.admin-input:focus { border-color: var(--gold-hi); outline: none; }
 .admin-btn {
-    background: var(--gold); color: var(--bg-0);
-    padding: 10px 18px; font-size: 12px;
-    letter-spacing: 0.15em; text-transform: uppercase;
+    background: var(--gold);
+    color: #fff;
+    padding: 10px 18px;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    font-family: 'Manrope', 'Outfit', sans-serif;
+    font-weight: 600;
     border: 1px solid var(--gold);
     transition: background-color 0.3s ease;
 }
 .admin-btn:hover { background: var(--gold-hi); border-color: var(--gold-hi); }
-.admin-btn.ghost { background: transparent; color: var(--ink); border-color: var(--line-strong); }
-.admin-btn.ghost:hover { background: var(--bg-2); }
-.admin-btn.danger { background: transparent; color: #ef7c7c; border-color: rgba(239,124,124,0.35); }
-.admin-btn.danger:hover { background: rgba(239,124,124,0.08); }
+.admin-btn.ghost { background: transparent; color: #F5EEE0; border-color: rgba(245, 238, 224, 0.2); }
+.admin-btn.ghost:hover { background: rgba(245, 238, 224, 0.06); }
+.admin-btn.danger { background: transparent; color: #E88A8A; border-color: rgba(232, 138, 138, 0.4); }
+.admin-btn.danger:hover { background: rgba(232, 138, 138, 0.1); }
 
-/* Scrollbar */
+/* Scrollbar — warm neutral */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: var(--bg-0); }
 ::-webkit-scrollbar-thumb { background: var(--bg-2); }
-::-webkit-scrollbar-thumb:hover { background: var(--line-strong); }
+::-webkit-scrollbar-thumb:hover { background: var(--gold); }
 
-/* Prefer reduced motion */
 @media (prefers-reduced-motion: reduce) {
     .reveal-mask > span, .rise { transition: none !important; transform: none !important; opacity: 1 !important; }
 }

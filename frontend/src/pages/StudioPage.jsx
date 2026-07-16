@@ -43,7 +43,7 @@ export default function StudioPage() {
               outlive their trends.
             </p>
 
-            <div className="grid grid-cols-3 gap-6 border-t border-white/10 pt-8">
+            <div className="grid grid-cols-3 gap-6 border-t border-[var(--line)] pt-8">
               <Stat n="80+" l="Projects Delivered" />
               <Stat n="12" l="Cities" />
               <Stat n="6" l="Years of Craft" />
@@ -57,7 +57,7 @@ export default function StudioPage() {
             ["Restoration & Renovation Wing", "Heritage restoration, facade renewal, adaptive reuse and structural renovation — reverent, precise, thoroughly documented."],
           ].map(([t, b], i) => (
             <Rise key={t} delay={i * 100}>
-              <div className="p-8 md:p-10 border border-white/10 bg-[var(--bg-1)]">
+              <div className="p-8 md:p-10 border border-[var(--line)] bg-[var(--bg-1)]">
                 <div className="overline text-[10px] text-[var(--gold)] mb-4">{i === 0 ? "Wing 01" : "Wing 02"}</div>
                 <h3 className="font-serif text-[28px] md:text-[36px] leading-tight tracking-tight mb-4">{t}</h3>
                 <p className="text-[15px] leading-relaxed text-[var(--ink)]/80">{b}</p>

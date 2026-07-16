@@ -70,7 +70,7 @@ export default function WorksPage() {
                 className={`px-4 py-2 border text-[12px] uppercase tracking-[0.14em] transition-colors ${
                   category === k
                     ? "border-[var(--gold)] text-[var(--gold)]"
-                    : "border-white/15 text-[var(--ink)]/80 hover:border-white/40"
+                    : "border-[var(--line-strong)] text-[var(--ink)]/80 hover:border-[var(--line-strong)]"
                 }`}
               >
                 {l}

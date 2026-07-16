@@ -119,7 +119,7 @@ export default function GalleryPage() {
           >
             <button
               onClick={() => setLightbox(null)}
-              className="absolute top-6 right-6 w-10 h-10 border border-white/20 text-[var(--ink)] hover:border-[var(--gold)] hover:text-[var(--gold)] transition"
+              className="absolute top-6 right-6 w-10 h-10 border border-[var(--line-strong)] text-[var(--ink)] hover:border-[var(--gold)] hover:text-[var(--gold)] transition"
               aria-label="Close"
             >✕</button>
             <motion.div
@@ -165,7 +165,7 @@ function FilterChip({ axis, val, active, onChange, children, idx }) {
       data-testid={`gallery-filter-${axis}-${val === "all" ? "all" : idx}`}
       onClick={() => onChange(val)}
       className={`px-3 py-1.5 text-[12px] tracking-[0.06em] border transition-colors ${
-        is ? "border-[var(--gold)] text-[var(--gold)]" : "border-white/10 text-[var(--ink)]/80 hover:border-white/30"
+        is ? "border-[var(--gold)] text-[var(--gold)]" : "border-[var(--line)] text-[var(--ink)]/80 hover:border-[var(--line-strong)]"
       }`}
     >
       {children}

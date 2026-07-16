@@ -6,7 +6,7 @@ const PRACTICE = [
     tag: "01 / Interiors",
     title: "Residential, hospitality & commercial interiors.",
     body: "From private residences to boutique hospitality, our interior practice is a study in restraint — considered material palettes, quiet lighting, and an editorial approach to composition.",
-    image: "https://images.pexels.com/photos/34688219/pexels-photo-34688219.jpeg",
+    image: "https://images.pexels.com/photos/33685861/pexels-photo-33685861.jpeg?auto=compress&cs=tinysrgb&w=1400",
     to: "/works?category=interiors",
     cta: "Interior Portfolio",
   },
@@ -14,7 +14,7 @@ const PRACTICE = [
     tag: "02 / Restoration & Renovation",
     title: "Heritage restoration and structural renewal.",
     body: "A dedicated wing for the preservation and adaptation of older architecture — facade renewal, structural restoration, and the sensitive reuse of built heritage.",
-    image: "https://images.pexels.com/photos/7389533/pexels-photo-7389533.jpeg",
+    image: "https://images.pexels.com/photos/7389533/pexels-photo-7389533.jpeg?auto=compress&cs=tinysrgb&w=1400",
     to: "/works?category=restoration",
     cta: "Restoration Portfolio",
   },
@@ -51,7 +51,7 @@ export default function Divisions() {
                     className="w-full h-full object-cover"
                     loading="lazy"
                   />
-                  <span className="absolute top-4 left-4 overline text-[10px] bg-[var(--bg-0)]/70 backdrop-blur px-3 py-1.5 border border-white/10">
+                  <span className="absolute top-4 left-4 overline text-[10px] bg-[var(--bg-0)]/85 backdrop-blur px-3 py-1.5 border border-[var(--line)]">
                     {p.tag}
                   </span>
                 </div>

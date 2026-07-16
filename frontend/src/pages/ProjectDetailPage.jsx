@@ -96,7 +96,7 @@ export default function ProjectDetailPage() {
 
       {/* Related */}
       {related.length > 0 && (
-        <section className="pb-24 md:pb-32 border-t border-white/10 pt-20">
+        <section className="pb-24 md:pb-32 border-t border-[var(--line)] pt-20">
           <div className="max-w-[1440px] mx-auto px-6 md:px-14">
             <div className="flex items-end justify-between mb-10">
               <h2 className="font-serif text-[clamp(2rem,4vw,3.5rem)] tracking-tight">Related Projects</h2>

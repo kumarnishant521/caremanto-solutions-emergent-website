@@ -12,7 +12,7 @@ export default function EditorialMarquee() {
   return (
     <section
       data-testid="marquee-section"
-      className="relative border-y border-white/10 bg-[var(--bg-0)] py-6 md:py-8 overflow-hidden"
+      className="relative border-y border-[var(--line)] bg-[var(--bg-0)] py-6 md:py-8 overflow-hidden"
     >
       <Marquee speed={38} gradient={false} pauseOnHover>
         {items.map((t, i) => (

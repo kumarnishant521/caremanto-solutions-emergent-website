@@ -77,17 +77,17 @@ export function ProjectCard({ project, large = false }) {
       </div>
       <div className="absolute inset-x-0 bottom-0 z-10 p-5 md:p-7 flex items-end justify-between gap-4">
         <div>
-          <div className="overline text-[10px] text-[var(--gold)] mb-2">
+          <div className="text-[10px] tracking-[0.28em] uppercase text-[var(--gold-hi)] mb-2 font-medium">
             {project.category === "interiors" ? "Interiors" : "Restoration"} · {project.subcategory}
           </div>
-          <h3 className="font-serif text-[22px] md:text-[30px] leading-none tracking-tight">
+          <h3 className="font-serif text-[22px] md:text-[30px] leading-none tracking-tight text-white">
             {project.title}
           </h3>
-          <div className="text-[12px] text-[var(--muted)] mt-2">
+          <div className="text-[12px] text-white/70 mt-2">
             {project.location}{project.location && project.year ? " · " : ""}{project.year}
           </div>
         </div>
-        <span className="hidden md:inline-block w-9 h-9 rounded-full border border-white/30 group-hover:border-[var(--gold)] group-hover:bg-[var(--gold)] group-hover:text-[var(--bg-0)] transition-colors text-[var(--ink)] text-center leading-[34px]">↗</span>
+        <span className="hidden md:inline-block w-9 h-9 rounded-full border border-white/40 text-white text-center leading-[34px] group-hover:border-[var(--gold-hi)] group-hover:bg-[var(--gold-hi)] transition-colors">↗</span>
       </div>
     </Link>
   );

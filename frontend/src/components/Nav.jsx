@@ -40,7 +40,7 @@ function BrandMark() {
       />
     );
   }
-  return <CMLogo size={42} className="text-[var(--ink)]" />;
+  return <CMLogo size={42} className="cm-logo-color text-[var(--ink)]" />;
 }
 
 const RESTORATION_SHORT = "Services – Restoration & Renovation";
@@ -61,6 +61,10 @@ export default function Nav() {
 
   useEffect(() => { setOpen(null); setMobileOpen(false); }, [loc.pathname]);
 
+  // Only apply the "over dark hero" style when on the home page & near the top.
+  const isHome = loc.pathname === "/";
+  const overHero = isHome && !scrolled;
+
   const goWorks = (cat, sub) => {
     const params = new URLSearchParams({ category: cat });
     if (sub) params.set("sub", sub);
@@ -74,9 +78,9 @@ export default function Nav() {
   return (
     <header
       data-testid="site-nav"
-      className={`fixed top-0 left-0 right-0 z-50 nav-blur transition-colors duration-500 ${
-        scrolled ? "border-b border-white/10" : "border-b border-transparent"
-      }`}
+      className={`fixed top-0 left-0 right-0 z-50 transition-colors duration-500 ${
+        overHero ? "nav-over-hero" : "nav-blur"
+      } ${scrolled ? "border-b border-[var(--line)]" : "border-b border-transparent"}`}
     >
       <div className="max-w-[1500px] mx-auto px-6 md:px-10 h-[80px] flex items-center justify-between gap-6">
         {/* Brand */}
@@ -169,11 +173,11 @@ export default function Nav() {
         <button
           data-testid="mobile-menu-toggle"
           onClick={() => setMobileOpen((v) => !v)}
-          className="xl:hidden w-11 h-11 flex flex-col items-center justify-center gap-[5px] border border-white/15 hover:border-[var(--gold)] transition-colors"
+          className="xl:hidden w-11 h-11 flex flex-col items-center justify-center gap-[5px] border border-[var(--line-strong)] hover:border-[var(--gold)] transition-colors"
           aria-label="Menu"
         >
-          <span className={`w-4 h-[1.5px] bg-[var(--ink)] transition-transform ${mobileOpen ? "translate-y-[3px] rotate-45" : ""}`}/>
-          <span className={`w-4 h-[1.5px] bg-[var(--ink)] transition-transform ${mobileOpen ? "-translate-y-[3px] -rotate-45" : ""}`}/>
+          <span className={`w-4 h-[1.5px] bg-current transition-transform ${mobileOpen ? "translate-y-[3px] rotate-45" : ""}`}/>
+          <span className={`w-4 h-[1.5px] bg-current transition-transform ${mobileOpen ? "-translate-y-[3px] -rotate-45" : ""}`}/>
         </button>
       </div>
 
@@ -185,7 +189,7 @@ export default function Nav() {
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.4, ease: [0.2, 0.7, 0.15, 1] }}
-            className="xl:hidden overflow-hidden border-t border-white/10 bg-[var(--bg-0)]/97 backdrop-blur-xl"
+            className="xl:hidden overflow-hidden border-t border-[var(--line)] bg-[var(--bg-0)]/97 backdrop-blur-xl"
           >
             <div className="px-6 py-8 space-y-6">
               <Link to="/" data-testid="mobile-home" className="nav-label block text-[13px]">Home</Link>

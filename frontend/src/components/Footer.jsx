@@ -4,7 +4,7 @@ export default function Footer() {
   return (
     <footer
       data-testid="site-footer"
-      className="relative bg-[var(--bg-0)] border-t border-white/10 pt-20 pb-10 mt-0"
+      className="relative bg-[var(--bg-0)] border-t border-[var(--line)] pt-20 pb-10 mt-0"
     >
       <div className="max-w-[1440px] mx-auto px-6 md:px-14">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-6">
