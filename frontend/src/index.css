@@ -273,7 +273,16 @@ a, button, [role="button"] { cursor: pointer; }
 
 /* ------------------------------------------------------------------ */
 /* Marquee — sharp sans, uppercase, tight vertical rhythm             */
+/* Every slot uses identical horizontal spacing:                       */
+/*   [item][2.5rem][dot][2.5rem][item][2.5rem][dot]…                   */
+/* Both `.marquee-item` and `.marquee-dot` supply their spacing via a  */
+/* right-side padding ONLY — never left — so the gaps are symmetric.   */
 /* ------------------------------------------------------------------ */
+.marquee-slot {
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
+}
 .marquee-item {
     font-family: 'Montserrat', 'Manrope', 'Outfit', sans-serif;
     font-weight: 500;
@@ -282,14 +291,14 @@ a, button, [role="button"] { cursor: pointer; }
     letter-spacing: 0.14em;
     font-size: clamp(1.15rem, 2.2vw, 1.9rem);
     color: var(--ink);
-    padding: 0 2.5rem;
+    padding: 0 2.5rem 0 0;
     line-height: 1;
     display: inline-flex;
     align-items: center;
 }
 .marquee-dot {
     color: var(--gold);
-    padding: 0 1.4rem;
+    padding: 0 2.5rem 0 0;
     font-size: clamp(0.95rem, 1.7vw, 1.5rem);
     line-height: 1;
     display: inline-flex;

@@ -52,18 +52,17 @@ export default function HomeGallery() {
         const real = homeGalleryImages().map((r2) => r2.src);
         const combined = [];
         [...featured, ...real, ...PLACEHOLDERS].forEach((src) => {
-          if (src && !combined.includes(src) && combined.length < 10) combined.push(src);
+          if (src && !combined.includes(src) && combined.length < 12) combined.push(src);
         });
-        setTiles(combined.map((src, idx) => ({ src, span: SPANS[idx] })));
+        setTiles(combined.map((src) => ({ src })));
       })
       .catch(() => {
-        // Fallback: only realProjects.js + placeholders
         const real = homeGalleryImages().map((r) => r.src);
         const combined = [];
         [...real, ...PLACEHOLDERS].forEach((src) => {
-          if (src && !combined.includes(src) && combined.length < 10) combined.push(src);
+          if (src && !combined.includes(src) && combined.length < 12) combined.push(src);
         });
-        setTiles(combined.map((src, idx) => ({ src, span: SPANS[idx] })));
+        setTiles(combined.map((src) => ({ src })));
       });
   }, []);
 
@@ -91,16 +90,29 @@ export default function HomeGallery() {
           </Rise>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6">
+        {/*
+          Masonry columns preserve every image's natural aspect ratio, so
+          nothing is cropped (watermarks at the bottom edge stay visible)
+          and tiles pack tightly with no wide blank margins.
+        */}
+        <div
+          data-testid="home-gallery-grid"
+          className="columns-1 sm:columns-2 lg:columns-3 gap-4 md:gap-6 [column-fill:_balance]"
+        >
           {tiles.map((t, i) => (
-            <Rise key={i} delay={(i % 5) * 70} className={t.span}>
-              <figure className="relative overflow-hidden bg-[var(--bg-2)] h-full group">
+            <Rise
+              key={i}
+              delay={(i % 5) * 60}
+              className="mb-4 md:mb-6 break-inside-avoid block"
+            >
+              <figure className="relative overflow-hidden bg-[var(--bg-2)] group">
                 <img
                   src={t.src}
                   alt=""
                   aria-hidden="true"
                   loading="lazy"
-                  className="w-full h-full object-cover transition-transform duration-[1200ms] ease-[cubic-bezier(0.2,0.7,0.15,1)] group-hover:scale-[1.04]"
+                  className="w-full h-auto block max-w-full transition-transform duration-[1200ms] ease-[cubic-bezier(0.2,0.7,0.15,1)] group-hover:scale-[1.03]"
+                  style={{ objectFit: "contain" }}
                 />
               </figure>
             </Rise>
