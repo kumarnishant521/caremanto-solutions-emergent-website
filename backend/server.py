@@ -488,6 +488,15 @@ async def upload_image(file: UploadFile = File(...), _admin=Depends(get_current_
         f.write(data)
     return {"url": f"/api/uploads/{fname}", "filename": fname, "size": len(data), "content_type": file.content_type}
 
+# ---- Compatibility aliases so stale (cached) client bundles keep working ----
+# Older builds of the admin console posted to /api/upload instead of
+# /api/admin/upload. iOS Safari caches these hashed bundles aggressively, so
+# without this alias existing users see 404s until they clear browser cache.
+@api.post("/upload")
+async def upload_image_alias(file: UploadFile = File(...), _admin=Depends(get_current_admin)):
+    return await upload_image(file=file, _admin=_admin)
+
+
 # ------------------------------------------------------------------ health
 @api.get("/")
 async def root():
