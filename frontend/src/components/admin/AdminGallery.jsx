@@ -14,9 +14,12 @@ export default function AdminGallery() {
   const [filterSub, setFilterSub] = useState("");
   const [loading, setLoading] = useState(true);
   const [bulkText, setBulkText] = useState("");
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 24;
 
   const loadAll = () => {
     setLoading(true);
+    setPage(1);
     const q = new URLSearchParams();
     if (filterCat) q.set("category", filterCat);
     if (filterSub) q.set("subcategory", filterSub);
@@ -217,26 +220,54 @@ export default function AdminGallery() {
                     if (!files.length) return;
                     if (!form.category) { toast.error("Set category first."); return; }
                     if (currentSubOptions.length > 0 && !form.subcategory) { toast.error("Set sub-category first."); return; }
-                    let ok = 0;
-                    for (const f of files) {
-                      try {
-                        const fd = new FormData();
-                        fd.append("file", f);
-                        const r = await api.post("/admin/upload", fd, {
-                          headers: { "Content-Type": "multipart/form-data" },
-                        });
-                        const url = `${process.env.REACT_APP_BACKEND_URL}${r.data.url}`;
-                        await api.post("/admin/gallery", {
-                          title: "", description: "",
-                          category: form.category, subcategory: form.subcategory || "",
-                          image: url, is_sample: false,
-                        });
-                        ok += 1;
-                      } catch (err) {
-                        toast.error(`${f.name}: ${err?.response?.data?.detail || "upload failed"}`);
+
+                    const CONCURRENCY = 3;
+                    const MAX_ATTEMPTS = 3;
+                    let ok = 0, fail = 0, done = 0;
+                    const totalToast = toast.loading(`Uploading 0 / ${files.length}…`);
+
+                    const uploadOne = async (f) => {
+                      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+                        try {
+                          const fd = new FormData();
+                          fd.append("file", f);
+                          const r = await api.post("/admin/upload", fd, {
+                            headers: { "Content-Type": "multipart/form-data" },
+                          });
+                          const url = `${process.env.REACT_APP_BACKEND_URL}${r.data.url}`;
+                          await api.post("/admin/gallery", {
+                            title: "", description: "",
+                            category: form.category, subcategory: form.subcategory || "",
+                            image: url, is_sample: false,
+                          });
+                          return true;
+                        } catch (err) {
+                          if (attempt === MAX_ATTEMPTS) {
+                            console.warn(`Upload of ${f.name} failed after ${attempt} attempts`, err);
+                            return false;
+                          }
+                          await new Promise(res => setTimeout(res, 400 * Math.pow(2, attempt - 1)));
+                        }
                       }
-                    }
-                    if (ok) toast.success(`${ok} photograph(s) uploaded`);
+                      return false;
+                    };
+
+                    // Simple concurrency queue — CONCURRENCY workers pull from a shared cursor.
+                    let cursor = 0;
+                    const worker = async () => {
+                      while (cursor < files.length) {
+                        const idx = cursor++;
+                        const success = await uploadOne(files[idx]);
+                        if (success) ok++; else fail++;
+                        done++;
+                        toast.loading(`Uploading ${done} / ${files.length}${fail ? ` · ${fail} failed` : ""}…`, { id: totalToast });
+                      }
+                    };
+                    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, files.length) }, worker));
+
+                    toast.dismiss(totalToast);
+                    if (ok) toast.success(`${ok} photograph(s) uploaded${fail ? ` · ${fail} failed — please retry` : ""}`);
+                    else if (fail) toast.error(`All ${fail} uploads failed — please retry`);
                     e.target.value = "";
                     loadAll();
                   }}
@@ -268,11 +299,34 @@ export default function AdminGallery() {
       ) : photos.length === 0 ? (
         <div className="py-12 text-center text-[#F5EEE0]/60">No photographs yet.</div>
       ) : (
+        <>
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-[11px] text-[#F5EEE0]/60">
+            Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, photos.length)} of {photos.length}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="admin-btn ghost text-[11px] disabled:opacity-40"
+              data-testid="admin-page-prev"
+            >← Prev</button>
+            <span className="text-[11px] text-[#F5EEE0]/60">
+              {page} / {Math.max(1, Math.ceil(photos.length / PAGE_SIZE))}
+            </span>
+            <button
+              onClick={() => setPage((p) => p + 1)}
+              disabled={page * PAGE_SIZE >= photos.length}
+              className="admin-btn ghost text-[11px] disabled:opacity-40"
+              data-testid="admin-page-next"
+            >Next →</button>
+          </div>
+        </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {photos.map((p) => (
+          {photos.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((p) => (
             <div key={p.id} className="admin-card p-3" data-testid={`admin-photo-${p.id}`}>
               <div className="aspect-square overflow-hidden bg-[#241D16] mb-3 relative">
-                <img src={p.image} alt={p.title || ""} className="w-full h-full object-cover"/>
+                <img src={p.image} alt={p.title || ""} loading="lazy" className="w-full h-full object-cover"/>
                 {p.featured_home && (
                   <span className="absolute top-2 right-2 bg-[var(--gold)] text-white text-[9px] tracking-widest uppercase px-2 py-1">★ Home</span>
                 )}
@@ -290,10 +344,13 @@ export default function AdminGallery() {
               <div className="flex flex-wrap gap-1.5 mt-2">
                 <button
                   onClick={async () => {
-                    try {
-                      await api.put(`/admin/gallery/${p.id}`, { ...p, featured_home: !p.featured_home });
-                      loadAll();
-                    } catch { toast.error("Failed."); }
+                    // Optimistic — no refetch on click, admin stays responsive
+                    setPhotos((prev) => prev.map((x) => x.id === p.id ? { ...x, featured_home: !x.featured_home } : x));
+                    try { await api.put(`/admin/gallery/${p.id}`, { ...p, featured_home: !p.featured_home }); }
+                    catch {
+                      toast.error("Failed.");
+                      setPhotos((prev) => prev.map((x) => x.id === p.id ? { ...x, featured_home: p.featured_home } : x));
+                    }
                   }}
                   className={`admin-btn ghost flex-1 text-[10px] min-w-[60px] ${p.featured_home ? "text-[var(--gold-hi)]" : ""}`}
                   data-testid={`toggle-home-${p.id}`}
@@ -302,10 +359,12 @@ export default function AdminGallery() {
                 </button>
                 <button
                   onClick={async () => {
-                    try {
-                      await api.put(`/admin/gallery/${p.id}`, { ...p, featured_portfolio: !p.featured_portfolio });
-                      loadAll();
-                    } catch { toast.error("Failed."); }
+                    setPhotos((prev) => prev.map((x) => x.id === p.id ? { ...x, featured_portfolio: !x.featured_portfolio } : x));
+                    try { await api.put(`/admin/gallery/${p.id}`, { ...p, featured_portfolio: !p.featured_portfolio }); }
+                    catch {
+                      toast.error("Failed.");
+                      setPhotos((prev) => prev.map((x) => x.id === p.id ? { ...x, featured_portfolio: p.featured_portfolio } : x));
+                    }
                   }}
                   className={`admin-btn ghost flex-1 text-[10px] min-w-[60px] ${p.featured_portfolio ? "text-[var(--gold-hi)]" : ""}`}
                   data-testid={`toggle-portfolio-${p.id}`}
@@ -314,10 +373,12 @@ export default function AdminGallery() {
                 </button>
                 <button
                   onClick={async () => {
-                    try {
-                      await api.put(`/admin/gallery/${p.id}`, { ...p, is_cover: !p.is_cover });
-                      loadAll();
-                    } catch { toast.error("Failed."); }
+                    setPhotos((prev) => prev.map((x) => x.id === p.id ? { ...x, is_cover: !x.is_cover } : x));
+                    try { await api.put(`/admin/gallery/${p.id}`, { ...p, is_cover: !p.is_cover }); }
+                    catch {
+                      toast.error("Failed.");
+                      setPhotos((prev) => prev.map((x) => x.id === p.id ? { ...x, is_cover: p.is_cover } : x));
+                    }
                   }}
                   className={`admin-btn ghost flex-1 text-[10px] min-w-[60px] ${p.is_cover ? "text-[var(--gold-hi)]" : ""}`}
                   data-testid={`toggle-cover-${p.id}`}
@@ -330,6 +391,7 @@ export default function AdminGallery() {
             </div>
           ))}
         </div>
+        </>
       )}
     </section>
   );

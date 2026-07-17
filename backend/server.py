@@ -517,7 +517,7 @@ async def upload_image(file: UploadFile = File(...), _admin=Depends(get_current_
 
         # Prefer Emergent object storage (essentially unlimited capacity).
         try:
-            put_object_from_file(storage_path, Path(tmp.name), file.content_type or "application/octet-stream")
+            await put_object_from_file(storage_path, Path(tmp.name), file.content_type or "application/octet-stream")
             # Public URL served by our own /api/files/... proxy.
             url = f"/api/files/{storage_path}"
             backend = "object-storage"
@@ -557,23 +557,27 @@ async def upload_image_alias(file: UploadFile = File(...), _admin=Depends(get_cu
 
 # ------------------------------------------------------------------ /files/* streaming proxy
 # Serves objects stored in Emergent Object Storage back to the browser.
-# Uses HTTP range-friendly streaming so large videos (multi-GB) play with
-# zero server-side buffering.
+# Uses HTTP streaming so large videos (multi-GB) play with zero server-side
+# buffering.
 @api.get("/files/{path:path}")
 async def get_file(path: str):
     try:
-        upstream, content_type = get_object_stream(path)
+        upstream, content_type = await get_object_stream(path)
     except Exception as e:
         logger.warning(f"Object fetch failed for {path}: {e}")
         raise HTTPException(404, "File not found")
 
-    def _iter():
+    async def _iter():
         try:
-            for chunk in upstream.iter_content(chunk_size=64 * 1024):
+            async for chunk in upstream.aiter_bytes(chunk_size=64 * 1024):
                 if chunk:
                     yield chunk
         finally:
-            upstream.close()
+            await upstream.aclose()
+            client = getattr(upstream, "_caremanto_client", None)
+            if client is not None:
+                try: await client.aclose()
+                except Exception: pass
 
     headers = {"Cache-Control": "public, max-age=31536000, immutable"}
     if "Content-Length" in upstream.headers:
@@ -746,7 +750,7 @@ async def seed_admin_and_samples():
 async def on_startup():
     # Warm up the object storage session key (non-fatal on failure).
     try:
-        init_storage()
+        await init_storage()
     except Exception as e:
         logger.warning(f"Object storage init deferred: {e}")
     try:
