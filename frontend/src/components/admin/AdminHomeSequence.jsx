@@ -116,6 +116,46 @@ export default function AdminHomeSequence() {
         </div>
       </div>
 
+      {/* Live preview strip — a masonry-mini of the home-page bento */}
+      <div className="admin-card p-4 md:p-6" data-testid="home-seq-preview">
+        <div className="flex items-baseline justify-between mb-3">
+          <div className="overline text-[var(--gold-hi)]">Live Preview</div>
+          <div className="text-[10px] text-[#F5EEE0]/50">
+            {dirty ? "Unsaved order — visible only in preview" : "Currently published order"}
+          </div>
+        </div>
+        {seq.length === 0 ? (
+          <div className="py-8 text-center text-[#F5EEE0]/50 text-[12px]">
+            No photographs on the home page yet.
+          </div>
+        ) : (
+          <div className="grid grid-cols-4 md:grid-cols-8 gap-1.5">
+            {seq.slice(0, 24).map((p, idx) => (
+              <div
+                key={`prev-${p.id}`}
+                className="relative aspect-square overflow-hidden bg-[#241D16]"
+                title={`#${idx + 1} · ${p.category}${p.subcategory ? " · " + p.subcategory : ""}`}
+              >
+                <img
+                  src={thumbUrl(p.image, 200)}
+                  alt=""
+                  loading="lazy"
+                  className="w-full h-full object-cover"
+                />
+                <span className="absolute top-1 left-1 text-[9px] font-bold text-white bg-black/70 px-1.5 py-0.5">
+                  {idx + 1}
+                </span>
+              </div>
+            ))}
+            {seq.length > 24 && (
+              <div className="aspect-square flex items-center justify-center bg-[#241D16] border border-[#F5EEE0]/10 text-[10px] tracking-[0.2em] uppercase text-[#F5EEE0]/60">
+                +{seq.length - 24}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Add-photo picker */}
       {pickerOpen && (
         <div className="admin-card p-4 md:p-6">
