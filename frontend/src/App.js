@@ -5,6 +5,7 @@ import "@/App.css";
 
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/lib/auth";
 import { useLenis } from "@/lib/useLenis";
 
@@ -88,10 +89,12 @@ function SiteRoot() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <SiteRoot />
-      </AuthProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <SiteRoot />
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }

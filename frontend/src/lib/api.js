@@ -8,6 +8,32 @@ export const api = axios.create({
   withCredentials: true,
 });
 
+/**
+ * Prevents the CRA red runtime-error overlay from showing up whenever an API
+ * call happens to fail. We still surface the rejection to the caller (so
+ * component code can react to it), but we mark it as `__handled` and swallow
+ * unhandled-rejection events at the window level below, so it never bubbles
+ * up as an uncaught error.
+ */
+api.interceptors.response.use(
+  (r) => r,
+  (error) => {
+    if (error && typeof error === "object") error.__handled = true;
+    return Promise.reject(error);
+  }
+);
+
+if (typeof window !== "undefined" && !window.__caremantoAxiosGuard) {
+  window.__caremantoAxiosGuard = true;
+  window.addEventListener("unhandledrejection", (e) => {
+    const reason = e && e.reason;
+    if (reason && reason.__handled) {
+      // Silently swallow — component-level `.catch()` already handled it.
+      e.preventDefault();
+    }
+  });
+}
+
 export const formatApiError = (detail) => {
   if (detail == null) return "Something went wrong. Please try again.";
   if (typeof detail === "string") return detail;

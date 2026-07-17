@@ -22,12 +22,35 @@ Public: `GET /`, `GET /projects[?category=…]`, `GET /projects/{id}`, `GET /gal
 Auth: `POST /auth/login`, `GET /auth/me`, `POST /auth/logout`
 Admin (cookie-auth): `POST/PUT/DELETE /admin/projects[/{id}]`, `POST/PUT/DELETE /admin/gallery[/{id}]`, `PUT /admin/gallery/taxonomy`, `GET /admin/leads`, `PATCH/DELETE /admin/leads/{id}`
 
-## What's Implemented (2026-07-17 · v2)
-- **Home**: Ken Burns hero slideshow — now driven by the backend's `hero_images` + `hero_interval_seconds` config (admin picks the pool and cadence live).
-- **/works — the Portfolio landing page**: reads gallery items with `featured_portfolio=true` and renders a magazine grid with Practice filter (All / Interiors / Restoration & Renovation). Empty state points admin back to the Portfolio Feature Manager.
-- **/gallery — the Reference Library**: restructured to three Practice tabs [ALL] · [INTERIORS] · [RESTORATION & RENOVATION]. INTERIORS reveals a sub-row with **Residential** + **Commercial** ONLY. Residential shows 5 folder cards (Bedrooms, Bathrooms, Kitchen, Hall & Dining, Balcony & Dry area); Commercial shows 3 folder cards (Offices, Retail, Hospitality). Each card renders a single cover image; clicking a card opens a full-screen folder modal with every photograph in that suite. Restoration bucket shows an editorial empty-state until content is added.
+## What's Implemented (2026-07-17 · v3 — resilience + unlimited storage)
+
+### Public site
+- **Home**: Ken Burns hero slideshow driven by backend `hero_images` + `hero_interval_seconds` config; editorial marquee (`INTERIORS ✦ RESTORATION ✦ REDEFINING SPACES ✦ SERVICES`) with fully symmetric spacing; Divisions section; masonry HomeGallery with natural aspect ratios (watermark-safe).
+- **/works — Portfolio landing**: three category tabs (RESIDENTIAL / COMMERCIAL / RESTORATION & RENOVATIONS). Residential = exactly 5 unique folder cards, Commercial = 3 folder cards, Restoration = direct grid. Clicking a folder card routes to `/works?folder=<name>` child view with "← Back to Folders" navigation.
+- **/gallery — Reference library**: mirrors the Portfolio structure; folder cards → folder modal → lightbox with "Share as Pin ↗" (Web Share API + clipboard fallback).
 - **/films**: public video wall from `/api/videos`.
-- **/admin/login**: passless auto-entry.
+- **Footer**: contact = `care@caremanto.in`; four social icons (Instagram / LinkedIn / Twitter / YouTube) with placeholder handles.
+- **Global error boundary + axios guard**: unhandled rejections from failed API calls no longer surface the CRA "Uncaught runtime errors" overlay; the site shows a graceful "Something needed a quiet reset" screen with a Reload button on any React exception.
+- **Meta**: Open Graph + Twitter card + Pinterest rich-pin tags on every URL for magazine-style link previews.
+- **Cache**: `no-store` headers on `index.html` so future bundle updates propagate to iOS Safari immediately.
+
+### /admin console (6 tabs, passless auto-login)
+- **Gallery** — Folder Manager section (clickable folder chips → slide-out drawer with Cover Picker + Bulk Reassign + Delete). Individual photo CRUD with cascading Parent/Sub-folder dropdowns.
+- **Portfolio** — Portfolio Feature Manager (per-photo `featured_portfolio` toggle, category filter, featured-only filter, bulk feature/un-feature).
+- **Hero · Covers** — Hero Slideshow Configuration (interval seconds + gallery-photo multi-select) + Division Cover Cards.
+- **Videos** — CRUD + device video uploads.
+- **Projects** — CRUD.
+- **Leads** — status changes + reply-via-email + delete.
+
+### Storage & resilience (2026-07-17)
+- **Emergent Object Storage** for every admin upload — essentially unlimited capacity. Uploads stream from a temp file on disk (1 MB chunks, flat RAM footprint), get PUT to the object store, and are served back through `/api/files/{path:path}` as a streaming proxy with 1-year immutable cache headers. Fallback to local disk if the object store is momentarily unavailable.
+- **Legacy `/api/uploads/…`** static route preserved for pre-existing files.
+- **Compatibility alias** `POST /api/upload` → `/admin/upload` for any client still on a stale bundle.
+
+## Test Credentials
+- Admin URL: `/admin/login` (auto-signs in; no credentials required)
+- Fallback (still works): `admin@caremanto.com` / `Caremanto@2026`
+- Studio notification email (env `STUDIO_NOTIFICATION_EMAIL`): `info@caremanto.solutions` (editable in `/app/backend/.env`)
 - **/admin** (six tabs):
    - **Gallery** — CRUD + taxonomy + device uploads + per-photo toggles for Home / Portfolio / Cover.
    - **Portfolio** — NEW single-purpose *Portfolio Feature Manager* view. Filter by category or "Featured Only", toggle any card, bulk feature/un-feature.
@@ -45,21 +68,23 @@ Admin (cookie-auth): `POST/PUT/DELETE /admin/projects[/{id}]`, `POST/PUT/DELETE 
 - Studio notification email (env `STUDIO_NOTIFICATION_EMAIL`): `info@caremanto.solutions` (editable in `/app/backend/.env`)
 
 ## P1 Backlog (deferred, non-blocking)
-1. **Image uploads** — currently image URLs only. Add a file uploader (Cloudinary / S3 / local uploads) so admin can upload photos directly.
-2. **Blogs module** — schema + admin CRUD + `/journal` public route.
-3. **Partnerships module** — logos grid + partner detail.
-4. **Rate limiting / brute-force lockout** on `/api/auth/login` (playbook recommends 5 attempts / 15-min lockout).
-5. **Public origin restriction** — change `CORS_ORIGINS` from `*` to explicit preview URL (safety hardening).
-6. **Password reset flow** for admin.
-7. **Multi-admin roles** (editor vs super-admin) as the studio scales.
+1. **Rate limiting / brute-force lockout** on `/api/auth/login` (5 attempts / 15-min lockout).
+2. **Public origin restriction** — change `CORS_ORIGINS` from `*` to explicit preview URL before launch.
+3. **Password reset flow** for admin (currently passless-login is open — must gate before public launch).
+4. **Blogs module** — schema + admin CRUD + `/journal` public route.
+5. **Partnerships module** — logos grid + partner detail.
+6. **Multi-admin roles** (editor vs super-admin) as the studio scales.
+7. **Drag-and-drop reorder** inside each folder drawer.
 
 ## P2 Backlog
 - Instagram embed of latest posts.
 - Press / Awards section on `/studio`.
 - Search + tag facets on gallery.
-- Sitemap + Open Graph metadata for social sharing.
 - Analytics events (page views, gallery filter usage, lead conversion).
+- Studio-Reel video overlay under the Ken Burns hero.
 
 ## Notes
-- Sample projects/photos are flagged with `is_sample=true` in the DB — admin can filter and replace as real photography arrives.
-- Gallery taxonomy is fully editable from admin (`/admin` → Gallery tab → Categories) — no code changes needed to add new spaces or work segments.
+- All uploads now go to Emergent Object Storage (backend: `object-storage`) with local disk fallback (backend: `local`) when the object store is momentarily unreachable.
+- Sample projects/photos are flagged with `is_sample=true` in the DB.
+- Gallery taxonomy is fixed to 3 top-level categories with the new sub-folder scheme — restructures are handled by the startup migration in `server.py`.
+- ⚠️ **Passless login** is currently open — `POST /api/auth/passless-login` grants admin without credentials. Gate this endpoint before public launch.

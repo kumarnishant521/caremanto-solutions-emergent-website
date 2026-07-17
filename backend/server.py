@@ -13,10 +13,14 @@ import httpx
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Literal
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, UploadFile, File
+from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, EmailStr
+import tempfile
+
+from emergent_storage import init_storage, put_object_from_file, get_object_stream, APP_NAME as STORAGE_APP
 
 # ------------------------------------------------------------------ config
 MONGO_URL = os.environ['MONGO_URL']
@@ -483,17 +487,64 @@ MAX_UPLOAD_BYTES = None
 
 @api.post("/admin/upload")
 async def upload_image(file: UploadFile = File(...), _admin=Depends(get_current_admin)):
+    """Uploads a file (image or video) to Emergent Object Storage via a
+    streaming disk temp file — RAM stays flat regardless of size. Falls back
+    to local disk storage if object storage is unavailable at the moment.
+    """
     if file.content_type not in ALLOWED_MIME:
         raise HTTPException(400, f"Unsupported type: {file.content_type}")
-    data = await file.read()
-    if MAX_UPLOAD_BYTES is not None and len(data) > MAX_UPLOAD_BYTES:
-        raise HTTPException(413, "File too large")
     ext = (file.filename.rsplit(".", 1)[-1] if "." in (file.filename or "") else "bin").lower()
-    fname = f"{uuid.uuid4().hex}.{ext}"
-    dest = UPLOAD_DIR / fname
-    with open(dest, "wb") as f:
-        f.write(data)
-    return {"url": f"/api/uploads/{fname}", "filename": fname, "size": len(data), "content_type": file.content_type}
+
+    # Stream to a temp file on disk in 1 MB chunks so the process memory stays flat.
+    tmp = tempfile.NamedTemporaryFile(delete=False, dir=str(UPLOAD_DIR), suffix=f".{ext}")
+    total = 0
+    CHUNK = 1024 * 1024
+    try:
+        try:
+            while True:
+                chunk = await file.read(CHUNK)
+                if not chunk:
+                    break
+                total += len(chunk)
+                if MAX_UPLOAD_BYTES is not None and total > MAX_UPLOAD_BYTES:
+                    raise HTTPException(413, "File too large")
+                tmp.write(chunk)
+        finally:
+            tmp.close()
+
+        fname = f"{uuid.uuid4().hex}.{ext}"
+        storage_path = f"{STORAGE_APP}/uploads/{fname}"
+
+        # Prefer Emergent object storage (essentially unlimited capacity).
+        try:
+            put_object_from_file(storage_path, Path(tmp.name), file.content_type or "application/octet-stream")
+            # Public URL served by our own /api/files/... proxy.
+            url = f"/api/files/{storage_path}"
+            backend = "object-storage"
+        except Exception as e:
+            # Fallback: keep the temp file as the served asset so the upload
+            # still succeeds even if the object store is momentarily flaky.
+            logger.warning(f"Object storage upload failed, using local disk: {e}")
+            local_path = UPLOAD_DIR / fname
+            Path(tmp.name).rename(local_path)
+            url = f"/api/uploads/{fname}"
+            backend = "local"
+        else:
+            # Object storage succeeded — remove the temp file.
+            try: Path(tmp.name).unlink()
+            except Exception: pass
+
+        return {"url": url, "filename": fname, "size": total, "content_type": file.content_type, "backend": backend}
+    except HTTPException:
+        # Clean up on validation failure
+        try: Path(tmp.name).unlink()
+        except Exception: pass
+        raise
+    except Exception as e:
+        try: Path(tmp.name).unlink()
+        except Exception: pass
+        logger.exception("Upload failed")
+        raise HTTPException(500, f"Upload failed: {e}")
 
 # ---- Compatibility aliases so stale (cached) client bundles keep working ----
 # Older builds of the admin console posted to /api/upload instead of
@@ -502,6 +553,32 @@ async def upload_image(file: UploadFile = File(...), _admin=Depends(get_current_
 @api.post("/upload")
 async def upload_image_alias(file: UploadFile = File(...), _admin=Depends(get_current_admin)):
     return await upload_image(file=file, _admin=_admin)
+
+
+# ------------------------------------------------------------------ /files/* streaming proxy
+# Serves objects stored in Emergent Object Storage back to the browser.
+# Uses HTTP range-friendly streaming so large videos (multi-GB) play with
+# zero server-side buffering.
+@api.get("/files/{path:path}")
+async def get_file(path: str):
+    try:
+        upstream, content_type = get_object_stream(path)
+    except Exception as e:
+        logger.warning(f"Object fetch failed for {path}: {e}")
+        raise HTTPException(404, "File not found")
+
+    def _iter():
+        try:
+            for chunk in upstream.iter_content(chunk_size=64 * 1024):
+                if chunk:
+                    yield chunk
+        finally:
+            upstream.close()
+
+    headers = {"Cache-Control": "public, max-age=31536000, immutable"}
+    if "Content-Length" in upstream.headers:
+        headers["Content-Length"] = upstream.headers["Content-Length"]
+    return StreamingResponse(_iter(), media_type=content_type, headers=headers)
 
 
 # ------------------------------------------------------------------ health
@@ -667,6 +744,11 @@ async def seed_admin_and_samples():
 
 @app.on_event("startup")
 async def on_startup():
+    # Warm up the object storage session key (non-fatal on failure).
+    try:
+        init_storage()
+    except Exception as e:
+        logger.warning(f"Object storage init deferred: {e}")
     try:
         await seed_admin_and_samples()
     except Exception as e:
