@@ -81,9 +81,9 @@ export default function GalleryPage() {
         </Rise>
         <Rise delay={160}>
           <p className="mt-8 max-w-2xl text-[15px] md:text-[16px] leading-relaxed text-[var(--ink)]/85">
-            Browse our reference library across four collections. Two of them —
-            Home Spaces & Corners and Commercial Spaces — carry finer sub-filters
-            so you can zero in on exactly the room or context you're studying.
+            Browse our reference library across two collections — Residential and
+            Commercial. Each collection carries finer sub-filters so you can zero
+            in on exactly the room or context you're studying.
           </p>
         </Rise>
       </section>
@@ -138,7 +138,7 @@ export default function GalleryPage() {
               >
                 <span className="overline text-[10px] text-[var(--muted)] mr-2">Filter:</span>
                 <SubChip
-                  label={`All ${cat === "Commercial Spaces" ? "Segments" : "Rooms"}`}
+                  label={`All ${cat === "COMMERCIAL" ? "Segments" : "Rooms"}`}
                   active={!sub}
                   onClick={() => setSub("")}
                   testid="gallery-sub-all"
