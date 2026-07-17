@@ -1,23 +1,26 @@
+import { useEffect, useState } from "react";
 import Marquee from "react-fast-marquee";
+import { api } from "../lib/api";
+
+const DEFAULT_ITEMS = ["INTERIORS", "RESTORATION", "REDEFINING SPACES", "SERVICES"];
 
 /**
- * Editorial marquee — brand-value ticker.
- *
- * Every slot has identical horizontal spacing:
- *   `[ITEM]  ✦  [ITEM]  ✦  [ITEM]  ✦  …`
- *  |—2.5rem—|—2.5rem—|—2.5rem—|
- *
- * Achieved by giving BOTH the item and the dot the same right-side padding
- * and NO left padding — so every visible gap is exactly one padding stride.
+ * Editorial marquee — reads its item list from the backend covers config so
+ * the studio can edit the ticker from the admin without touching code.
+ * Falls back to the default set if the fetch fails.
  */
-const items = [
-  "INTERIORS",
-  "RESTORATION",
-  "REDEFINING SPACES",
-  "SERVICES",
-];
-
 export default function EditorialMarquee() {
+  const [items, setItems] = useState(DEFAULT_ITEMS);
+
+  useEffect(() => {
+    api.get("/covers")
+      .then((r) => {
+        const list = Array.isArray(r.data?.marquee_items) ? r.data.marquee_items.filter(Boolean) : [];
+        if (list.length) setItems(list);
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <section
       data-testid="marquee-section"

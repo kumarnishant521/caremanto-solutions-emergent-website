@@ -8,14 +8,16 @@ import AdminLeads from "../components/admin/AdminLeads";
 import AdminCovers from "../components/admin/AdminCovers";
 import AdminVideos from "../components/admin/AdminVideos";
 import AdminPortfolio from "../components/admin/AdminPortfolio";
+import AdminHomeSequence from "../components/admin/AdminHomeSequence";
 
 const TABS = [
-  { key: "gallery",   label: "Gallery"       },
-  { key: "portfolio", label: "Portfolio"     },
-  { key: "covers",    label: "Hero · Covers" },
-  { key: "videos",    label: "Videos"        },
-  { key: "projects",  label: "Projects"      },
-  { key: "leads",     label: "Leads"         },
+  { key: "gallery",      label: "Gallery"       },
+  { key: "home-seq",     label: "Home Sequence" },
+  { key: "portfolio",    label: "Portfolio"     },
+  { key: "covers",       label: "Hero · Covers" },
+  { key: "videos",       label: "Videos"        },
+  { key: "projects",     label: "Projects"      },
+  { key: "leads",        label: "Leads"         },
 ];
 
 export default function AdminDashboardPage() {
@@ -70,6 +72,7 @@ export default function AdminDashboardPage() {
       <div className="max-w-[1440px] mx-auto px-6 md:px-10">
         {tab === "projects"  && <AdminProjects  />}
         {tab === "gallery"   && <AdminGallery   />}
+        {tab === "home-seq"  && <AdminHomeSequence />}
         {tab === "portfolio" && <AdminPortfolio />}
         {tab === "videos"    && <AdminVideos    />}
         {tab === "covers"    && <AdminCovers    />}

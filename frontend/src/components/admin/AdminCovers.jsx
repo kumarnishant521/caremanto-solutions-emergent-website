@@ -12,8 +12,9 @@ export default function AdminCovers() {
   const [form, setForm] = useState({
     interiors_cover: "",
     restoration_cover: "",
-    hero_images: [],           // array of image URLs
+    hero_images: [],
     hero_interval_seconds: 4.5,
+    marquee_items: [],
   });
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,6 +30,7 @@ export default function AdminCovers() {
         restoration_cover:    c.data.restoration_cover || "",
         hero_images:          Array.isArray(c.data.hero_images) ? c.data.hero_images : [],
         hero_interval_seconds: typeof c.data.hero_interval_seconds === "number" ? c.data.hero_interval_seconds : 4.5,
+        marquee_items:        Array.isArray(c.data.marquee_items) ? c.data.marquee_items : [],
       });
       setPhotos(g.data || []);
     } finally { setLoading(false); }
@@ -60,6 +62,7 @@ export default function AdminCovers() {
         restoration_cover:     form.restoration_cover.trim(),
         hero_images:           form.hero_images,
         hero_interval_seconds: Number(form.hero_interval_seconds) || 4.5,
+        marquee_items:         (form.marquee_items || []).map((s) => String(s).trim()).filter(Boolean),
       });
       toast.success("Hero & covers updated.");
     } catch (e) {
@@ -210,6 +213,32 @@ export default function AdminCovers() {
           onChange={(v) => setForm({ ...form, restoration_cover: v })}
           onFile={uploadInto("restoration_cover")}
         />
+      </div>
+
+      {/* Horizontal Nav Carousel (marquee) editor */}
+      <div className="pt-4">
+        <h3 className="font-serif text-[24px] mb-2">Horizontal Marquee Ticker</h3>
+        <p className="text-[12px] text-[#F5EEE0]/60 max-w-2xl mb-6">
+          Edit the words that scroll across the home page between the hero and the divisions.
+          One entry per line — up to 24. Diamond separators (✦) are inserted automatically.
+        </p>
+        <div className="admin-card p-6">
+          <label className="block">
+            <span className="overline text-[10px] block mb-2">Marquee Items</span>
+            <textarea
+              data-testid="marquee-editor"
+              rows={8}
+              className="admin-input font-mono-alt tracking-wide"
+              value={(form.marquee_items || []).join("\n")}
+              onChange={(e) => setForm({ ...form, marquee_items: e.target.value.split("\n") })}
+            />
+          </label>
+          <div className="mt-3 text-[11px] text-[#F5EEE0]/60">
+            Preview: <span className="text-[var(--gold-hi)] tracking-widest">
+              {(form.marquee_items || []).filter(Boolean).slice(0, 6).join(" ✦ ") || "—"}
+            </span>
+          </div>
+        </div>
       </div>
     </section>
   );

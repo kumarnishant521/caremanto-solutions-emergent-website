@@ -377,14 +377,38 @@ async def update_taxonomy(body: TaxonomyIn, _admin=Depends(get_current_admin)):
     return value
 
 @api.get("/gallery", response_model=List[GalleryPhoto])
-async def list_gallery(category: Optional[str] = None, subcategory: Optional[str] = None):
+async def list_gallery(category: Optional[str] = None, subcategory: Optional[str] = None,
+                       featured_home: Optional[bool] = None,
+                       featured_portfolio: Optional[bool] = None,
+                       is_cover: Optional[bool] = None):
     q: dict = {}
-    if category:
-        q["category"] = category
-    if subcategory:
-        q["subcategory"] = subcategory
-    docs = await db.gallery.find(q, {"_id": 0}).sort("created_at", -1).to_list(2000)
+    if category:            q["category"] = category
+    if subcategory:         q["subcategory"] = subcategory
+    if featured_home is not None:      q["featured_home"] = featured_home
+    if featured_portfolio is not None: q["featured_portfolio"] = featured_portfolio
+    if is_cover is not None:           q["is_cover"] = is_cover
+    docs = await db.gallery.find(q, {"_id": 0}).sort("created_at", -1).to_list(4000)
     return docs
+
+# Home-page sequence: return only the featured_home photos, in `home_order`
+# ascending (fallback to created_at). Keeps the public /home render + admin
+# sequence editor in sync.
+@api.get("/gallery/home-sequence")
+async def home_sequence():
+    docs = await db.gallery.find({"featured_home": True}, {"_id": 0}).to_list(500)
+    # sort: home_order asc (null last), then created_at
+    docs.sort(key=lambda d: (d.get("home_order") is None, d.get("home_order") or 0, d.get("created_at", "")))
+    return docs
+
+class HomeOrderIn(BaseModel):
+    order: List[str]     # ordered list of photo ids
+
+@api.put("/admin/gallery/home-sequence")
+async def set_home_sequence(body: HomeOrderIn, _admin=Depends(get_current_admin)):
+    """Persist the exact display order for photos featured on the home page."""
+    for idx, pid in enumerate(body.order):
+        await db.gallery.update_one({"id": pid}, {"$set": {"home_order": idx, "featured_home": True}})
+    return {"ok": True, "count": len(body.order)}
 
 @api.post("/admin/gallery", response_model=GalleryPhoto)
 async def create_photo(body: GalleryPhotoIn, _admin=Depends(get_current_admin)):
@@ -443,12 +467,14 @@ async def delete_video(vid: str, _admin=Depends(get_current_admin)):
     return {"ok": True}
 
 # ------------------------------------------------------------------ section covers
+DEFAULT_MARQUEE = ["INTERIORS", "RESTORATION", "REDEFINING SPACES", "SERVICES"]
 DEFAULT_COVERS = {
     "interiors_cover":   "https://lh3.googleusercontent.com/d/1F9U9UjI9CHuxR-AkUvJZQRrom_oF10pm=w1400",
     "restoration_cover": "https://lh3.googleusercontent.com/d/1tMuPICaLjYIn8smCG0cize45rzG9DKPo=w1400",
-    "hero_extra":        [],           # legacy: URLs appended to the default hero mix
-    "hero_images":       [],           # curated hero — if non-empty, REPLACES defaults
-    "hero_interval_seconds": 4.5,      # slideshow tempo
+    "hero_extra":        [],
+    "hero_images":       [],
+    "hero_interval_seconds": 4.5,
+    "marquee_items":     DEFAULT_MARQUEE,
 }
 
 class CoversIn(BaseModel):
@@ -457,6 +483,7 @@ class CoversIn(BaseModel):
     hero_extra: Optional[List[str]] = None
     hero_images: Optional[List[str]] = None
     hero_interval_seconds: Optional[float] = None
+    marquee_items: Optional[List[str]] = None
 
 @api.get("/covers")
 async def get_covers():
@@ -477,6 +504,10 @@ async def update_covers(body: CoversIn, _admin=Depends(get_current_admin)):
     if body.hero_interval_seconds is not None:
         # clamp to [0.5s, 60s] to keep the ticker sane
         value["hero_interval_seconds"] = max(0.5, min(60.0, float(body.hero_interval_seconds)))
+    if body.marquee_items is not None:
+        # Trim / filter empties; limit to 24 to keep the ticker legible.
+        clean = [str(s).strip() for s in body.marquee_items if str(s).strip()]
+        value["marquee_items"] = clean[:24] or DEFAULT_MARQUEE
     await db.settings.update_one(
         {"key": "section_covers"},
         {"$set": {"key": "section_covers", "value": value}},
@@ -760,6 +791,22 @@ async def seed_admin_and_samples():
 
 @app.on_event("startup")
 async def on_startup():
+    # Indexes — dramatically speeds up admin filters and public-site reads.
+    try:
+        await db.gallery.create_index("category")
+        await db.gallery.create_index("subcategory")
+        await db.gallery.create_index("featured_home")
+        await db.gallery.create_index("featured_portfolio")
+        await db.gallery.create_index("is_cover")
+        await db.gallery.create_index("created_at")
+        await db.gallery.create_index([("category", 1), ("subcategory", 1)])
+        await db.videos.create_index("featured_home")
+        await db.leads.create_index("created_at")
+        await db.leads.create_index("customer_uid")
+        logger.info("Mongo indexes ensured.")
+    except Exception as e:
+        logger.warning(f"Index creation skipped: {e}")
+
     # Warm up the object storage session key (non-fatal on failure).
     try:
         await init_storage()

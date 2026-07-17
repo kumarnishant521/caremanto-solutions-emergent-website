@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api";
 import { toast } from "sonner";
+import { thumbUrl } from "../../lib/thumb";
 import AdminFolderManager from "./AdminFolderManager";
 
 const EMPTY = { title: "", description: "", category: "", subcategory: "", image: "", is_sample: false, featured_home: false, featured_portfolio: false, is_cover: false };
@@ -12,6 +13,7 @@ export default function AdminGallery() {
   const [form, setForm] = useState(EMPTY);
   const [filterCat, setFilterCat] = useState("");
   const [filterSub, setFilterSub] = useState("");
+  const [filterFlag, setFilterFlag] = useState("all"); // all | home | cover | portfolio
   const [loading, setLoading] = useState(true);
   const [bulkText, setBulkText] = useState("");
   const [page, setPage] = useState(1);
@@ -116,8 +118,42 @@ export default function AdminGallery() {
               </select>
             </label>
           )}
+          {/* Multi-tag flag filter — HOME / COVER / PORTFOLIO */}
+          <div>
+            <span className="overline text-[10px] block mb-1">Zone</span>
+            <div className="flex items-center gap-1" role="tablist" data-testid="admin-flag-filter">
+              {[
+                ["all",       "All"],
+                ["home",      "Home"],
+                ["cover",     "Cover"],
+                ["portfolio", "Portfolio"],
+              ].map(([k, l]) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setFilterFlag(k)}
+                  data-testid={`admin-flag-${k}`}
+                  className={`px-3 py-2 text-[11px] uppercase tracking-[0.14em] border transition-colors ${
+                    filterFlag === k
+                      ? "border-[var(--gold-hi)] text-[var(--gold-hi)]"
+                      : "border-[#F5EEE0]/20 text-[#F5EEE0]/70 hover:border-[#F5EEE0]/50"
+                  }`}
+                >{l}</button>
+              ))}
+            </div>
+          </div>
         </div>
-        <button data-testid="admin-new-photo" onClick={startNew} className="admin-btn">+ Add Photograph</button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => loadAll()}
+            data-testid="admin-save-refresh"
+            className="admin-btn"
+            title="Re-sync the admin view with the live database"
+          >
+            ★ Save Changes / Refresh
+          </button>
+          <button data-testid="admin-new-photo" onClick={startNew} className="admin-btn ghost">+ Add Photograph</button>
+        </div>
       </div>
 
       {/* Edit / new form */}
@@ -300,33 +336,47 @@ export default function AdminGallery() {
         <div className="py-12 text-center text-[#F5EEE0]/60">No photographs yet.</div>
       ) : (
         <>
-        <div className="flex items-center justify-between mb-4">
-          <div className="text-[11px] text-[#F5EEE0]/60">
-            Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, photos.length)} of {photos.length}
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="admin-btn ghost text-[11px] disabled:opacity-40"
-              data-testid="admin-page-prev"
-            >← Prev</button>
-            <span className="text-[11px] text-[#F5EEE0]/60">
-              {page} / {Math.max(1, Math.ceil(photos.length / PAGE_SIZE))}
-            </span>
-            <button
-              onClick={() => setPage((p) => p + 1)}
-              disabled={page * PAGE_SIZE >= photos.length}
-              className="admin-btn ghost text-[11px] disabled:opacity-40"
-              data-testid="admin-page-next"
-            >Next →</button>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {photos.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((p) => (
-            <div key={p.id} className="admin-card p-3" data-testid={`admin-photo-${p.id}`}>
-              <div className="aspect-square overflow-hidden bg-[#241D16] mb-3 relative">
-                <img src={p.image} alt={p.title || ""} loading="lazy" className="w-full h-full object-cover"/>
+        {/* Apply flag filter locally so filter is instant */}
+        {(() => {
+          const filtered = photos.filter((p) => {
+            if (filterFlag === "home")      return !!p.featured_home;
+            if (filterFlag === "cover")     return !!p.is_cover;
+            if (filterFlag === "portfolio") return !!p.featured_portfolio;
+            return true;
+          });
+          const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+          const currentPage = Math.min(page, totalPages);
+          const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+          return (
+            <>
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-[11px] text-[#F5EEE0]/60">
+                  {filtered.length === 0 ? "0 results" : `Showing ${(currentPage - 1) * PAGE_SIZE + 1}–${Math.min(currentPage * PAGE_SIZE, filtered.length)} of ${filtered.length}`}
+                  {filterFlag !== "all" && <span className="text-[var(--gold-hi)] ml-2">· {filterFlag.toUpperCase()} only</span>}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="admin-btn ghost text-[11px] disabled:opacity-40"
+                    data-testid="admin-page-prev"
+                  >← Prev</button>
+                  <span className="text-[11px] text-[#F5EEE0]/60">
+                    {currentPage} / {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setPage((p) => p + 1)}
+                    disabled={currentPage >= totalPages}
+                    className="admin-btn ghost text-[11px] disabled:opacity-40"
+                    data-testid="admin-page-next"
+                  >Next →</button>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {paged.map((p) => (
+                  <div key={p.id} className="admin-card p-3" data-testid={`admin-photo-${p.id}`}>
+                    <div className="aspect-square overflow-hidden bg-[#241D16] mb-3 relative">
+                      <img src={thumbUrl(p.image, 400)} alt={p.title || ""} loading="lazy" className="w-full h-full object-cover"/>
                 {p.featured_home && (
                   <span className="absolute top-2 right-2 bg-[var(--gold)] text-white text-[9px] tracking-widest uppercase px-2 py-1">★ Home</span>
                 )}
@@ -389,8 +439,11 @@ export default function AdminGallery() {
                 <button onClick={() => remove(p.id)} className="admin-btn danger text-[10px]">Del</button>
               </div>
             </div>
-          ))}
-        </div>
+                ))}
+              </div>
+            </>
+          );
+        })()}
         </>
       )}
     </section>
