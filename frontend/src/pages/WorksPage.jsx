@@ -53,7 +53,7 @@ export default function WorksPage() {
   useEffect(() => {
     setLoading(true);
     api.get("/gallery")
-      .then((r) => setPhotos((r.data || []).filter((p) => p.featured_portfolio)))
+      .then((r) => setPhotos(r.data || []))
       .catch(() => setPhotos([]))
       .finally(() => setLoading(false));
   }, []);
@@ -282,11 +282,15 @@ function FolderCards({ folders, categoryLabel, coverForSub, countForSub, onOpen 
                 </div>
                 <div className="font-serif text-[34px] md:text-[44px] leading-[0.95]">{name}</div>
                 <div className="mt-5 flex items-center gap-3 text-[11px] tracking-[0.28em] uppercase opacity-90 group-hover:text-[var(--gold-hi)] transition-colors">
-                  {empty ? "No works featured yet" : `${count} work${count === 1 ? "" : "s"} · Open Folder`}
-                  {!empty && <>
-                    <span className="w-8 h-[1px] bg-current" />
-                    <span>→</span>
-                  </>}
+                  {empty ? (
+                    <span>Coming soon</span>
+                  ) : (
+                    <>
+                      <span>View Section</span>
+                      <span className="w-8 h-[1px] bg-current" />
+                      <span>→</span>
+                    </>
+                  )}
                 </div>
               </div>
               <span className="absolute top-4 left-4 right-4 flex items-center justify-between text-[10px] tracking-[0.28em] uppercase text-white/85">
@@ -319,17 +323,12 @@ function FolderChildView({ categoryLabel, folderName, photos, onBack, onOpenPhot
         </div>
       </Rise>
       <Rise delay={70}>
-        <h2 className="font-serif text-[clamp(2.4rem,7vw,5.5rem)] leading-[0.9] tracking-[-0.02em] text-[var(--ink)]">
+        <h2 className="font-serif text-[clamp(2.4rem,7vw,5.5rem)] leading-[0.9] tracking-[-0.02em] text-[var(--ink)] mb-12">
           <span className="italic text-[var(--gold)]">{folderName}</span>
         </h2>
       </Rise>
-      <Rise delay={140}>
-        <p className="mt-6 text-[14px] text-[var(--muted)]">
-          {photos.length} photograph{photos.length === 1 ? "" : "s"} in this folder
-        </p>
-      </Rise>
 
-      <div className="mt-12">
+      <div className="mt-4">
         {photos.length === 0 ? (
           <EmptyState
             title="No works featured in this folder yet."

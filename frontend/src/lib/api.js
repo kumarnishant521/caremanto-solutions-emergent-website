@@ -6,6 +6,13 @@ export const API = `${BACKEND_URL}/api`;
 export const api = axios.create({
   baseURL: API,
   withCredentials: true,
+  headers: {
+    // Force browsers / caches to always revalidate — critical so that admin
+    // edits are immediately reflected on the public site without needing a
+    // hard refresh.
+    "Cache-Control": "no-cache",
+    Pragma: "no-cache",
+  },
 });
 
 /**

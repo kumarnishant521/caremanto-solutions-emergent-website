@@ -187,15 +187,12 @@ export default function GalleryPage() {
                 </div>
               </Rise>
               <Rise delay={70}>
-                <h2 className="font-serif text-[clamp(2.4rem,7vw,5.5rem)] leading-[0.9] tracking-[-0.02em] text-[var(--ink)]">
+                <h2 className="font-serif text-[clamp(2.4rem,7vw,5.5rem)] leading-[0.9] tracking-[-0.02em] text-[var(--ink)] mb-12">
                   <span className="italic text-[var(--gold)]">{openedFolder}</span>
                 </h2>
               </Rise>
-              <Rise delay={140}>
-                <p className="mt-6 text-[14px] text-[var(--muted)]">{folderPhotos.length} photograph{folderPhotos.length === 1 ? "" : "s"}</p>
-              </Rise>
 
-              <div className="mt-14">
+              <div className="mt-4">
                 {folderPhotos.length === 0 ? (
                   <div className="py-20 text-center text-[var(--muted)] font-serif italic text-2xl">
                     No photographs in this folder yet.
@@ -282,18 +279,17 @@ function FolderCards({ folders, categoryLabel, coverForSub, countForSub, onOpen 
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-black/10 pointer-events-none" />
               <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-8 text-white">
-                <div className="text-[10px] tracking-[0.32em] uppercase text-[var(--gold-hi)] mb-3">
-                  {count} photograph{count === 1 ? "" : "s"}
+                <div className="text-[10px] tracking-[0.32em] uppercase text-[var(--gold-hi)] font-medium mb-2">
+                  {categoryLabel}
                 </div>
                 <div className="font-serif text-[34px] md:text-[44px] leading-[0.95]">{name}</div>
                 <div className="mt-5 flex items-center gap-3 text-[11px] tracking-[0.28em] uppercase opacity-90 group-hover:text-[var(--gold-hi)] transition-colors">
-                  Open Folder
+                  <span>View Section</span>
                   <span className="w-8 h-[1px] bg-current" />
                   <span>→</span>
                 </div>
               </div>
               <span className="absolute top-4 left-4 right-4 flex items-center justify-between text-[10px] tracking-[0.28em] uppercase text-white/85">
-                <span>{categoryLabel}</span>
                 <span>0{i + 1}</span>
               </span>
             </button>

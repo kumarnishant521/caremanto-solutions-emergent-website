@@ -762,6 +762,22 @@ async def on_shutdown():
 app.include_router(api)
 # Serve uploaded gallery images
 app.mount("/api/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
+
+
+@app.middleware("http")
+async def no_store_for_dynamic_api(request: Request, call_next):
+    """Force browsers to always revalidate dynamic /api responses so admin
+    edits are visible on the public site instantly. Static asset routes
+    (/api/uploads, /api/files) keep their own long-lived cache headers.
+    """
+    response = await call_next(request)
+    path = request.url.path
+    if path.startswith("/api/") and not path.startswith("/api/uploads") and not path.startswith("/api/files"):
+        response.headers["Cache-Control"] = "no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+    return response
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
