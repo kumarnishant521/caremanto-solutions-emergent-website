@@ -25,6 +25,7 @@ export default function Footer() {
               <li><Link to="/approach" className="hover:text-[var(--gold)] transition-colors">Approach</Link></li>
               <li><Link to="/works" className="hover:text-[var(--gold)] transition-colors">Our Works</Link></li>
               <li><Link to="/gallery" className="hover:text-[var(--gold)] transition-colors">Gallery</Link></li>
+              <li><Link to="/films" className="hover:text-[var(--gold)] transition-colors">Films</Link></li>
               <li><Link to="/contact" className="hover:text-[var(--gold)] transition-colors">Contact</Link></li>
             </ul>
           </div>

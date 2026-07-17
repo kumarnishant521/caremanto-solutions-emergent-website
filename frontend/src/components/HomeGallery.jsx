@@ -1,13 +1,18 @@
+import { useEffect, useState } from "react";
 import { Rise } from "./Rise";
 import { Link } from "react-router-dom";
+import { api } from "../lib/api";
 import { homeGalleryImages } from "../lib/realProjects";
 
 /**
- * Curated home imagery.
- *   • Prefers real project photography from lib/realProjects.js
- *   • Falls back to placeholders until 10 real images have been added
- *   • Aims for a ~70 / 30 residential / commercial mix (never surfaced as text)
- *   • Pure images — no titles, captions or overlays.
+ * Home page image bento — the scroll section.
+ *
+ * Priority order for the tiles:
+ *   1. Gallery photographs the admin marked `featured_home` from /admin
+ *   2. Real project images from /lib/realProjects.js (placement includes "home")
+ *   3. Curated Pexels placeholders (final fallback)
+ *
+ * The 70 / 30 residential-to-commercial rule shapes the mix silently — no text.
  */
 
 const SPANS = [
@@ -36,20 +41,32 @@ const PLACEHOLDERS = [
   "https://images.pexels.com/photos/1743229/pexels-photo-1743229.jpeg?auto=compress&cs=tinysrgb&w=1200",
 ];
 
-const buildTiles = () => {
-  const real = homeGalleryImages().map((r) => r.src);
-  const combined = [...real];
-  let i = 0;
-  while (combined.length < 10 && i < PLACEHOLDERS.length) {
-    if (!combined.includes(PLACEHOLDERS[i])) combined.push(PLACEHOLDERS[i]);
-    i++;
-  }
-  return combined.slice(0, 10).map((src, idx) => ({ src, span: SPANS[idx] }));
-};
-
-const TILES = buildTiles();
-
 export default function HomeGallery() {
+  const [tiles, setTiles] = useState([]);
+
+  useEffect(() => {
+    // First, ask the backend for any photos the admin has featured on the home page.
+    api.get("/gallery")
+      .then((r) => {
+        const featured = (r.data || []).filter((p) => p.featured_home).map((p) => p.image);
+        const real = homeGalleryImages().map((r2) => r2.src);
+        const combined = [];
+        [...featured, ...real, ...PLACEHOLDERS].forEach((src) => {
+          if (src && !combined.includes(src) && combined.length < 10) combined.push(src);
+        });
+        setTiles(combined.map((src, idx) => ({ src, span: SPANS[idx] })));
+      })
+      .catch(() => {
+        // Fallback: only realProjects.js + placeholders
+        const real = homeGalleryImages().map((r) => r.src);
+        const combined = [];
+        [...real, ...PLACEHOLDERS].forEach((src) => {
+          if (src && !combined.includes(src) && combined.length < 10) combined.push(src);
+        });
+        setTiles(combined.map((src, idx) => ({ src, span: SPANS[idx] })));
+      });
+  }, []);
+
   return (
     <section
       id="home-gallery"
@@ -57,7 +74,6 @@ export default function HomeGallery() {
       className="relative bg-[var(--bg-0)] py-24 md:py-36"
     >
       <div className="max-w-[1500px] mx-auto px-6 md:px-14">
-
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-8 mb-14 md:mb-20">
           <Rise>
             <h2
@@ -76,7 +92,7 @@ export default function HomeGallery() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6">
-          {TILES.map((t, i) => (
+          {tiles.map((t, i) => (
             <Rise key={i} delay={(i % 5) * 70} className={t.span}>
               <figure className="relative overflow-hidden bg-[var(--bg-2)] h-full group">
                 <img

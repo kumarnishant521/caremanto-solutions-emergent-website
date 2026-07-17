@@ -1,7 +1,9 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Rise } from "./Rise";
+import { api } from "../lib/api";
 
-const PRACTICE = [
+const DEFAULT_PRACTICE = [
   {
     tag: "01 / DIVISION",
     title: "INTERIORS",
@@ -10,6 +12,7 @@ const PRACTICE = [
     image: "https://lh3.googleusercontent.com/d/1F9U9UjI9CHuxR-AkUvJZQRrom_oF10pm=w1400",
     to: "/works?category=interiors",
     cta: "INTERIOR PORTFOLIO",
+    coverKey: "interiors_cover",
   },
   {
     tag: "02 / DIVISION",
@@ -19,10 +22,19 @@ const PRACTICE = [
     image: "https://lh3.googleusercontent.com/d/1tMuPICaLjYIn8smCG0cize45rzG9DKPo=w1400",
     to: "/works?category=restoration",
     cta: "RESTORATION PORTFOLIO",
+    coverKey: "restoration_cover",
   },
 ];
 
 export default function Divisions() {
+  const [covers, setCovers] = useState({});
+  useEffect(() => {
+    api.get("/covers").then((r) => setCovers(r.data || {})).catch(() => {});
+  }, []);
+  const PRACTICE = DEFAULT_PRACTICE.map((p) => ({
+    ...p,
+    image: covers[p.coverKey] || p.image,
+  }));
   return (
     <section
       id="divisions"

@@ -5,11 +5,15 @@ import { Toaster } from "sonner";
 import AdminProjects from "../components/admin/AdminProjects";
 import AdminGallery from "../components/admin/AdminGallery";
 import AdminLeads from "../components/admin/AdminLeads";
+import AdminCovers from "../components/admin/AdminCovers";
+import AdminVideos from "../components/admin/AdminVideos";
 
 const TABS = [
-  { key: "projects", label: "Projects" },
-  { key: "gallery",  label: "Gallery"  },
-  { key: "leads",    label: "Leads"    },
+  { key: "gallery",  label: "Gallery"      },
+  { key: "videos",   label: "Videos"       },
+  { key: "covers",   label: "Covers · Hero"},
+  { key: "projects", label: "Projects"     },
+  { key: "leads",    label: "Leads"        },
 ];
 
 export default function AdminDashboardPage() {
@@ -64,6 +68,8 @@ export default function AdminDashboardPage() {
       <div className="max-w-[1440px] mx-auto px-6 md:px-10">
         {tab === "projects" && <AdminProjects />}
         {tab === "gallery"  && <AdminGallery  />}
+        {tab === "videos"   && <AdminVideos   />}
+        {tab === "covers"   && <AdminCovers   />}
         {tab === "leads"    && <AdminLeads    />}
       </div>
     </main>

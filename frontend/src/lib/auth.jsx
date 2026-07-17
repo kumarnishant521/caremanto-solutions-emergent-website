@@ -33,7 +33,15 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
-  return <AuthCtx.Provider value={{ user, loading, login, logout }}>{children}</AuthCtx.Provider>;
+  const refresh = async () => {
+    try {
+      const { data } = await api.get("/auth/me", { validateStatus: (s) => s < 500 || s === 401 });
+      if (data && data.role) setUser(data);
+      else setUser(null);
+    } catch { setUser(null); }
+  };
+
+  return <AuthCtx.Provider value={{ user, loading, login, logout, refresh }}>{children}</AuthCtx.Provider>;
 }
 
 export const useAuth = () => useContext(AuthCtx);

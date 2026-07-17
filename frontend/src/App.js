@@ -17,6 +17,7 @@ import ApproachPage from "@/pages/ApproachPage";
 import ContactPage from "@/pages/ContactPage";
 import AdminLoginPage from "@/pages/AdminLoginPage";
 import AdminDashboardPage from "@/pages/AdminDashboardPage";
+import VideosPage from "@/pages/VideosPage";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -55,6 +56,8 @@ function SiteRoot() {
                 <Route path="/works" element={<WorksPage />} />
                 <Route path="/works/:id" element={<ProjectDetailPage />} />
                 <Route path="/gallery" element={<GalleryPage />} />
+        <Route path="/films" element={<VideosPage />} />
+        <Route path="/videos" element={<VideosPage />} />
                 <Route path="/studio" element={<StudioPage />} />
                 <Route path="/approach" element={<ApproachPage />} />
                 <Route path="/contact" element={<ContactPage />} />

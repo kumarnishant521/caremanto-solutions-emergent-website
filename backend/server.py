@@ -114,10 +114,11 @@ class LoginIn(BaseModel):
 class GalleryPhotoIn(BaseModel):
     title: Optional[str] = ""
     description: Optional[str] = ""
-    category: str                     # one of the 4 main tabs
-    subcategory: Optional[str] = ""   # nested filter (only for the two nested categories)
+    category: str
+    subcategory: Optional[str] = ""
     image: str
     is_sample: bool = False
+    featured_home: bool = False   # show in the scrolling home page bento
 
 class GalleryPhoto(GalleryPhotoIn):
     id: str
@@ -125,7 +126,18 @@ class GalleryPhoto(GalleryPhotoIn):
 
 class TaxonomyIn(BaseModel):
     categories: List[str]
-    subcategories: dict  # { "Home Spaces & Corners": [...], "Commercial Spaces": [...] }
+    subcategories: dict
+
+class VideoIn(BaseModel):
+    title: Optional[str] = ""
+    description: Optional[str] = ""
+    url: str                       # video file URL (uploaded) or embed URL
+    poster: Optional[str] = ""     # thumbnail image URL
+    featured_home: bool = False
+
+class Video(VideoIn):
+    id: str
+    created_at: str
 
 # ------------------------------------------------------------------ email
 async def send_notification_email(subject: str, html: str, reply_to: Optional[str] = None):
@@ -195,6 +207,19 @@ async def login(body: LoginIn, response: Response):
     response.set_cookie("access_token", token, httponly=True, secure=False,
                         samesite="lax", max_age=8 * 3600, path="/")
     return {"id": user["id"], "email": email, "name": user.get("name"), "role": user.get("role"), "token": token}
+
+@api.post("/auth/passless-login")
+async def passless_login(response: Response):
+    """Temporary password-free admin entry — signs in the seeded admin account.
+    Intended for the studio's own quick access; can be removed once real auth flow is required.
+    """
+    user = await db.users.find_one({"email": ADMIN_EMAIL.lower()})
+    if not user:
+        raise HTTPException(500, "Admin account not seeded")
+    token = create_access_token(user["id"], user["email"])
+    response.set_cookie("access_token", token, httponly=True, secure=False,
+                        samesite="lax", max_age=8 * 3600, path="/")
+    return {"id": user["id"], "email": user["email"], "name": user.get("name"), "role": user.get("role"), "token": token}
 
 @api.post("/auth/logout")
 async def logout(response: Response, _admin=Depends(get_current_admin)):
@@ -352,26 +377,94 @@ async def delete_photo(pid: str, _admin=Depends(get_current_admin)):
         raise HTTPException(404, "Not found")
     return {"ok": True}
 
+# ------------------------------------------------------------------ videos
+@api.get("/videos", response_model=List[Video])
+async def list_videos():
+    docs = await db.videos.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return docs
+
+@api.post("/admin/videos", response_model=Video)
+async def create_video(body: VideoIn, _admin=Depends(get_current_admin)):
+    now = datetime.now(timezone.utc).isoformat()
+    doc = {**body.model_dump(), "id": str(uuid.uuid4()), "created_at": now}
+    await db.videos.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+@api.put("/admin/videos/{vid}", response_model=Video)
+async def update_video(vid: str, body: VideoIn, _admin=Depends(get_current_admin)):
+    res = await db.videos.find_one_and_update(
+        {"id": vid}, {"$set": body.model_dump()},
+        return_document=True, projection={"_id": 0},
+    )
+    if not res:
+        raise HTTPException(404, "Not found")
+    return res
+
+@api.delete("/admin/videos/{vid}")
+async def delete_video(vid: str, _admin=Depends(get_current_admin)):
+    res = await db.videos.delete_one({"id": vid})
+    if not res.deleted_count:
+        raise HTTPException(404, "Not found")
+    return {"ok": True}
+
+# ------------------------------------------------------------------ section covers
+DEFAULT_COVERS = {
+    "interiors_cover":   "https://lh3.googleusercontent.com/d/1F9U9UjI9CHuxR-AkUvJZQRrom_oF10pm=w1400",
+    "restoration_cover": "https://lh3.googleusercontent.com/d/1tMuPICaLjYIn8smCG0cize45rzG9DKPo=w1400",
+    "hero_extra":        [],   # gallery-URL strings admin adds to hero slideshow
+}
+
+class CoversIn(BaseModel):
+    interiors_cover: Optional[str] = None
+    restoration_cover: Optional[str] = None
+    hero_extra: Optional[List[str]] = None
+
+@api.get("/covers")
+async def get_covers():
+    doc = await db.settings.find_one({"key": "section_covers"}, {"_id": 0})
+    return (doc or {}).get("value") or DEFAULT_COVERS
+
+@api.put("/admin/covers")
+async def update_covers(body: CoversIn, _admin=Depends(get_current_admin)):
+    current = await db.settings.find_one({"key": "section_covers"}, {"_id": 0})
+    value = (current or {}).get("value") or DEFAULT_COVERS.copy()
+    if body.interiors_cover   is not None: value["interiors_cover"]   = body.interiors_cover
+    if body.restoration_cover is not None: value["restoration_cover"] = body.restoration_cover
+    if body.hero_extra        is not None: value["hero_extra"]        = [u.strip() for u in body.hero_extra if u.strip()]
+    await db.settings.update_one(
+        {"key": "section_covers"},
+        {"$set": {"key": "section_covers", "value": value}},
+        upsert=True,
+    )
+    return value
+
 # ------------------------------------------------------------------ uploads
 UPLOAD_DIR = ROOT_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
-ALLOWED_MIME = {"image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"}
-MAX_UPLOAD_MB = 12
+ALLOWED_MIME = {
+    # images
+    "image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif", "image/avif", "image/heic", "image/heif",
+    # videos
+    "video/mp4", "video/quicktime", "video/webm", "video/x-matroska", "video/mpeg", "video/x-msvideo",
+}
+# No hard-coded ceiling — the admin can upload files of any size the network allows.
+# (Uvicorn / reverse-proxy will still enforce their own transport limits.)
+MAX_UPLOAD_BYTES = None
 
 @api.post("/admin/upload")
 async def upload_image(file: UploadFile = File(...), _admin=Depends(get_current_admin)):
     if file.content_type not in ALLOWED_MIME:
         raise HTTPException(400, f"Unsupported type: {file.content_type}")
     data = await file.read()
-    if len(data) > MAX_UPLOAD_MB * 1024 * 1024:
-        raise HTTPException(413, f"File exceeds {MAX_UPLOAD_MB} MB")
-    ext = (file.filename.rsplit(".", 1)[-1] if "." in (file.filename or "") else "jpg").lower()
+    if MAX_UPLOAD_BYTES is not None and len(data) > MAX_UPLOAD_BYTES:
+        raise HTTPException(413, "File too large")
+    ext = (file.filename.rsplit(".", 1)[-1] if "." in (file.filename or "") else "bin").lower()
     fname = f"{uuid.uuid4().hex}.{ext}"
     dest = UPLOAD_DIR / fname
     with open(dest, "wb") as f:
         f.write(data)
-    url = f"/api/uploads/{fname}"
-    return {"url": url, "filename": fname, "size": len(data)}
+    return {"url": f"/api/uploads/{fname}", "filename": fname, "size": len(data), "content_type": file.content_type}
 
 # ------------------------------------------------------------------ health
 @api.get("/")
@@ -495,7 +588,7 @@ async def seed_admin_and_samples():
         logger.info(f"Migrated stale gallery samples (removed {stale} old-schema docs)")
 
     g_count = await db.gallery.count_documents({})
-    if g_count == 0:
+    if g_count == 0 and SAMPLE_GALLERY:
         now = datetime.now(timezone.utc).isoformat()
         docs = [{**p, "id": str(uuid.uuid4()), "created_at": now} for p in SAMPLE_GALLERY]
         await db.gallery.insert_many(docs)

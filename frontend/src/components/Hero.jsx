@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Link } from "react-router-dom";
 import { heroImages as realHeroImages } from "../lib/realProjects";
+import { api } from "../lib/api";
 
 /* ---------------------------------------------------------------------
  * HERO SLIDESHOW
@@ -27,7 +28,7 @@ const buildHeroImages = () => {
 };
 
 const HERO_IMAGES = buildHeroImages();
-const SLIDE_HOLD_MS  = 1600;   // ~3 s total per slide (1.6s hold + 1.4s crossfade)
+const SLIDE_HOLD_MS  = 3100;   // ~4.5 s total per slide (3.1 s hold + 1.4 s crossfade)
 const CROSSFADE_MS   = 1400;
 const ORIGINS = ["center", "top left", "bottom right", "top right", "bottom left", "center", "center", "top center"];
 
@@ -35,36 +36,49 @@ export default function Hero() {
   const ref = useRef(null);
   const [ready, setReady] = useState(false);
   const [active, setActive] = useState(0);
+  const [extraImages, setExtraImages] = useState([]);
   const { scrollY } = useScroll();
   const y = useTransform(scrollY, [0, 800], [0, 140]);
 
+  // Fetch extra hero URLs added from /admin (Covers · Hero tab).
+  useEffect(() => {
+    api.get("/covers")
+      .then((r) => {
+        const extra = (r.data?.hero_extra || []).filter(Boolean).map((src) => ({ src, kind: "residential" }));
+        setExtraImages(extra);
+      })
+      .catch(() => {});
+  }, []);
+
+  const IMAGES = useMemo(() => [...HERO_IMAGES, ...extraImages], [extraImages]);
+
   // Preload the first two images so the cross-fade is silky from the start.
   useEffect(() => {
-    HERO_IMAGES.slice(0, 2).forEach((im) => { const i = new Image(); i.src = im.src; });
+    IMAGES.slice(0, 2).forEach((im) => { const i = new Image(); i.src = im.src; });
     const t = setTimeout(() => setReady(true), 120);
     return () => clearTimeout(t);
-  }, []);
+  }, [IMAGES]);
 
   // Slideshow ticker — pauses when the tab is hidden to save cycles.
   useEffect(() => {
     if (typeof document !== "undefined" && document.hidden) return;
     const id = setInterval(
-      () => setActive((p) => (p + 1) % HERO_IMAGES.length),
+      () => setActive((p) => (p + 1) % IMAGES.length),
       SLIDE_HOLD_MS + CROSSFADE_MS
     );
     return () => clearInterval(id);
-  }, []);
+  }, [IMAGES.length]);
 
   const slides = useMemo(
     () =>
-      HERO_IMAGES.map((im, idx) => ({
+      IMAGES.map((im, idx) => ({
         ...im,
         origin: im.origin || ORIGINS[idx % ORIGINS.length],
         // negative delays de-sync each image's Ken-Burns cycle so the
         // motion never feels lock-stepped when two images cross-fade.
         delay: `-${(idx * 3.3) % 14}s`,
       })),
-    []
+    [IMAGES]
   );
 
   return (

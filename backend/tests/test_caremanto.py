@@ -205,6 +205,132 @@ def test_taxonomy_update_restore(admin_session, s):
     assert r.status_code == 200
 
 
+# ------------ Passless login (iteration_4) ------------
+def test_passless_login_sets_cookie_and_returns_admin():
+    sess = requests.Session()
+    r = sess.post(f"{API}/auth/passless-login")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["role"] == "admin"
+    assert body["email"] == ADMIN_EMAIL
+    assert "token" in body and body["token"]
+    assert "access_token" in sess.cookies
+    # /auth/me works with just the cookie
+    r2 = sess.get(f"{API}/auth/me")
+    assert r2.status_code == 200
+    assert r2.json()["email"] == ADMIN_EMAIL
+
+
+# ------------ Gallery seed of 48 Drive photos ------------
+def test_gallery_has_48_drive_photos(s):
+    r = s.get(f"{API}/gallery")
+    assert r.status_code == 200
+    docs = r.json()
+    assert isinstance(docs, list)
+    assert len(docs) >= 48, f"expected >=48 gallery photos, got {len(docs)}"
+    drive_docs = [d for d in docs if "lh3.googleusercontent.com/d/" in (d.get("image") or "")]
+    assert len(drive_docs) >= 48, f"expected >=48 googleusercontent drive photos, got {len(drive_docs)}"
+    cats = {d.get("category") for d in drive_docs}
+    assert cats.issubset({"RESIDENTIAL", "COMMERCIAL"}), f"unexpected categories: {cats}"
+    for d in drive_docs[:5]:
+        assert d["image"].startswith("https://lh3.googleusercontent.com/d/")
+        assert "=w" in d["image"]
+
+
+# ------------ Covers (public) ------------
+def test_covers_public(s):
+    r = s.get(f"{API}/covers")
+    assert r.status_code == 200
+    body = r.json()
+    assert "interiors_cover" in body and "restoration_cover" in body
+
+
+# ------------ Video upload (tiny mp4) ------------
+def _tiny_mp4_bytes() -> bytes:
+    # Minimal-ish MP4: ftyp + free box. Not playable but has correct sniff signature.
+    ftyp = b'\x00\x00\x00\x20ftypisom\x00\x00\x02\x00isomiso2avc1mp41'
+    free = b'\x00\x00\x00\x08free'
+    return ftyp + free
+
+
+def test_upload_video_success(admin_session, s):
+    data = _tiny_mp4_bytes()
+    r = admin_session.post(
+        f"{API}/admin/upload",
+        files={"file": ("clip.mp4", data, "video/mp4")},
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["content_type"] == "video/mp4"
+    assert body["size"] == len(data)
+    assert body["url"].startswith("/api/uploads/")
+    fetched = s.get(f"{BASE_URL}{body['url']}")
+    assert fetched.status_code == 200
+    assert fetched.content == data
+
+
+# ------------ Video CRUD (iteration_4) ------------
+def test_videos_crud_end_to_end(admin_session):
+    payload = {
+        "title": "TEST_Video",
+        "description": "e2e test",
+        "url": "https://example.com/clip.mp4",
+        "poster": "https://example.com/poster.jpg",
+        "featured_home": True,
+    }
+    r = admin_session.post(f"{API}/admin/videos", json=payload)
+    assert r.status_code == 200, r.text
+    vid = r.json()
+    assert vid["id"] and vid["title"] == "TEST_Video"
+    vid_id = vid["id"]
+
+    # public list
+    r = requests.get(f"{API}/videos")
+    assert r.status_code == 200
+    assert any(v["id"] == vid_id for v in r.json())
+
+    # update
+    r = admin_session.put(f"{API}/admin/videos/{vid_id}",
+                          json={**payload, "title": "TEST_Video_Updated"})
+    assert r.status_code == 200
+    assert r.json()["title"] == "TEST_Video_Updated"
+
+    # unauth guard
+    r = requests.put(f"{API}/admin/videos/{vid_id}", json=payload)
+    assert r.status_code == 401
+
+    # delete
+    r = admin_session.delete(f"{API}/admin/videos/{vid_id}")
+    assert r.status_code == 200
+
+    # confirm gone
+    r = admin_session.delete(f"{API}/admin/videos/{vid_id}")
+    assert r.status_code == 404
+
+
+# ------------ Gallery CRUD via passless cookie ------------
+def test_gallery_crud_via_passless_cookie():
+    sess = requests.Session()
+    r = sess.post(f"{API}/auth/passless-login")
+    assert r.status_code == 200
+    payload = {
+        "title": "TEST_Passless_Photo",
+        "description": "",
+        "category": "COMMERCIAL",
+        "subcategory": "Office Spaces",
+        "image": "https://example.com/x.jpg",
+        "featured_home": False,
+    }
+    r = sess.post(f"{API}/admin/gallery", json=payload)
+    assert r.status_code == 200, r.text
+    pid = r.json()["id"]
+    r = sess.put(f"{API}/admin/gallery/{pid}", json={**payload, "featured_home": True})
+    assert r.status_code == 200
+    assert r.json()["featured_home"] is True
+    r = sess.delete(f"{API}/admin/gallery/{pid}")
+    assert r.status_code == 200
+
+
 # ------------ Logout ------------
 def test_logout(admin_session):
     r = admin_session.post(f"{API}/auth/logout")
