@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 import { api } from "../lib/api";
 import { Rise } from "../components/Rise";
+import { sharePhoto } from "../lib/share";
 
 /* -------------------------------------------------------------------------
  * Gallery structure per user spec:
@@ -303,6 +305,19 @@ export default function GalleryPage() {
                 {lightbox.title && <div className="font-serif text-[24px] md:text-[32px] text-white">{lightbox.title}</div>}
                 {lightbox.description && <div className="text-[14px] text-white/70 mt-1 max-w-xl">{lightbox.description}</div>}
               </div>
+              <button
+                data-testid="lightbox-share"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  const result = await sharePhoto(lightbox);
+                  if (result === "shared")   toast.success("Shared.");
+                  else if (result === "copied") toast.success("Pin link copied — paste anywhere to share.");
+                  else if (result === "unsupported") toast.error("Sharing not supported on this device.");
+                }}
+                className="btn-gold self-start md:self-end"
+              >
+                Share as Pin ↗
+              </button>
             </div>
           </div>
         </div>

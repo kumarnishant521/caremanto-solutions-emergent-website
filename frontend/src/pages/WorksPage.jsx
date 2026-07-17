@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 import { api } from "../lib/api";
 import { Rise } from "../components/Rise";
+import { sharePhoto } from "../lib/share";
 
 /**
  * Portfolio landing page.
@@ -139,12 +141,27 @@ export default function WorksPage() {
           >×</button>
           <div className="max-w-[1200px] w-full" onClick={(e) => e.stopPropagation()}>
             <img src={lightbox.image} alt={lightbox.title || ""} className="w-full max-h-[80vh] object-contain" />
-            <div className="mt-5">
-              <div className="overline text-[var(--gold-hi)] mb-1">
-                {lightbox.category}{lightbox.subcategory ? ` · ${lightbox.subcategory}` : ""}
+            <div className="mt-5 flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+              <div>
+                <div className="overline text-[var(--gold-hi)] mb-1">
+                  {lightbox.category}{lightbox.subcategory ? ` · ${lightbox.subcategory}` : ""}
+                </div>
+                {lightbox.title && <div className="font-serif text-[24px] md:text-[32px] text-white">{lightbox.title}</div>}
+                {lightbox.description && <div className="text-[14px] text-white/70 mt-1 max-w-xl">{lightbox.description}</div>}
               </div>
-              {lightbox.title && <div className="font-serif text-[24px] md:text-[32px] text-white">{lightbox.title}</div>}
-              {lightbox.description && <div className="text-[14px] text-white/70 mt-1 max-w-xl">{lightbox.description}</div>}
+              <button
+                data-testid="portfolio-lightbox-share"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  const result = await sharePhoto(lightbox);
+                  if (result === "shared")   toast.success("Shared.");
+                  else if (result === "copied") toast.success("Pin link copied — paste anywhere to share.");
+                  else if (result === "unsupported") toast.error("Sharing not supported on this device.");
+                }}
+                className="btn-gold self-start md:self-end"
+              >
+                Share as Pin ↗
+              </button>
             </div>
           </div>
         </div>

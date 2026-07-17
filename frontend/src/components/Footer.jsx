@@ -1,4 +1,14 @@
 import { Link } from "react-router-dom";
+import { Instagram, Linkedin, Twitter, Youtube } from "lucide-react";
+
+// Placeholder handles — routes forward to the studio's future social presence.
+// Update the base URLs here once the handles are live.
+const SOCIALS = [
+  { key: "instagram", label: "Instagram", href: "https://www.instagram.com/caremanto/", Icon: Instagram },
+  { key: "linkedin",  label: "LinkedIn",  href: "https://www.linkedin.com/company/caremanto/", Icon: Linkedin  },
+  { key: "twitter",   label: "Twitter",   href: "https://twitter.com/caremanto",         Icon: Twitter   },
+  { key: "youtube",   label: "YouTube",   href: "https://www.youtube.com/@caremanto",    Icon: Youtube   },
+];
 
 export default function Footer() {
   return (
@@ -21,19 +31,19 @@ export default function Footer() {
           <div className="md:col-span-3">
             <div className="overline mb-4">Studio</div>
             <ul className="space-y-2 text-[14px]">
-              <li><Link to="/studio" className="hover:text-[var(--gold)] transition-colors">About Us</Link></li>
+              <li><Link to="/studio"   className="hover:text-[var(--gold)] transition-colors">About Us</Link></li>
               <li><Link to="/approach" className="hover:text-[var(--gold)] transition-colors">Approach</Link></li>
-              <li><Link to="/works" className="hover:text-[var(--gold)] transition-colors">Our Works</Link></li>
-              <li><Link to="/gallery" className="hover:text-[var(--gold)] transition-colors">Gallery</Link></li>
-              <li><Link to="/films" className="hover:text-[var(--gold)] transition-colors">Films</Link></li>
-              <li><Link to="/contact" className="hover:text-[var(--gold)] transition-colors">Contact</Link></li>
+              <li><Link to="/works"    className="hover:text-[var(--gold)] transition-colors">Our Works</Link></li>
+              <li><Link to="/gallery"  className="hover:text-[var(--gold)] transition-colors">Gallery</Link></li>
+              <li><Link to="/films"    className="hover:text-[var(--gold)] transition-colors">Films</Link></li>
+              <li><Link to="/contact"  className="hover:text-[var(--gold)] transition-colors">Contact</Link></li>
             </ul>
           </div>
 
           <div className="md:col-span-2">
             <div className="overline mb-4">Practices</div>
             <ul className="space-y-2 text-[14px]">
-              <li><Link to="/works?category=interiors" className="hover:text-[var(--gold)] transition-colors">Interiors</Link></li>
+              <li><Link to="/works?category=interiors"   className="hover:text-[var(--gold)] transition-colors">Interiors</Link></li>
               <li><Link to="/works?category=restoration" className="hover:text-[var(--gold)] transition-colors">Restoration</Link></li>
             </ul>
           </div>
@@ -41,8 +51,39 @@ export default function Footer() {
           <div className="md:col-span-2">
             <div className="overline mb-4">Contact</div>
             <ul className="space-y-2 text-[14px] text-[var(--ink)]/80">
-              <li>info@caremanto.solutions</li>
+              <li>
+                <a
+                  href="mailto:care@caremanto.in"
+                  data-testid="footer-email"
+                  className="hover:text-[var(--gold)] transition-colors"
+                >
+                  care@caremanto.in
+                </a>
+              </li>
               <li>+91 · Available on request</li>
+            </ul>
+
+            <div className="overline mt-6 mb-3">Follow</div>
+            <ul
+              data-testid="footer-social"
+              className="flex items-center gap-3"
+              aria-label="Social media"
+            >
+              {SOCIALS.map(({ key, label, href, Icon }) => (
+                <li key={key}>
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={label}
+                    title={label}
+                    data-testid={`social-${key}`}
+                    className="inline-flex items-center justify-center w-9 h-9 border border-[var(--line-strong)] text-[var(--ink)]/80 hover:text-[var(--gold)] hover:border-[var(--gold)] transition-colors"
+                  >
+                    <Icon size={16} strokeWidth={1.6} />
+                  </a>
+                </li>
+              ))}
             </ul>
           </div>
         </div>
