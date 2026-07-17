@@ -22,17 +22,22 @@ Public: `GET /`, `GET /projects[?category=…]`, `GET /projects/{id}`, `GET /gal
 Auth: `POST /auth/login`, `GET /auth/me`, `POST /auth/logout`
 Admin (cookie-auth): `POST/PUT/DELETE /admin/projects[/{id}]`, `POST/PUT/DELETE /admin/gallery[/{id}]`, `PUT /admin/gallery/taxonomy`, `GET /admin/leads`, `PATCH/DELETE /admin/leads/{id}`
 
-## What's Implemented (2026-07-17)
-- **Home**: 4.5s Ken Burns hero slideshow, editorial marquee, Divisions (Interiors + Renovations/Restorations), 4-chapter Manifesto, home bento gallery (driven by `featured_home` flag), closing quote.
-- **/works**: two-tier category dropdowns (Interiors, Restoration & Renovations).
-- **/gallery**: two-axis filtering (Category × Sub-category), masonry columns, lightbox.
-- **/films (also /videos)**: public video wall driven by `/api/videos`.
-- **/studio, /approach, /contact**: editorial content pages.
-- **/admin/login**: PASSLESS auto-entry — hitting the URL calls `POST /api/auth/passless-login` and drops the studio straight into `/admin`.
-- **/admin**: five tabs — Gallery (CRUD + taxonomy + device uploads + featured-home toggle), Videos (CRUD + device video uploads), Covers · Hero, Projects, Leads.
-- **File uploads**: `/api/admin/upload` accepts images and videos with no explicit size cap.
-- **Seeded content**: 48 real Google Drive photographs auto-ingested (2026-07-17) across RESIDENTIAL / COMMERCIAL categories via `/app/backend/scripts/seed_drive_gallery.py`.
-- **Consultation lead**: saved to Mongo + Resend email attempt to `STUDIO_NOTIFICATION_EMAIL`.
+## What's Implemented (2026-07-17 · v2)
+- **Home**: Ken Burns hero slideshow — now driven by the backend's `hero_images` + `hero_interval_seconds` config (admin picks the pool and cadence live).
+- **/works — the Portfolio landing page**: reads gallery items with `featured_portfolio=true` and renders a magazine grid with Practice filter (All / Interiors / Restoration & Renovation). Empty state points admin back to the Portfolio Feature Manager.
+- **/gallery — the Reference Library**: restructured to three Practice tabs [ALL] · [INTERIORS] · [RESTORATION & RENOVATION]. INTERIORS reveals a sub-row with **Residential** + **Commercial** ONLY. Residential shows 5 folder cards (Bedrooms, Bathrooms, Kitchen, Hall & Dining, Balcony & Dry area); Commercial shows 3 folder cards (Offices, Retail, Hospitality). Each card renders a single cover image; clicking a card opens a full-screen folder modal with every photograph in that suite. Restoration bucket shows an editorial empty-state until content is added.
+- **/films**: public video wall from `/api/videos`.
+- **/admin/login**: passless auto-entry.
+- **/admin** (six tabs):
+   - **Gallery** — CRUD + taxonomy + device uploads + per-photo toggles for Home / Portfolio / Cover.
+   - **Portfolio** — NEW single-purpose *Portfolio Feature Manager* view. Filter by category or "Featured Only", toggle any card, bulk feature/un-feature.
+   - **Hero · Covers** — NEW *Hero Slideshow Configuration*. Numeric interval seconds input (with 3/4.5/6/8 preset chips) + a filterable multi-checkbox grid of every uploaded photograph, plus the division cover cards.
+   - **Videos** — CRUD + device video uploads.
+   - **Projects** — CRUD.
+   - **Leads** — status + reply + delete.
+- **File uploads**: `/api/admin/upload` accepts images and videos, no explicit size cap.
+- **Seeded content**: 48 real Google Drive photographs (Portfolio 3 folder), spread across the new taxonomy with 8 auto-set cover images and 14 auto-featured portfolio picks.
+- **Startup migration**: legacy sub-category values (`Balcony - Dry Area`, `Office Spaces`, `Retail Design`, `Temple`) auto-renamed to the new schema on boot.
 
 ## Test Credentials
 - Admin URL: `/admin/login` (auto-signs in; no credentials required)

@@ -64,8 +64,8 @@ def test_list_projects_filter_interiors(s):
 EXPECTED_TAXONOMY = {
     "categories": ["RESIDENTIAL", "COMMERCIAL"],
     "subcategories": {
-        "RESIDENTIAL": ["Bedrooms", "Bathrooms", "Kitchen", "Hall & Dining", "Balcony - Dry Area", "Temple"],
-        "COMMERCIAL":  ["Hospitality", "Retail Design", "Office Spaces"],
+        "RESIDENTIAL": ["Bedrooms", "Bathrooms", "Kitchen", "Hall & Dining", "Balcony & Dry area"],
+        "COMMERCIAL":  ["Offices", "Retail", "Hospitality"],
     },
 }
 
@@ -317,7 +317,7 @@ def test_gallery_crud_via_passless_cookie():
         "title": "TEST_Passless_Photo",
         "description": "",
         "category": "COMMERCIAL",
-        "subcategory": "Office Spaces",
+        "subcategory": "Offices",
         "image": "https://example.com/x.jpg",
         "featured_home": False,
     }
