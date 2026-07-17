@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api";
 import { toast } from "sonner";
 
-const EMPTY = { title: "", description: "", category: "", subcategory: "", image: "", is_sample: false, featured_home: false };
+const EMPTY = { title: "", description: "", category: "", subcategory: "", image: "", is_sample: false, featured_home: false, featured_portfolio: false, is_cover: false };
 
 export default function AdminGallery() {
   const [taxonomy, setTaxonomy] = useState({ categories: [], subcategories: {} });
@@ -61,6 +61,8 @@ export default function AdminGallery() {
       category: form.category, subcategory: form.subcategory || "",
       image: form.image, is_sample: !!form.is_sample,
       featured_home: !!form.featured_home,
+      featured_portfolio: !!form.featured_portfolio,
+      is_cover: !!form.is_cover,
     };
     try {
       if (editing === "new") await api.post("/admin/gallery", payload);
@@ -228,6 +230,14 @@ export default function AdminGallery() {
               <input type="checkbox" checked={!!form.featured_home} onChange={(e)=>setForm({...form, featured_home: e.target.checked})}/>
               Feature on Home Page (appears in the home page scrolling bento)
             </label>
+            <label className="flex items-center gap-3 text-[13px] md:col-span-2">
+              <input type="checkbox" checked={!!form.featured_portfolio} onChange={(e)=>setForm({...form, featured_portfolio: e.target.checked})}/>
+              Feature on Portfolio Page (Explore Portfolio landing / <code>/works</code>)
+            </label>
+            <label className="flex items-center gap-3 text-[13px] md:col-span-2">
+              <input type="checkbox" checked={!!form.is_cover} onChange={(e)=>setForm({...form, is_cover: e.target.checked})}/>
+              Use as Sub-Category Cover Card (only one per {form.category || "category"} · {form.subcategory || "sub"})
+            </label>
             <label className="flex items-center gap-3 text-[13px] md:col-span-2 mt-1">
               <input type="checkbox" checked={!!form.is_sample} onChange={(e)=>setForm({...form,is_sample:e.target.checked})}/>
               Mark as sample / placeholder
@@ -319,27 +329,56 @@ export default function AdminGallery() {
                 {p.featured_home && (
                   <span className="absolute top-2 right-2 bg-[var(--gold)] text-white text-[9px] tracking-widest uppercase px-2 py-1">★ Home</span>
                 )}
+                {p.is_cover && (
+                  <span className="absolute top-2 left-2 bg-[var(--gold-hi)] text-black text-[9px] tracking-widest uppercase px-2 py-1 font-medium">Cover</span>
+                )}
+                {p.featured_portfolio && (
+                  <span className="absolute bottom-2 left-2 bg-black/70 text-[var(--gold-hi)] text-[9px] tracking-widest uppercase px-2 py-1 border border-[var(--gold-hi)]/60">Portfolio</span>
+                )}
               </div>
               <div className="overline text-[9px] mb-1">
                 {p.category}{p.subcategory ? ` · ${p.subcategory}` : ""}
               </div>
               {p.title && <div className="font-serif text-[16px] leading-tight mb-2">{p.title}</div>}
-              <div className="flex gap-2 mt-2">
+              <div className="flex flex-wrap gap-1.5 mt-2">
                 <button
                   onClick={async () => {
                     try {
                       await api.put(`/admin/gallery/${p.id}`, { ...p, featured_home: !p.featured_home });
-                      toast.success(!p.featured_home ? "Added to Home" : "Removed from Home");
                       loadAll();
                     } catch { toast.error("Failed."); }
                   }}
-                  className={`admin-btn ghost flex-1 text-[10px] ${p.featured_home ? "text-[var(--gold-hi)]" : ""}`}
+                  className={`admin-btn ghost flex-1 text-[10px] min-w-[60px] ${p.featured_home ? "text-[var(--gold-hi)]" : ""}`}
                   data-testid={`toggle-home-${p.id}`}
                 >
-                  {p.featured_home ? "★ Home" : "☆ Home"}
+                  {p.featured_home ? "★" : "☆"} Home
                 </button>
-                <button onClick={() => startEdit(p)} className="admin-btn ghost text-[11px]">Edit</button>
-                <button onClick={() => remove(p.id)} className="admin-btn danger text-[11px]">Del</button>
+                <button
+                  onClick={async () => {
+                    try {
+                      await api.put(`/admin/gallery/${p.id}`, { ...p, featured_portfolio: !p.featured_portfolio });
+                      loadAll();
+                    } catch { toast.error("Failed."); }
+                  }}
+                  className={`admin-btn ghost flex-1 text-[10px] min-w-[60px] ${p.featured_portfolio ? "text-[var(--gold-hi)]" : ""}`}
+                  data-testid={`toggle-portfolio-${p.id}`}
+                >
+                  {p.featured_portfolio ? "★" : "☆"} Port.
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      await api.put(`/admin/gallery/${p.id}`, { ...p, is_cover: !p.is_cover });
+                      loadAll();
+                    } catch { toast.error("Failed."); }
+                  }}
+                  className={`admin-btn ghost flex-1 text-[10px] min-w-[60px] ${p.is_cover ? "text-[var(--gold-hi)]" : ""}`}
+                  data-testid={`toggle-cover-${p.id}`}
+                >
+                  {p.is_cover ? "●" : "○"} Cover
+                </button>
+                <button onClick={() => startEdit(p)} className="admin-btn ghost text-[10px]">Edit</button>
+                <button onClick={() => remove(p.id)} className="admin-btn danger text-[10px]">Del</button>
               </div>
             </div>
           ))}

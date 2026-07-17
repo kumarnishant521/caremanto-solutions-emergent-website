@@ -114,11 +114,14 @@ class LoginIn(BaseModel):
 class GalleryPhotoIn(BaseModel):
     title: Optional[str] = ""
     description: Optional[str] = ""
+    practice: Optional[str] = "interiors"   # "interiors" | "restoration"
     category: str
     subcategory: Optional[str] = ""
     image: str
     is_sample: bool = False
-    featured_home: bool = False   # show in the scrolling home page bento
+    featured_home: bool = False             # scrolling home bento
+    featured_portfolio: bool = False        # /works portfolio page
+    is_cover: bool = False                  # cover card for its (category, subcategory)
 
 class GalleryPhoto(GalleryPhotoIn):
     id: str
@@ -315,9 +318,17 @@ async def delete_lead(lid: str, _admin=Depends(get_current_admin)):
 DEFAULT_TAXONOMY = {
     "categories": ["RESIDENTIAL", "COMMERCIAL"],
     "subcategories": {
-        "RESIDENTIAL": ["Bedrooms", "Bathrooms", "Kitchen", "Hall & Dining", "Balcony - Dry Area", "Temple"],
-        "COMMERCIAL":  ["Hospitality", "Retail Design", "Office Spaces"],
+        "RESIDENTIAL": ["Bedrooms", "Bathrooms", "Kitchen", "Hall & Dining", "Balcony & Dry area"],
+        "COMMERCIAL":  ["Offices", "Retail", "Hospitality"],
     },
+}
+# Old sub-name → new sub-name — applied once at startup so any previously-seeded
+# photos still resolve to a card on the restructured Gallery page.
+SUBCATEGORY_ALIASES = {
+    "Balcony - Dry Area": "Balcony & Dry area",
+    "Office Spaces":      "Offices",
+    "Retail Design":      "Retail",
+    "Temple":             "Hall & Dining",   # legacy bucket rolled into Hall & Dining
 }
 
 @api.get("/gallery/taxonomy")
@@ -412,18 +423,25 @@ async def delete_video(vid: str, _admin=Depends(get_current_admin)):
 DEFAULT_COVERS = {
     "interiors_cover":   "https://lh3.googleusercontent.com/d/1F9U9UjI9CHuxR-AkUvJZQRrom_oF10pm=w1400",
     "restoration_cover": "https://lh3.googleusercontent.com/d/1tMuPICaLjYIn8smCG0cize45rzG9DKPo=w1400",
-    "hero_extra":        [],   # gallery-URL strings admin adds to hero slideshow
+    "hero_extra":        [],           # legacy: URLs appended to the default hero mix
+    "hero_images":       [],           # curated hero — if non-empty, REPLACES defaults
+    "hero_interval_seconds": 4.5,      # slideshow tempo
 }
 
 class CoversIn(BaseModel):
     interiors_cover: Optional[str] = None
     restoration_cover: Optional[str] = None
     hero_extra: Optional[List[str]] = None
+    hero_images: Optional[List[str]] = None
+    hero_interval_seconds: Optional[float] = None
 
 @api.get("/covers")
 async def get_covers():
     doc = await db.settings.find_one({"key": "section_covers"}, {"_id": 0})
-    return (doc or {}).get("value") or DEFAULT_COVERS
+    stored = (doc or {}).get("value") or {}
+    # Merge over defaults so newly-added keys (hero_images / hero_interval_seconds)
+    # are always present in the response even if the stored doc is old.
+    return {**DEFAULT_COVERS, **stored}
 
 @api.put("/admin/covers")
 async def update_covers(body: CoversIn, _admin=Depends(get_current_admin)):
@@ -432,6 +450,10 @@ async def update_covers(body: CoversIn, _admin=Depends(get_current_admin)):
     if body.interiors_cover   is not None: value["interiors_cover"]   = body.interiors_cover
     if body.restoration_cover is not None: value["restoration_cover"] = body.restoration_cover
     if body.hero_extra        is not None: value["hero_extra"]        = [u.strip() for u in body.hero_extra if u.strip()]
+    if body.hero_images       is not None: value["hero_images"]       = [u.strip() for u in body.hero_images if u.strip()]
+    if body.hero_interval_seconds is not None:
+        # clamp to [0.5s, 60s] to keep the ticker sane
+        value["hero_interval_seconds"] = max(0.5, min(60.0, float(body.hero_interval_seconds)))
     await db.settings.update_one(
         {"key": "section_covers"},
         {"$set": {"key": "section_covers", "value": value}},
@@ -586,6 +608,21 @@ async def seed_admin_and_samples():
         # Also nuke stale taxonomy if it uses old shape
         await db.settings.delete_one({"key": "gallery_taxonomy"})
         logger.info(f"Migrated stale gallery samples (removed {stale} old-schema docs)")
+
+    # Rename any legacy sub-category values so the new Gallery structure can
+    # find them (e.g. "Balcony - Dry Area" → "Balcony & Dry area").
+    for old, new in SUBCATEGORY_ALIASES.items():
+        r = await db.gallery.update_many({"subcategory": old}, {"$set": {"subcategory": new}})
+        if r.modified_count:
+            logger.info(f"Migrated {r.modified_count} photos: {old!r} → {new!r}")
+
+    # Force the taxonomy to match the current DEFAULT (Residential 5-card /
+    # Commercial 3-card layout) — the previous seed used a longer list.
+    await db.settings.update_one(
+        {"key": "gallery_taxonomy"},
+        {"$set": {"key": "gallery_taxonomy", "value": DEFAULT_TAXONOMY}},
+        upsert=True,
+    )
 
     g_count = await db.gallery.count_documents({})
     if g_count == 0 and SAMPLE_GALLERY:

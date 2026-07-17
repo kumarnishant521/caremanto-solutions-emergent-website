@@ -20,41 +20,58 @@ const PLACEHOLDERS = [
   { src: "https://images.pexels.com/photos/380769/pexels-photo-380769.jpeg?auto=compress&cs=tinysrgb&w=1920",   kind: "commercial"  },
 ];
 
-const buildHeroImages = () => {
+const buildFallbackHeroImages = () => {
   const real = realHeroImages();
-  if (real.length >= 6) return real;   // use ALL real hero entries (20+)
+  if (real.length >= 6) return real;
   const missing = 6 - real.length;
   return [...real, ...PLACEHOLDERS.slice(0, missing)];
 };
 
-const HERO_IMAGES = buildHeroImages();
-const SLIDE_HOLD_MS  = 3100;   // ~4.5 s total per slide (3.1 s hold + 1.4 s crossfade)
-const CROSSFADE_MS   = 1400;
+const FALLBACK_HERO_IMAGES = buildFallbackHeroImages();
+const DEFAULT_INTERVAL_SEC  = 4.5;
+const CROSSFADE_MS          = 1400;
 const ORIGINS = ["center", "top left", "bottom right", "top right", "bottom left", "center", "center", "top center"];
 
 export default function Hero() {
   const ref = useRef(null);
   const [ready, setReady] = useState(false);
   const [active, setActive] = useState(0);
-  const [extraImages, setExtraImages] = useState([]);
+  const [heroConfig, setHeroConfig] = useState({ images: [], interval_seconds: DEFAULT_INTERVAL_SEC, hero_extra: [] });
   const { scrollY } = useScroll();
   const y = useTransform(scrollY, [0, 800], [0, 140]);
 
-  // Fetch extra hero URLs added from /admin (Covers · Hero tab).
+  // Live-config from /admin (Hero · Covers tab).
   useEffect(() => {
     api.get("/covers")
       .then((r) => {
-        const extra = (r.data?.hero_extra || []).filter(Boolean).map((src) => ({ src, kind: "residential" }));
-        setExtraImages(extra);
+        setHeroConfig({
+          images:            Array.isArray(r.data?.hero_images) ? r.data.hero_images.filter(Boolean) : [],
+          interval_seconds:  Number(r.data?.hero_interval_seconds) || DEFAULT_INTERVAL_SEC,
+          hero_extra:        Array.isArray(r.data?.hero_extra) ? r.data.hero_extra.filter(Boolean) : [],
+        });
       })
       .catch(() => {});
   }, []);
 
-  const IMAGES = useMemo(() => [...HERO_IMAGES, ...extraImages], [extraImages]);
+  const IMAGES = useMemo(() => {
+    // Admin-picked hero images REPLACE defaults (per user requirement).
+    if (heroConfig.images.length > 0) {
+      return heroConfig.images.map((src) => ({ src, kind: "custom" }));
+    }
+    const extras = heroConfig.hero_extra.map((src) => ({ src, kind: "residential" }));
+    return [...FALLBACK_HERO_IMAGES, ...extras];
+  }, [heroConfig.images, heroConfig.hero_extra]);
+
+  const slideCycleMs = useMemo(() => {
+    // Total cycle = hold + crossfade; hold ≥ 0.5s so nothing snaps.
+    const total = Math.max(1200, heroConfig.interval_seconds * 1000);
+    return total;
+  }, [heroConfig.interval_seconds]);
 
   // Preload the first two images so the cross-fade is silky from the start.
   useEffect(() => {
     IMAGES.slice(0, 2).forEach((im) => { const i = new Image(); i.src = im.src; });
+    setActive(0);
     const t = setTimeout(() => setReady(true), 120);
     return () => clearTimeout(t);
   }, [IMAGES]);
@@ -62,12 +79,13 @@ export default function Hero() {
   // Slideshow ticker — pauses when the tab is hidden to save cycles.
   useEffect(() => {
     if (typeof document !== "undefined" && document.hidden) return;
+    if (IMAGES.length <= 1) return;
     const id = setInterval(
       () => setActive((p) => (p + 1) % IMAGES.length),
-      SLIDE_HOLD_MS + CROSSFADE_MS
+      slideCycleMs
     );
     return () => clearInterval(id);
-  }, [IMAGES.length]);
+  }, [IMAGES.length, slideCycleMs]);
 
   const slides = useMemo(
     () =>

@@ -1,48 +1,42 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { api, NAV_CATEGORIES } from "../lib/api";
-import { worksProjects } from "../lib/realProjects";
-import { ProjectCard } from "../components/FeaturedWorks";
+import { api } from "../lib/api";
 import { Rise } from "../components/Rise";
 
+/**
+ * Portfolio landing page.
+ *
+ * Fully driven by the admin "Portfolio Feature Manager" — reads gallery
+ * assets flagged featured_portfolio=true and renders them in a magazine
+ * grid. Practice filter mirrors the Gallery structure (All / Interiors /
+ * Restoration & Renovation).
+ */
 export default function WorksPage() {
-  const [projects, setProjects] = useState([]);
+  const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [params, setParams] = useSearchParams();
-  const category = params.get("category") || "all";
-  const sub = params.get("sub") || "all";
+  const practice = params.get("practice") || "all";
+  const [lightbox, setLightbox] = useState(null);
 
   useEffect(() => {
     setLoading(true);
-    // Real project photography always takes priority — merge with any DB
-    // projects that aren't already represented.
-    const real = worksProjects();
-    api.get("/projects")
-      .then((r) => {
-        const ids = new Set(real.map((p) => p.id));
-        const extras = (r.data || []).filter((p) => !ids.has(p.id));
-        setProjects([...real, ...extras]);
-      })
-      .catch(() => setProjects(real))
+    api.get("/gallery")
+      .then((r) => setPhotos((r.data || []).filter((p) => p.featured_portfolio)))
+      .catch(() => setPhotos([]))
       .finally(() => setLoading(false));
   }, []);
 
-  const scoped = category === "all" ? projects : projects.filter((p) => p.category === category);
-  const filtered = sub === "all" ? scoped : scoped.filter((p) => p.subcategory === sub);
-
-  const setCat = (c) => {
-    const p = new URLSearchParams();
-    if (c !== "all") p.set("category", c);
-    setParams(p);
+  const setPractice = (k) => {
+    const q = new URLSearchParams();
+    if (k !== "all") q.set("practice", k);
+    setParams(q);
   };
 
-  const setSub = (s) => {
-    const p = new URLSearchParams(params);
-    if (s === "all") p.delete("sub"); else p.set("sub", s);
-    setParams(p);
-  };
-
-  const subOptions = category !== "all" ? NAV_CATEGORIES[category]?.items ?? [] : [];
+  const filtered = useMemo(() => {
+    if (practice === "all") return photos;
+    if (practice === "restoration") return photos.filter((p) => (p.practice || "").toLowerCase() === "restoration");
+    return photos.filter((p) => (p.practice || "interiors").toLowerCase() === "interiors");
+  }, [photos, practice]);
 
   return (
     <main data-testid="works-page" className="pt-32 pb-24 md:pt-40 md:pb-32 bg-[var(--bg-0)]">
@@ -60,68 +54,101 @@ export default function WorksPage() {
         </Rise>
         <Rise delay={160}>
           <p className="mt-6 max-w-2xl text-[15px] md:text-[17px] text-[var(--ink)]/80 leading-relaxed">
-            A curated ledger of interiors, restorations and renewals — filter by practice and sub-discipline.
+            A curated ledger of interiors, restorations and renewals — hand-picked from our studio archive.
           </p>
         </Rise>
 
         <div className="hairline mt-14 mb-8" />
 
-        <div className="flex flex-col gap-6">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="overline text-[10px] text-[var(--muted)] mr-2">Practice ·</span>
-            {[["all", "All"], ["interiors", "Interiors"], ["restoration", "Restoration & Renovation"]].map(([k, l]) => (
-              <button
-                key={k}
-                data-testid={`filter-category-${k}`}
-                onClick={() => setCat(k)}
-                className={`px-4 py-2 border text-[12px] uppercase tracking-[0.14em] transition-colors ${
-                  category === k
-                    ? "border-[var(--gold)] text-[var(--gold)]"
-                    : "border-[var(--line-strong)] text-[var(--ink)]/80 hover:border-[var(--line-strong)]"
-                }`}
-              >
-                {l}
-              </button>
+        <div className="flex flex-wrap items-center gap-2 mb-10">
+          <span className="overline text-[10px] text-[var(--muted)] mr-2">Practice ·</span>
+          {[["all", "All"], ["interiors", "Interiors"], ["restoration", "Restoration & Renovation"]].map(([k, l]) => (
+            <button
+              key={k}
+              data-testid={`filter-category-${k}`}
+              onClick={() => setPractice(k)}
+              className={`px-4 py-2 border text-[12px] uppercase tracking-[0.14em] transition-colors ${
+                practice === k
+                  ? "border-[var(--gold)] text-[var(--gold)]"
+                  : "border-[var(--line-strong)] text-[var(--ink)]/80 hover:border-[var(--ink)]"
+              }`}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
+
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="aspect-[4/5] bg-[var(--bg-1)] animate-pulse" />
             ))}
           </div>
-
-          {subOptions.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="overline text-[10px] text-[var(--muted)] mr-2">Sub ·</span>
-              {["all", ...subOptions].map((s, i) => (
-                <button
-                  key={s}
-                  data-testid={`filter-sub-${i}`}
-                  onClick={() => setSub(s)}
-                  className={`px-3 py-1.5 text-[12px] tracking-[0.06em] transition-colors ${
-                    sub === s ? "text-[var(--gold)]" : "text-[var(--ink)]/70 hover:text-[var(--ink)]"
-                  }`}
-                >
-                  {s === "all" ? "All" : s}
-                </button>
-              ))}
+        ) : filtered.length === 0 ? (
+          <div className="py-20 text-center">
+            <div className="font-serif italic text-2xl md:text-3xl text-[var(--muted)]">
+              No portfolio pieces have been featured yet.
             </div>
-          )}
-        </div>
-
-        <div className="mt-14 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-          {loading ? (
-            [...Array(6)].map((_, i) => (
-              <div key={i} className="aspect-[4/5] bg-[var(--bg-1)] animate-pulse" />
-            ))
-          ) : filtered.length === 0 ? (
-            <div className="col-span-full py-24 text-center text-[var(--muted)] font-serif italic text-2xl">
-              No projects in this category yet.
-            </div>
-          ) : (
-            filtered.map((p, i) => (
+            <p className="mt-4 text-[13px] text-[var(--muted)] max-w-md mx-auto">
+              Head to the studio console → Portfolio Feature Manager and toggle photographs to appear here.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+            {filtered.map((p, i) => (
               <Rise key={p.id} delay={i * 60}>
-                <ProjectCard project={p} />
+                <button
+                  onClick={() => setLightbox(p)}
+                  data-testid={`portfolio-item-${i}`}
+                  className="group relative w-full text-left overflow-hidden bg-[var(--bg-1)] aspect-[4/5]"
+                >
+                  <img
+                    src={p.image}
+                    alt={p.title || ""}
+                    loading="lazy"
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-[900ms] ease-[cubic-bezier(0.2,0.7,0.15,1)] group-hover:scale-[1.05]"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                  <div className="absolute inset-x-0 bottom-0 p-5 md:p-6 text-white">
+                    <div className="text-[10px] tracking-[0.28em] uppercase text-[var(--gold-hi)] mb-2">
+                      {p.category}{p.subcategory ? ` · ${p.subcategory}` : ""}
+                    </div>
+                    <div className="font-serif text-[22px] md:text-[26px] leading-tight">
+                      {p.title || p.subcategory || "Untitled"}
+                    </div>
+                  </div>
+                </button>
               </Rise>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div
+          role="dialog"
+          data-testid="portfolio-lightbox"
+          onClick={() => setLightbox(null)}
+          className="fixed inset-0 z-[80] bg-black/95 backdrop-blur-md flex items-center justify-center p-4 md:p-10"
+        >
+          <button
+            onClick={(e) => { e.stopPropagation(); setLightbox(null); }}
+            className="absolute top-6 right-6 w-11 h-11 border border-white/40 text-white hover:border-[var(--gold-hi)] hover:text-[var(--gold-hi)] transition-colors"
+            data-testid="portfolio-lightbox-close"
+          >×</button>
+          <div className="max-w-[1200px] w-full" onClick={(e) => e.stopPropagation()}>
+            <img src={lightbox.image} alt={lightbox.title || ""} className="w-full max-h-[80vh] object-contain" />
+            <div className="mt-5">
+              <div className="overline text-[var(--gold-hi)] mb-1">
+                {lightbox.category}{lightbox.subcategory ? ` · ${lightbox.subcategory}` : ""}
+              </div>
+              {lightbox.title && <div className="font-serif text-[24px] md:text-[32px] text-white">{lightbox.title}</div>}
+              {lightbox.description && <div className="text-[14px] text-white/70 mt-1 max-w-xl">{lightbox.description}</div>}
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
