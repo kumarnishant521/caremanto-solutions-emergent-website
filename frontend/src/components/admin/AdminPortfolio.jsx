@@ -80,6 +80,7 @@ export default function AdminPortfolio() {
             <option value="ALL">All Categories</option>
             <option value="RESIDENTIAL">Residential</option>
             <option value="COMMERCIAL">Commercial</option>
+            <option value="RESTORATION & RENOVATIONS">Restoration & Renovations</option>
           </select>
           <select
             className="admin-input"

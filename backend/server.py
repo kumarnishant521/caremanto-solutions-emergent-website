@@ -316,19 +316,26 @@ async def delete_lead(lid: str, _admin=Depends(get_current_admin)):
 
 # ------------------------------------------------------------------ routes: gallery
 DEFAULT_TAXONOMY = {
-    "categories": ["RESIDENTIAL", "COMMERCIAL"],
+    "categories": ["RESIDENTIAL", "COMMERCIAL", "RESTORATION & RENOVATIONS"],
     "subcategories": {
-        "RESIDENTIAL": ["Bedrooms", "Bathrooms", "Kitchen", "Hall & Dining", "Balcony & Dry area"],
-        "COMMERCIAL":  ["Offices", "Retail", "Hospitality"],
+        "RESIDENTIAL": ["Hall & Dining", "Bedrooms", "Bathrooms", "Kitchens", "Balcony / Dry Area / Temple"],
+        "COMMERCIAL":  ["Office spaces", "Retail Design", "Hospitality"],
+        "RESTORATION & RENOVATIONS": [],   # no sub-folders — direct photo grid
     },
 }
-# Old sub-name → new sub-name — applied once at startup so any previously-seeded
-# photos still resolve to a card on the restructured Gallery page.
+# Legacy sub-name → new sub-name — applied once at startup so previously-seeded
+# photos still resolve to a folder card in the restructured Gallery page.
 SUBCATEGORY_ALIASES = {
-    "Balcony - Dry Area": "Balcony & Dry area",
-    "Office Spaces":      "Offices",
-    "Retail Design":      "Retail",
-    "Temple":             "Hall & Dining",   # legacy bucket rolled into Hall & Dining
+    # v1 seed
+    "Balcony - Dry Area": "Balcony / Dry Area / Temple",
+    "Temple":             "Balcony / Dry Area / Temple",
+    "Office Spaces":      "Office spaces",
+    "Retail Design":      "Retail Design",
+    "Kitchen":            "Kitchens",
+    # v2 seed
+    "Balcony & Dry area": "Balcony / Dry Area / Temple",
+    "Offices":            "Office spaces",
+    "Retail":             "Retail Design",
 }
 
 @api.get("/gallery/taxonomy")
@@ -619,11 +626,22 @@ async def seed_admin_and_samples():
         logger.info(f"Migrated stale gallery samples (removed {stale} old-schema docs)")
 
     # Rename any legacy sub-category values so the new Gallery structure can
-    # find them (e.g. "Balcony - Dry Area" → "Balcony & Dry area").
+    # find them (e.g. "Balcony - Dry Area" → "Balcony / Dry Area / Temple").
     for old, new in SUBCATEGORY_ALIASES.items():
+        if old == new:
+            continue
         r = await db.gallery.update_many({"subcategory": old}, {"$set": {"subcategory": new}})
         if r.modified_count:
             logger.info(f"Migrated {r.modified_count} photos: {old!r} → {new!r}")
+
+    # Promote any photo whose legacy `practice` field is "restoration" into the
+    # new top-level RESTORATION & RENOVATIONS category, and clear its sub.
+    r = await db.gallery.update_many(
+        {"practice": "restoration"},
+        {"$set": {"category": "RESTORATION & RENOVATIONS", "subcategory": ""}},
+    )
+    if r.modified_count:
+        logger.info(f"Migrated {r.modified_count} photos: practice=restoration → RESTORATION & RENOVATIONS")
 
     # Force the taxonomy to match the current DEFAULT (Residential 5-card /
     # Commercial 3-card layout) — the previous seed used a longer list.

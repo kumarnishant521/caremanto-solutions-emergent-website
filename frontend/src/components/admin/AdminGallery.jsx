@@ -235,8 +235,8 @@ export default function AdminGallery() {
               Feature on Portfolio Page (Explore Portfolio landing / <code>/works</code>)
             </label>
             <label className="flex items-center gap-3 text-[13px] md:col-span-2">
-              <input type="checkbox" checked={!!form.is_cover} onChange={(e)=>setForm({...form, is_cover: e.target.checked})}/>
-              Use as Sub-Category Cover Card (only one per {form.category || "category"} · {form.subcategory || "sub"})
+              <input type="checkbox" checked={!!form.is_cover} onChange={(e)=>setForm({...form, is_cover: e.target.checked})} disabled={currentSubOptions.length === 0}/>
+              Use as Sub-Category Cover Card {currentSubOptions.length === 0 ? "(not applicable — this category has no sub-folders)" : `(only one per ${form.category} · ${form.subcategory || "sub"})`}
             </label>
             <label className="flex items-center gap-3 text-[13px] md:col-span-2 mt-1">
               <input type="checkbox" checked={!!form.is_sample} onChange={(e)=>setForm({...form,is_sample:e.target.checked})}/>
@@ -256,7 +256,7 @@ export default function AdminGallery() {
                   data-testid="admin-file-upload-label"
                   className="admin-btn ghost inline-block cursor-pointer"
                 >
-                  Choose Files (JPG · PNG · WEBP · max 12&nbsp;MB each)
+                  Choose Files (JPG · PNG · WEBP · no size cap)
                 </label>
                 <input
                   id="admin-gallery-file"

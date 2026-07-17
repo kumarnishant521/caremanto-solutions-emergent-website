@@ -147,6 +147,7 @@ export default function AdminCovers() {
               <option value="ALL">All Categories</option>
               <option value="RESIDENTIAL">Residential</option>
               <option value="COMMERCIAL">Commercial</option>
+              <option value="RESTORATION & RENOVATIONS">Restoration & Renovations</option>
             </select>
             <button onClick={selectAll} className="admin-btn ghost text-[11px]" data-testid="hero-select-all">Select All</button>
             <button onClick={clearAll}  className="admin-btn ghost text-[11px]" data-testid="hero-clear-all">Clear</button>

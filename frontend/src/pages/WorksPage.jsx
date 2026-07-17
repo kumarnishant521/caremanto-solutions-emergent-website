@@ -17,7 +17,7 @@ export default function WorksPage() {
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [params, setParams] = useSearchParams();
-  const practice = params.get("practice") || "all";
+  const practice = params.get("cat") || "all";
   const [lightbox, setLightbox] = useState(null);
 
   useEffect(() => {
@@ -30,14 +30,16 @@ export default function WorksPage() {
 
   const setPractice = (k) => {
     const q = new URLSearchParams();
-    if (k !== "all") q.set("practice", k);
+    if (k !== "all") q.set("cat", k);
     setParams(q);
   };
 
   const filtered = useMemo(() => {
     if (practice === "all") return photos;
-    if (practice === "restoration") return photos.filter((p) => (p.practice || "").toLowerCase() === "restoration");
-    return photos.filter((p) => (p.practice || "interiors").toLowerCase() === "interiors");
+    if (practice === "residential") return photos.filter((p) => p.category === "RESIDENTIAL");
+    if (practice === "commercial")  return photos.filter((p) => p.category === "COMMERCIAL");
+    if (practice === "restoration") return photos.filter((p) => p.category === "RESTORATION & RENOVATIONS");
+    return photos;
   }, [photos, practice]);
 
   return (
@@ -63,8 +65,13 @@ export default function WorksPage() {
         <div className="hairline mt-14 mb-8" />
 
         <div className="flex flex-wrap items-center gap-2 mb-10">
-          <span className="overline text-[10px] text-[var(--muted)] mr-2">Practice ·</span>
-          {[["all", "All"], ["interiors", "Interiors"], ["restoration", "Restoration & Renovation"]].map(([k, l]) => (
+          <span className="overline text-[10px] text-[var(--muted)] mr-2">Category ·</span>
+          {[
+            ["all", "All"],
+            ["residential", "Residential"],
+            ["commercial", "Commercial"],
+            ["restoration", "Restoration & Renovations"],
+          ].map(([k, l]) => (
             <button
               key={k}
               data-testid={`filter-category-${k}`}

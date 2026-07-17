@@ -7,35 +7,29 @@ import { Rise } from "../components/Rise";
 import { sharePhoto } from "../lib/share";
 
 /* -------------------------------------------------------------------------
- * Gallery structure per user spec:
+ * Three top-level tabs:
+ *   RESIDENTIAL                → 5 folder cards
+ *   COMMERCIAL                 → 3 folder cards
+ *   RESTORATION & RENOVATIONS  → direct photo grid (no sub-folders)
  *
- * Practice tabs:  [ALL] | [INTERIORS] | [RESTORATION & RENOVATION]
- *
- *   ALL                    → mass photo grid (all photos, lightbox on click)
- *   INTERIORS              → Sub row: [Residential] [Commercial]
- *     Residential          → 5 folder cards: Bedrooms, Bathrooms, Kitchen,
- *                            Hall & Dining, Balcony & Dry area
- *     Commercial           → 3 folder cards: Offices, Retail, Hospitality
- *   RESTORATION & RENOV.   → grid of restoration photos (or empty state)
- *
- * Each folder card shows ONLY its cover image (photo.is_cover === true, or
- * first photo in that (category, subcategory)). Clicking a card opens a
- * modal that reveals every photograph in that room type.
- * ---------------------------------------------------------------------- */
+ * Each folder card shows only its cover image (photo.is_cover === true,
+ * else the first photo in the sub). Click → modal with every image in
+ * that folder.
+ * ------------------------------------------------------------------------- */
 
-const RESIDENTIAL_CARDS = ["Bedrooms", "Bathrooms", "Kitchen", "Hall & Dining", "Balcony & Dry area"];
-const COMMERCIAL_CARDS  = ["Offices", "Retail", "Hospitality"];
+const RESIDENTIAL = "RESIDENTIAL";
+const COMMERCIAL  = "COMMERCIAL";
+const RESTORATION = "RESTORATION & RENOVATIONS";
 
-// URL param mapping
-const PRACTICE_ALL = "all";
-const PRACTICE_INTERIORS = "interiors";
-const PRACTICE_RESTORATION = "restoration";
+const RESIDENTIAL_FOLDERS = ["Hall & Dining", "Bedrooms", "Bathrooms", "Kitchens", "Balcony / Dry Area / Temple"];
+const COMMERCIAL_FOLDERS  = ["Office spaces", "Retail Design", "Hospitality"];
+
+const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 export default function GalleryPage() {
   const [params, setParams] = useSearchParams();
-  const practice = params.get("practice") || PRACTICE_ALL;
-  const sub = params.get("sub") || "";       // "residential" | "commercial" (only for interiors)
-  const openedFolder = params.get("folder") || ""; // subcategory string when modal is open
+  const category = params.get("cat") || RESIDENTIAL;
+  const openedFolder = params.get("folder") || "";
 
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,16 +43,9 @@ export default function GalleryPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // URL setters
-  const setPractice = (p) => {
+  const setCategory = (c) => {
     const q = new URLSearchParams();
-    if (p !== PRACTICE_ALL) q.set("practice", p);
-    setParams(q);
-  };
-  const setSub = (s) => {
-    const q = new URLSearchParams();
-    q.set("practice", practice);
-    if (s) q.set("sub", s);
+    if (c !== RESIDENTIAL) q.set("cat", c);
     setParams(q);
   };
   const openFolder = (name) => {
@@ -72,30 +59,23 @@ export default function GalleryPage() {
     setParams(q);
   };
 
-  // Filtering helpers
-  const restorationPhotos = useMemo(
-    () => photos.filter((p) => (p.practice || "").toLowerCase() === "restoration"),
-    [photos]
-  );
-  const interiorPhotos = useMemo(
-    () => photos.filter((p) => (p.practice || "interiors").toLowerCase() === "interiors"),
-    [photos]
-  );
+  const photosByCategory = useMemo(() => photos.filter((p) => p.category === category), [photos, category]);
 
-  const coverForSub = (category, subcategory) => {
-    const pool = interiorPhotos.filter(
-      (p) => p.category === category && p.subcategory === subcategory
-    );
+  const coverForSub = (sub) => {
+    const pool = photos.filter((p) => p.category === category && p.subcategory === sub);
     return pool.find((p) => p.is_cover) || pool[0] || null;
   };
-  const countForSub = (category, subcategory) =>
-    interiorPhotos.filter((p) => p.category === category && p.subcategory === subcategory).length;
+  const countForSub = (sub) =>
+    photos.filter((p) => p.category === category && p.subcategory === sub).length;
 
   const folderPhotos = useMemo(() => {
     if (!openedFolder) return [];
-    const category = RESIDENTIAL_CARDS.includes(openedFolder) ? "RESIDENTIAL" : "COMMERCIAL";
-    return interiorPhotos.filter((p) => p.category === category && p.subcategory === openedFolder);
-  }, [openedFolder, interiorPhotos]);
+    return photos.filter((p) => p.category === category && p.subcategory === openedFolder);
+  }, [openedFolder, photos, category]);
+
+  const folders = category === RESIDENTIAL ? RESIDENTIAL_FOLDERS
+                : category === COMMERCIAL  ? COMMERCIAL_FOLDERS
+                : [];
 
   return (
     <main data-testid="gallery-page" className="pt-[100px] bg-[var(--bg-0)] min-h-screen">
@@ -115,41 +95,37 @@ export default function GalleryPage() {
         </Rise>
         <Rise delay={160}>
           <p className="mt-8 max-w-2xl text-[15px] md:text-[16px] leading-relaxed text-[var(--ink)]/85">
-            Browse our reference library across two practices — Interiors and Restoration & Renovation.
-            Select a room-type card to reveal every photograph in that suite.
+            Three practices, curated end to end. Select a category to browse folder covers — click any card
+            to open its full suite of photographs.
           </p>
         </Rise>
       </section>
 
-      {/* Practice tabs */}
+      {/* Category tabs */}
       <section className="max-w-[1500px] mx-auto px-6 md:px-14 pt-2 border-t border-[var(--line)]">
         <div
           role="tablist"
-          data-testid="gallery-practice-tabs"
+          data-testid="gallery-category-tabs"
           className="flex flex-wrap items-center gap-x-2 md:gap-x-4 gap-y-2 py-5"
         >
-          <span className="overline text-[10px] text-[var(--muted)] mr-3">Practice ·</span>
-          {[
-            [PRACTICE_ALL, "All"],
-            [PRACTICE_INTERIORS, "Interiors"],
-            [PRACTICE_RESTORATION, "Restoration & Renovation"],
-          ].map(([k, l]) => {
-            const active = practice === k;
+          <span className="overline text-[10px] text-[var(--muted)] mr-3">Category ·</span>
+          {[RESIDENTIAL, COMMERCIAL, RESTORATION].map((k) => {
+            const active = category === k;
             return (
               <button
                 key={k}
                 role="tab"
                 aria-selected={active}
-                data-testid={`practice-tab-${k}`}
-                onClick={() => setPractice(k)}
+                data-testid={`category-tab-${slug(k)}`}
+                onClick={() => setCategory(k)}
                 className={`relative px-4 md:px-5 py-3 nav-label transition-colors ${
                   active ? "text-[var(--ink)]" : "text-[var(--muted)] hover:text-[var(--ink)]"
                 }`}
               >
-                {l}
+                {k}
                 {active && (
                   <motion.span
-                    layoutId="gallery-practice-underline"
+                    layoutId="gallery-category-underline"
                     className="absolute left-4 right-4 -bottom-[1px] h-[2px] bg-[var(--gold)]"
                     transition={{ type: "spring", stiffness: 380, damping: 32 }}
                   />
@@ -158,81 +134,32 @@ export default function GalleryPage() {
             );
           })}
         </div>
-
-        {/* Interiors sub-row (Residential / Commercial only) */}
-        <AnimatePresence initial={false} mode="wait">
-          {practice === PRACTICE_INTERIORS && (
-            <motion.div
-              key="interiors-sub"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.35, ease: [0.2, 0.7, 0.15, 1] }}
-              className="overflow-hidden border-t border-[var(--line)]"
-            >
-              <div data-testid="gallery-interiors-subs" className="flex flex-wrap items-center gap-x-4 gap-y-2 py-4">
-                <span className="overline text-[10px] text-[var(--muted)] mr-2">Sub ·</span>
-                {[
-                  ["residential", "Residential"],
-                  ["commercial", "Commercial"],
-                ].map(([k, l]) => (
-                  <SubChip
-                    key={k}
-                    label={l}
-                    active={sub === k}
-                    onClick={() => setSub(k === sub ? "" : k)}
-                    testid={`sub-${k}`}
-                  />
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </section>
 
       {/* BODY */}
       <section className="max-w-[1500px] mx-auto px-6 md:px-14 py-16 md:py-24">
         {loading ? (
           <div className="py-32 text-center overline text-[var(--muted)]">Loading references…</div>
-        ) : practice === PRACTICE_ALL ? (
-          <PhotoGrid photos={photos} onOpen={setLightbox} />
-        ) : practice === PRACTICE_RESTORATION ? (
-          restorationPhotos.length === 0 ? (
+        ) : category === RESTORATION ? (
+          photosByCategory.length === 0 ? (
             <div className="py-24 text-center">
               <div className="font-serif text-[28px] text-[var(--ink)] mb-3">Restoration references coming soon.</div>
               <div className="text-[14px] text-[var(--muted)] max-w-xl mx-auto">
-                Our restoration & renovation portfolio is being curated. In the meantime, explore our interior work.
+                Our restoration & renovation portfolio is being curated. Please check back shortly.
               </div>
             </div>
           ) : (
-            <PhotoGrid photos={restorationPhotos} onOpen={setLightbox} />
+            <PhotoGrid photos={photosByCategory} onOpen={setLightbox} />
           )
-        ) : practice === PRACTICE_INTERIORS && sub === "residential" ? (
+        ) : folders.length > 0 ? (
           <FolderCards
-            cards={RESIDENTIAL_CARDS}
-            category="RESIDENTIAL"
+            folders={folders}
+            categoryLabel={category === RESIDENTIAL ? "Residential" : "Commercial"}
             coverForSub={coverForSub}
             countForSub={countForSub}
             onOpen={openFolder}
           />
-        ) : practice === PRACTICE_INTERIORS && sub === "commercial" ? (
-          <FolderCards
-            cards={COMMERCIAL_CARDS}
-            category="COMMERCIAL"
-            coverForSub={coverForSub}
-            countForSub={countForSub}
-            onOpen={openFolder}
-          />
-        ) : (
-          // Interiors, no sub selected → prompt
-          <div className="py-24 text-center">
-            <div className="font-serif text-[28px] text-[var(--ink)] mb-3">Choose a practice sub-branch above.</div>
-            <div className="flex justify-center gap-3 mt-6">
-              <button onClick={() => setSub("residential")} className="admin-btn" data-testid="prompt-residential">Residential</button>
-              <button onClick={() => setSub("commercial")}  className="admin-btn ghost" data-testid="prompt-commercial">Commercial</button>
-            </div>
-          </div>
-        )}
+        ) : null}
       </section>
 
       {/* FOLDER MODAL */}
@@ -256,7 +183,7 @@ export default function GalleryPage() {
               <Rise>
                 <div className="flex items-center gap-3 mb-4">
                   <span className="w-10 h-[1px] bg-[var(--gold)]" />
-                  <span className="overline">{RESIDENTIAL_CARDS.includes(openedFolder) ? "Residential" : "Commercial"} · Folder</span>
+                  <span className="overline">{category} · Folder</span>
                 </div>
               </Rise>
               <Rise delay={70}>
@@ -328,17 +255,17 @@ export default function GalleryPage() {
 
 /* ============================================================= */
 
-function FolderCards({ cards, category, coverForSub, countForSub, onOpen }) {
+function FolderCards({ folders, categoryLabel, coverForSub, countForSub, onOpen }) {
   return (
     <div data-testid="folder-cards" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-      {cards.map((name, i) => {
-        const cover = coverForSub(category, name);
-        const count = countForSub(category, name);
+      {folders.map((name, i) => {
+        const cover = coverForSub(name);
+        const count = countForSub(name);
         return (
           <Rise key={name} delay={i * 60}>
             <button
               onClick={() => onOpen(name)}
-              data-testid={`folder-card-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+              data-testid={`folder-card-${slug(name)}`}
               className="group relative w-full text-left overflow-hidden bg-[var(--bg-1)] aspect-[4/5]"
             >
               {cover ? (
@@ -366,7 +293,7 @@ function FolderCards({ cards, category, coverForSub, countForSub, onOpen }) {
                 </div>
               </div>
               <span className="absolute top-4 left-4 right-4 flex items-center justify-between text-[10px] tracking-[0.28em] uppercase text-white/85">
-                <span>{category === "RESIDENTIAL" ? "Residential" : "Commercial"}</span>
+                <span>{categoryLabel}</span>
                 <span>0{i + 1}</span>
               </span>
             </button>
@@ -427,21 +354,5 @@ function PhotoGrid({ photos, onOpen }) {
         </Rise>
       ))}
     </motion.div>
-  );
-}
-
-function SubChip({ label, active, onClick, testid }) {
-  return (
-    <button
-      onClick={onClick}
-      data-testid={testid}
-      className={`relative px-4 py-2 text-[13px] font-serif italic transition-colors border ${
-        active
-          ? "text-[var(--bg-0)] bg-[var(--ink)] border-[var(--ink)]"
-          : "text-[var(--ink)]/80 bg-transparent border-[var(--line-strong)] hover:border-[var(--gold)] hover:text-[var(--gold)]"
-      }`}
-    >
-      {label}
-    </button>
   );
 }
