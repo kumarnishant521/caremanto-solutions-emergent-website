@@ -22,22 +22,21 @@ Public: `GET /`, `GET /projects[?category=…]`, `GET /projects/{id}`, `GET /gal
 Auth: `POST /auth/login`, `GET /auth/me`, `POST /auth/logout`
 Admin (cookie-auth): `POST/PUT/DELETE /admin/projects[/{id}]`, `POST/PUT/DELETE /admin/gallery[/{id}]`, `PUT /admin/gallery/taxonomy`, `GET /admin/leads`, `PATCH/DELETE /admin/leads/{id}`
 
-## What's Implemented (2026-07-16)
-- **Home**: kinetic hero (masked reveal + parallax) → editorial marquee → Divisions (two practices) → 4-chapter Manifesto → Featured Works bento → closing quote.
-- **/works**: category tabs (All / Interiors / Restoration) + sub-practice italic filters (Residential, Commercial, Hospitality, Heritage Restoration, Facade Renewal, etc.) + staggered bento grid.
-- **/works/:id**: editorial project detail with story block and multi-image grid.
-- **/gallery**: two-axis filtering (Space × Work Segment) with masonry columns + lightbox.
+## What's Implemented (2026-07-17)
+- **Home**: 4.5s Ken Burns hero slideshow, editorial marquee, Divisions (Interiors + Renovations/Restorations), 4-chapter Manifesto, home bento gallery (driven by `featured_home` flag), closing quote.
+- **/works**: two-tier category dropdowns (Interiors, Restoration & Renovations).
+- **/gallery**: two-axis filtering (Category × Sub-category), masonry columns, lightbox.
+- **/films (also /videos)**: public video wall driven by `/api/videos`.
 - **/studio, /approach, /contact**: editorial content pages.
-- **/admin/login**: cookie-based JWT auth.
-- **/admin**: three tabs — Projects (CRUD), Gallery (CRUD + Taxonomy editor + Bulk-add), Leads (status changes + delete + reply-via-email).
-- **Sample data**: 6 projects + 8 gallery photos + admin user auto-seeded on startup.
+- **/admin/login**: PASSLESS auto-entry — hitting the URL calls `POST /api/auth/passless-login` and drops the studio straight into `/admin`.
+- **/admin**: five tabs — Gallery (CRUD + taxonomy + device uploads + featured-home toggle), Videos (CRUD + device video uploads), Covers · Hero, Projects, Leads.
+- **File uploads**: `/api/admin/upload` accepts images and videos with no explicit size cap.
+- **Seeded content**: 48 real Google Drive photographs auto-ingested (2026-07-17) across RESIDENTIAL / COMMERCIAL categories via `/app/backend/scripts/seed_drive_gallery.py`.
 - **Consultation lead**: saved to Mongo + Resend email attempt to `STUDIO_NOTIFICATION_EMAIL`.
-- **Motion**: Lenis smooth scroll, framer-motion scroll-reveals, hover states, parallax, marquee, staggered bento animations.
 
 ## Test Credentials
-- Admin URL: `/admin/login`
-- Email: `admin@caremanto.com`
-- Password: `Caremanto@2026`
+- Admin URL: `/admin/login` (auto-signs in; no credentials required)
+- Fallback (still works): `admin@caremanto.com` / `Caremanto@2026`
 - Studio notification email (env `STUDIO_NOTIFICATION_EMAIL`): `info@caremanto.solutions` (editable in `/app/backend/.env`)
 
 ## P1 Backlog (deferred, non-blocking)

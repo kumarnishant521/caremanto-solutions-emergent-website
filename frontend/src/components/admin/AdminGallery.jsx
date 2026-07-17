@@ -121,7 +121,7 @@ export default function AdminGallery() {
           <button onClick={saveTaxonomy} className="admin-btn" data-testid="admin-save-taxonomy">Save Categories</button>
         </div>
         <p className="text-[12px] text-[#F5EEE0]/60 mb-6">
-          Manage the two main gallery tabs (Residential & Commercial) and their nested sub-filters. One entry per line.
+          Manage the two main gallery tabs (Residential &amp; Commercial) and their nested sub-filters. One entry per line.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <label className="block">
