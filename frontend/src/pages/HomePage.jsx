@@ -4,8 +4,9 @@ import Divisions from "../components/Divisions";
 import Manifesto from "../components/Manifesto";
 import HomeGallery from "../components/HomeGallery";
 import FeaturedWorks from "../components/FeaturedWorks";
+import Testimonials from "../components/Testimonials";
+import ConsultButton from "../components/ConsultButton";
 import { Rise } from "../components/Rise";
-import { Link } from "react-router-dom";
 
 export default function HomePage() {
   return (
@@ -16,6 +17,7 @@ export default function HomePage() {
       <HomeGallery />
       <Manifesto />
       <FeaturedWorks />
+      <Testimonials />
 
       {/* Closing quote strip */}
       <section className="relative bg-[var(--bg-1)] py-24 md:py-36 border-t border-[var(--line)]">
@@ -30,8 +32,8 @@ export default function HomePage() {
             </blockquote>
           </Rise>
           <Rise delay={200}>
-            <div className="mt-10">
-              <Link to="/contact" data-testid="home-final-cta" className="btn-gold">Begin a Conversation</Link>
+            <div className="mt-10 flex justify-center">
+              <ConsultButton testId="home-final-cta" />
             </div>
           </Rise>
         </div>

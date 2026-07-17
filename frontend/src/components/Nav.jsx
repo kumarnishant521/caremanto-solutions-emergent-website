@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { NAV_CATEGORIES } from "../lib/api";
+import { useConsultation } from "../lib/useConsultation";
 import CMLogo from "./CMLogo";
 
 /**
@@ -51,6 +52,7 @@ export default function Nav() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const nav = useNavigate();
   const loc = useLocation();
+  const { open: openConsult } = useConsultation();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -162,13 +164,14 @@ export default function Nav() {
           <Link to="/approach" data-testid="nav-process" className={`nav-link nav-label ${active("/approach") ? "text-[var(--gold)]" : ""}`}>Process</Link>
           <Link to="/studio" data-testid="nav-about" className={`nav-link nav-label ${active("/studio") ? "text-[var(--gold)]" : ""}`}>About Us</Link>
 
-          <Link
-            to="/contact"
+          <button
+            type="button"
+            onClick={openConsult}
             data-testid="nav-cta"
             className="ml-2 btn-pill text-[10px] py-[10px] px-5"
           >
             Consult
-          </Link>
+          </button>
         </nav>
 
         {/* Mobile toggle */}
@@ -248,7 +251,14 @@ export default function Nav() {
               <div className="hairline" />
               <Link to="/approach" data-testid="mobile-process" className="nav-label block text-[13px]">PROCESS</Link>
               <Link to="/studio" data-testid="mobile-about" className="nav-label block text-[13px]">ABOUT US</Link>
-              <Link to="/contact" className="btn-gold w-fit mt-2">REQUEST CONSULTATION</Link>
+              <button
+                type="button"
+                onClick={() => { setMobileOpen(false); openConsult(); }}
+                className="btn-gold w-fit mt-2"
+                data-testid="mobile-consult"
+              >
+                REQUEST CONSULTATION
+              </button>
             </div>
           </motion.div>
         )}

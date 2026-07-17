@@ -1,5 +1,8 @@
 import { Link } from "react-router-dom";
 import { Instagram, Linkedin, Twitter, Youtube } from "lucide-react";
+import { useConsultation } from "../lib/useConsultation";
+import { STUDIO } from "../lib/studio";
+import { WhatsAppIcon } from "./ConsultationModal";
 
 // Placeholder handles — routes forward to the studio's future social presence.
 // Update the base URLs here once the handles are live.
@@ -11,6 +14,7 @@ const SOCIALS = [
 ];
 
 export default function Footer() {
+  const { open: openConsult } = useConsultation();
   return (
     <footer
       data-testid="site-footer"
@@ -23,9 +27,27 @@ export default function Footer() {
               Let's compose <br />
               <span className="italic text-[var(--gold)]">something enduring.</span>
             </div>
-            <Link to="/contact" data-testid="footer-cta" className="btn-gold mt-8">
-              Request Consultation
-            </Link>
+            <div className="mt-8 inline-flex items-center gap-2">
+              <button
+                type="button"
+                onClick={openConsult}
+                data-testid="footer-cta"
+                className="btn-gold"
+              >
+                Request Consultation
+              </button>
+              <a
+                href={STUDIO.whatsapp}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Chat on WhatsApp"
+                title="Chat on WhatsApp"
+                data-testid="footer-whatsapp"
+                className="inline-flex items-center justify-center w-11 h-11 bg-[#25D366] text-white hover:opacity-90 transition-opacity"
+              >
+                <WhatsAppIcon size={18} />
+              </a>
+            </div>
           </div>
 
           <div className="md:col-span-3">
@@ -50,7 +72,7 @@ export default function Footer() {
 
           <div className="md:col-span-2">
             <div className="overline mb-4">Contact</div>
-            <ul className="space-y-2 text-[14px] text-[var(--ink)]/80">
+            <ul className="space-y-2 text-[13px] text-[var(--ink)]/80">
               <li>
                 <a
                   href="mailto:care@caremanto.in"
@@ -60,7 +82,22 @@ export default function Footer() {
                   care@caremanto.in
                 </a>
               </li>
-              <li>+91 · Available on request</li>
+              <li>
+                <a
+                  href="tel:+919595944417"
+                  data-testid="footer-phone"
+                  className="hover:text-[var(--gold)] transition-colors uppercase tracking-[0.14em] text-[12px]"
+                >
+                  +91 95959 44417
+                </a>
+              </li>
+              <li
+                data-testid="footer-address"
+                className="text-[11px] uppercase tracking-[0.18em] leading-relaxed text-[var(--ink)]/70 pt-2"
+              >
+                C-213, Eastern Business District,<br />
+                Mumbai — 400 078
+              </li>
             </ul>
 
             <div className="overline mt-6 mb-3">Follow</div>

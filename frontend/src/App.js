@@ -7,6 +7,7 @@ import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/lib/auth";
+import { ConsultationProvider } from "@/lib/useConsultation";
 import { useLenis } from "@/lib/useLenis";
 
 import HomePage from "@/pages/HomePage";
@@ -92,7 +93,9 @@ export default function App() {
     <ErrorBoundary>
       <BrowserRouter>
         <AuthProvider>
-          <SiteRoot />
+          <ConsultationProvider>
+            <SiteRoot />
+          </ConsultationProvider>
         </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>

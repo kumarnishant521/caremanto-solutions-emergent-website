@@ -102,12 +102,15 @@ class LeadIn(BaseModel):
     name: str
     email: EmailStr
     phone: Optional[str] = ""
-    project_type: str
+    project_type: Optional[str] = ""      # legacy field, kept for older payloads
+    service_type: Optional[str] = ""      # new — "interiors" | "restoration"
+    pincode: Optional[str] = ""
     budget: Optional[str] = ""
-    message: str
+    message: Optional[str] = ""
 
 class Lead(LeadIn):
     id: str
+    customer_uid: str = ""
     status: str = "new"
     created_at: str
 
@@ -285,13 +288,22 @@ async def delete_project(pid: str, _admin=Depends(get_current_admin)):
 @api.post("/leads", response_model=Lead)
 async def create_lead(body: LeadIn):
     now = datetime.now(timezone.utc).isoformat()
-    doc = {**body.model_dump(), "id": str(uuid.uuid4()), "status": "new", "created_at": now}
+    # Generate a stable, brand-prefixed Customer UID (e.g. "CS-20260717-8F3A2C")
+    seq = uuid.uuid4().hex[:6].upper()
+    customer_uid = f"CS-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{seq}"
+    doc = {
+        **body.model_dump(),
+        "id": str(uuid.uuid4()),
+        "customer_uid": customer_uid,
+        "status": "new",
+        "created_at": now,
+    }
     await db.leads.insert_one(doc)
     doc.pop("_id", None)
     # fire-and-forget email
     try:
         await send_notification_email(
-            subject=f"New consultation — {doc['name']}",
+            subject=f"New consultation — {doc['name']} ({customer_uid})",
             html=lead_email_html(doc),
             reply_to=doc["email"],
         )

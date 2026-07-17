@@ -1,5 +1,5 @@
 import { Rise } from "../components/Rise";
-import { Link } from "react-router-dom";
+import ConsultButton from "../components/ConsultButton";
 
 const STEPS = [
   { n: "I", title: "Listen", body: "Every commission begins with a slow, unhurried conversation. We learn how a client lives — not just what they want." },
@@ -50,8 +50,8 @@ export default function ApproachPage() {
           ))}
         </div>
 
-        <div className="mt-24 text-center">
-          <Link to="/contact" data-testid="approach-cta" className="btn-gold">Request Consultation</Link>
+        <div className="mt-24 flex justify-center">
+          <ConsultButton label="Request Consultation" testId="approach-cta" />
         </div>
       </div>
     </main>

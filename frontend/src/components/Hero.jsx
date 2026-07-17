@@ -3,6 +3,7 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { Link } from "react-router-dom";
 import { heroImages as realHeroImages } from "../lib/realProjects";
 import { api } from "../lib/api";
+import { useConsultation } from "../lib/useConsultation";
 
 /* ---------------------------------------------------------------------
  * HERO SLIDESHOW
@@ -39,6 +40,7 @@ export default function Hero() {
   const [heroConfig, setHeroConfig] = useState({ images: [], interval_seconds: DEFAULT_INTERVAL_SEC, hero_extra: [] });
   const { scrollY } = useScroll();
   const y = useTransform(scrollY, [0, 800], [0, 140]);
+  const { open: openConsult } = useConsultation();
 
   // Live-config from /admin (Hero · Covers tab).
   useEffect(() => {
@@ -180,9 +182,14 @@ export default function Hero() {
             <Link to="/works" data-testid="hero-cta-primary" className="btn-solid-light">
               Explore Portfolio
             </Link>
-            <Link to="/contact" data-testid="hero-cta-secondary" className="btn-outline-light">
+            <button
+              type="button"
+              onClick={openConsult}
+              data-testid="hero-cta-secondary"
+              className="btn-outline-light"
+            >
               Begin a Conversation
-            </Link>
+            </button>
           </div>
         </div>
 
