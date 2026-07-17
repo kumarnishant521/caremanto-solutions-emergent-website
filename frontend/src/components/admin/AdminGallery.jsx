@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api";
 import { toast } from "sonner";
+import AdminFolderManager from "./AdminFolderManager";
 
 const EMPTY = { title: "", description: "", category: "", subcategory: "", image: "", is_sample: false, featured_home: false, featured_portfolio: false, is_cover: false };
 
 export default function AdminGallery() {
   const [taxonomy, setTaxonomy] = useState({ categories: [], subcategories: {} });
-  const [taxDraft, setTaxDraft] = useState({ categories: "", subcategories: {} });
   const [photos, setPhotos] = useState([]);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(EMPTY);
@@ -26,12 +26,6 @@ export default function AdminGallery() {
     ])
       .then(([tax, ph]) => {
         setTaxonomy(tax.data);
-        setTaxDraft({
-          categories: (tax.data.categories || []).join("\n"),
-          subcategories: Object.fromEntries(
-            Object.entries(tax.data.subcategories || {}).map(([k, v]) => [k, (v || []).join("\n")])
-          ),
-        });
         setPhotos(ph.data);
       })
       .finally(() => setLoading(false));
@@ -78,21 +72,6 @@ export default function AdminGallery() {
     catch { toast.error("Delete failed."); }
   };
 
-  const saveTaxonomy = async () => {
-    const categories = taxDraft.categories.split("\n").map(s => s.trim()).filter(Boolean);
-    const subcategories = {};
-    for (const [k, txt] of Object.entries(taxDraft.subcategories || {})) {
-      if (categories.includes(k)) {
-        subcategories[k] = txt.split("\n").map(s => s.trim()).filter(Boolean);
-      }
-    }
-    try {
-      await api.put("/admin/gallery/taxonomy", { categories, subcategories });
-      toast.success("Categories updated.");
-      loadAll();
-    } catch { toast.error("Save failed."); }
-  };
-
   const bulkAdd = async () => {
     const lines = bulkText.split("\n").map(s => s.trim()).filter(Boolean);
     if (!lines.length) return toast.error("Paste image URLs (one per line).");
@@ -110,44 +89,10 @@ export default function AdminGallery() {
     } catch { toast.error("Some uploads failed."); }
   };
 
-  const nestedCategories = (taxonomy.categories || []).filter(
-    (c) => taxonomy.subcategories && taxonomy.subcategories[c]
-  );
-
   return (
     <section className="space-y-10">
-      {/* Taxonomy manager */}
-      <div className="admin-card p-6 md:p-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-serif text-[26px]">Categories</h2>
-          <button onClick={saveTaxonomy} className="admin-btn" data-testid="admin-save-taxonomy">Save Categories</button>
-        </div>
-        <p className="text-[12px] text-[#F5EEE0]/60 mb-6">
-          Manage the two main gallery tabs (Residential &amp; Commercial) and their nested sub-filters. One entry per line.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <label className="block">
-            <span className="overline text-[10px] block mb-2">Main Tabs</span>
-            <textarea
-              className="admin-input"
-              rows={8}
-              value={taxDraft.categories}
-              onChange={(e)=>setTaxDraft({...taxDraft, categories: e.target.value})}
-            />
-          </label>
-          {(taxDraft.categories.split("\n").map(s=>s.trim()).filter(Boolean).filter((c)=> c && c !== "Our Work" && c !== "Bespoke Custom Made Furniture")).map((c) => (
-            <label key={c} className="block">
-              <span className="overline text-[10px] block mb-2">Sub-filters · {c}</span>
-              <textarea
-                className="admin-input"
-                rows={8}
-                value={(taxDraft.subcategories || {})[c] || ""}
-                onChange={(e)=>setTaxDraft({...taxDraft, subcategories: {...taxDraft.subcategories, [c]: e.target.value}})}
-              />
-            </label>
-          ))}
-        </div>
-      </div>
+      {/* Folder manager (replaces the old textarea taxonomy editor) */}
+      <AdminFolderManager />
 
       {/* Filter + list header */}
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
@@ -185,34 +130,36 @@ export default function AdminGallery() {
               <input className="admin-input" value={form.image} onChange={(e)=>setForm({...form,image:e.target.value})} placeholder="https://…"/>
             </label>
             <label className="block">
-              <span className="overline text-[10px] block mb-2">Category *</span>
+              <span className="overline text-[10px] block mb-2">Parent Category *</span>
               <select
                 className="admin-input"
                 value={form.category}
+                data-testid="edit-parent-category"
                 onChange={(e)=>{
                   const c = e.target.value;
                   const subs = (taxonomy.subcategories || {})[c] || [];
                   setForm({...form, category: c, subcategory: subs[0] || ""});
                 }}
               >
-                <option value="">Select…</option>
+                <option value="">Select parent…</option>
                 {(taxonomy.categories || []).filter((c)=>c!=="Our Work").map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </label>
             <label className="block">
               <span className="overline text-[10px] block mb-2">
-                Sub-category {currentSubOptions.length > 0 ? "*" : "(not applicable)"}
+                Sub-folder {currentSubOptions.length > 0 ? "*" : "(not applicable)"}
               </span>
               <select
                 className="admin-input"
                 value={form.subcategory}
+                data-testid="edit-child-subcategory"
                 onChange={(e)=>setForm({...form,subcategory:e.target.value})}
                 disabled={currentSubOptions.length === 0}
               >
                 {currentSubOptions.length === 0
-                  ? <option value="">—</option>
+                  ? <option value="">— No sub-folders in this category —</option>
                   : (<>
-                      <option value="">Select…</option>
+                      <option value="">Select sub-folder…</option>
                       {currentSubOptions.map((s) => <option key={s} value={s}>{s}</option>)}
                     </>)
                 }
