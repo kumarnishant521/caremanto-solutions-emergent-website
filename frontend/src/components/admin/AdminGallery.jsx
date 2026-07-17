@@ -233,16 +233,68 @@ export default function AdminGallery() {
           </div>
 
           {editing === "new" && (
-            <div className="mt-8 pt-6 border-t border-[#F5EEE0]/10">
-              <div className="overline mb-3">Bulk Add — under current Category + Sub</div>
-              <textarea
-                className="admin-input"
-                rows={5}
-                placeholder="Paste image URLs, one per line"
-                value={bulkText}
-                onChange={(e)=>setBulkText(e.target.value)}
-              />
-              <button onClick={bulkAdd} className="admin-btn mt-4" data-testid="admin-bulk-add">Bulk Add</button>
+            <div className="mt-8 pt-6 border-t border-[#F5EEE0]/10 space-y-6">
+              <div>
+                <div className="overline mb-3">Upload from Device</div>
+                <label
+                  htmlFor="admin-gallery-file"
+                  data-testid="admin-file-upload-label"
+                  className="admin-btn ghost inline-block cursor-pointer"
+                >
+                  Choose Files (JPG · PNG · WEBP · max 12&nbsp;MB each)
+                </label>
+                <input
+                  id="admin-gallery-file"
+                  data-testid="admin-file-upload-input"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  style={{ display: "none" }}
+                  onChange={async (e) => {
+                    const files = Array.from(e.target.files || []);
+                    if (!files.length) return;
+                    if (!form.category) { toast.error("Set category first."); return; }
+                    if (currentSubOptions.length > 0 && !form.subcategory) { toast.error("Set sub-category first."); return; }
+                    let ok = 0;
+                    for (const f of files) {
+                      try {
+                        const fd = new FormData();
+                        fd.append("file", f);
+                        const r = await api.post("/admin/upload", fd, {
+                          headers: { "Content-Type": "multipart/form-data" },
+                        });
+                        const url = `${process.env.REACT_APP_BACKEND_URL}${r.data.url}`;
+                        await api.post("/admin/gallery", {
+                          title: "", description: "",
+                          category: form.category, subcategory: form.subcategory || "",
+                          image: url, is_sample: false,
+                        });
+                        ok += 1;
+                      } catch (err) {
+                        toast.error(`${f.name}: ${err?.response?.data?.detail || "upload failed"}`);
+                      }
+                    }
+                    if (ok) toast.success(`${ok} photograph(s) uploaded`);
+                    e.target.value = "";
+                    loadAll();
+                  }}
+                />
+                <p className="text-[11px] text-[#F5EEE0]/50 mt-2">
+                  Uploads go to the current Category + Sub selected above.
+                </p>
+              </div>
+
+              <div>
+                <div className="overline mb-3">Bulk Add by URL</div>
+                <textarea
+                  className="admin-input"
+                  rows={4}
+                  placeholder="Paste image URLs, one per line"
+                  value={bulkText}
+                  onChange={(e)=>setBulkText(e.target.value)}
+                />
+                <button onClick={bulkAdd} className="admin-btn mt-3" data-testid="admin-bulk-add">Bulk Add URLs</button>
+              </div>
             </div>
           )}
         </div>

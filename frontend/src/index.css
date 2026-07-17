@@ -179,14 +179,23 @@ a, button, [role="button"] { cursor: pointer; }
 }
 .nav-link:hover::after, .nav-link[data-open="true"]::after { transform: scaleX(1); transform-origin: left; }
 
-/* Dropdown — cream glass on light theme */
+/* Dropdown — cream glass panel with crisp charcoal text at all times */
 .dropdown-panel {
-    background: rgba(246, 241, 231, 0.96);
+    background: rgba(246, 241, 231, 0.98);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
     border: 1px solid var(--line);
-    box-shadow: 0 20px 60px rgba(31, 26, 22, 0.12);
+    box-shadow: 0 20px 60px rgba(31, 26, 22, 0.16);
+    color: var(--ink);
 }
+.dropdown-panel button { color: var(--ink) !important; }
+.dropdown-panel button:hover { color: var(--gold) !important; }
+/* Even when the header sits over the dark hero, the dropdown itself
+   keeps its cream background + charcoal text — never inverts. */
+.nav-over-hero .dropdown-panel,
+.nav-over-hero .dropdown-panel * { color: var(--ink); }
+.nav-over-hero .dropdown-panel button { color: var(--ink) !important; }
+.nav-over-hero .dropdown-panel button:hover { color: var(--gold) !important; }
 
 /* ------------------------------------------------------------------ */
 /* Buttons                                                            */
@@ -239,7 +248,7 @@ a, button, [role="button"] { cursor: pointer; }
     position: absolute;
     inset: 0;
     opacity: 0;
-    transition: opacity 1800ms cubic-bezier(0.4, 0, 0.2, 1);
+    transition: opacity 1400ms cubic-bezier(0.4, 0, 0.2, 1);
     will-change: opacity;
     z-index: 0;
     overflow: hidden;
@@ -249,7 +258,7 @@ a, button, [role="button"] { cursor: pointer; }
     width: 100%;
     height: 100%;
     object-fit: cover;
-    animation: hero-kenburns 14s ease-in-out infinite alternate;
+    animation: hero-kenburns 6s ease-in-out infinite alternate;
     will-change: transform;
 }
 @keyframes hero-kenburns {

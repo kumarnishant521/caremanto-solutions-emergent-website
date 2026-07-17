@@ -45,14 +45,9 @@ export const NAV_CATEGORIES = {
 };
 
 export const GALLERY_TAXONOMY = {
-  categories: [
-    "Our Work",
-    "Home Spaces & Corners",
-    "Bespoke Custom Made Furniture",
-    "Commercial Spaces",
-  ],
+  categories: ["RESIDENTIAL", "COMMERCIAL"],
   subcategories: {
-    "Home Spaces & Corners": ["Kitchen", "Bathrooms", "Bedrooms", "Hall", "Balcony", "Dry Area"],
-    "Commercial Spaces": ["Office Spaces", "Retail Design", "Hospitality"],
+    "RESIDENTIAL": ["Bedrooms", "Bathrooms", "Kitchen", "Hall & Dining", "Balcony - Dry Area", "Temple"],
+    "COMMERCIAL":  ["Hospitality", "Retail Design", "Office Spaces"],
   },
 };

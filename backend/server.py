@@ -12,7 +12,8 @@ import jwt
 import httpx
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Literal
-from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, UploadFile, File
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, EmailStr
@@ -287,19 +288,10 @@ async def delete_lead(lid: str, _admin=Depends(get_current_admin)):
 
 # ------------------------------------------------------------------ routes: gallery
 DEFAULT_TAXONOMY = {
-    "categories": [
-        "Our Work",
-        "Home Spaces & Corners",
-        "Bespoke Custom Made Furniture",
-        "Commercial Spaces",
-    ],
+    "categories": ["RESIDENTIAL", "COMMERCIAL"],
     "subcategories": {
-        "Home Spaces & Corners": [
-            "Kitchen", "Bathrooms", "Bedrooms", "Hall", "Balcony", "Dry Area",
-        ],
-        "Commercial Spaces": [
-            "Office Spaces", "Retail Design", "Hospitality",
-        ],
+        "RESIDENTIAL": ["Bedrooms", "Bathrooms", "Kitchen", "Hall & Dining", "Balcony - Dry Area", "Temple"],
+        "COMMERCIAL":  ["Hospitality", "Retail Design", "Office Spaces"],
     },
 }
 
@@ -359,6 +351,27 @@ async def delete_photo(pid: str, _admin=Depends(get_current_admin)):
     if not res.deleted_count:
         raise HTTPException(404, "Not found")
     return {"ok": True}
+
+# ------------------------------------------------------------------ uploads
+UPLOAD_DIR = ROOT_DIR / "uploads"
+UPLOAD_DIR.mkdir(exist_ok=True)
+ALLOWED_MIME = {"image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"}
+MAX_UPLOAD_MB = 12
+
+@api.post("/admin/upload")
+async def upload_image(file: UploadFile = File(...), _admin=Depends(get_current_admin)):
+    if file.content_type not in ALLOWED_MIME:
+        raise HTTPException(400, f"Unsupported type: {file.content_type}")
+    data = await file.read()
+    if len(data) > MAX_UPLOAD_MB * 1024 * 1024:
+        raise HTTPException(413, f"File exceeds {MAX_UPLOAD_MB} MB")
+    ext = (file.filename.rsplit(".", 1)[-1] if "." in (file.filename or "") else "jpg").lower()
+    fname = f"{uuid.uuid4().hex}.{ext}"
+    dest = UPLOAD_DIR / fname
+    with open(dest, "wb") as f:
+        f.write(data)
+    url = f"/api/uploads/{fname}"
+    return {"url": url, "filename": fname, "size": len(data)}
 
 # ------------------------------------------------------------------ health
 @api.get("/")
@@ -444,37 +457,7 @@ SAMPLE_PROJECTS = [
     },
 ]
 
-SAMPLE_GALLERY = [
-    # Home Spaces & Corners
-    {"title": "Marble Vanity Study", "description": "", "category": "Home Spaces & Corners", "subcategory": "Bathrooms",
-     "image": "https://images.pexels.com/photos/6438752/pexels-photo-6438752.jpeg?auto=compress&cs=tinysrgb&w=1400", "is_sample": True},
-    {"title": "Bedroom in Ivory", "description": "", "category": "Home Spaces & Corners", "subcategory": "Bedrooms",
-     "image": "https://images.pexels.com/photos/34688219/pexels-photo-34688219.jpeg?auto=compress&cs=tinysrgb&w=1400", "is_sample": True},
-    {"title": "Kitchen Volume", "description": "", "category": "Home Spaces & Corners", "subcategory": "Kitchen",
-     "image": "https://images.pexels.com/photos/2062431/pexels-photo-2062431.jpeg?auto=compress&cs=tinysrgb&w=1400", "is_sample": True},
-    {"title": "Living Hall", "description": "", "category": "Home Spaces & Corners", "subcategory": "Hall",
-     "image": "https://images.pexels.com/photos/1080696/pexels-photo-1080696.jpeg?auto=compress&cs=tinysrgb&w=1400", "is_sample": True},
-    {"title": "Balcony Bench", "description": "", "category": "Home Spaces & Corners", "subcategory": "Balcony",
-     "image": "https://images.pexels.com/photos/7389533/pexels-photo-7389533.jpeg?auto=compress&cs=tinysrgb&w=1400", "is_sample": True},
-    {"title": "Dry Utility Corner", "description": "", "category": "Home Spaces & Corners", "subcategory": "Dry Area",
-     "image": "https://images.pexels.com/photos/2724749/pexels-photo-2724749.jpeg?auto=compress&cs=tinysrgb&w=1400", "is_sample": True},
-
-    # Bespoke Custom Made Furniture (no sub-filters)
-    {"title": "Walnut Console", "description": "", "category": "Bespoke Custom Made Furniture", "subcategory": "",
-     "image": "https://images.pexels.com/photos/6969831/pexels-photo-6969831.jpeg?auto=compress&cs=tinysrgb&w=1400", "is_sample": True},
-    {"title": "Concealed Wardrobe", "description": "", "category": "Bespoke Custom Made Furniture", "subcategory": "",
-     "image": "https://images.pexels.com/photos/33685861/pexels-photo-33685861.jpeg?auto=compress&cs=tinysrgb&w=1400", "is_sample": True},
-    {"title": "Media Console", "description": "", "category": "Bespoke Custom Made Furniture", "subcategory": "",
-     "image": "https://images.pexels.com/photos/31500951/pexels-photo-31500951.jpeg?auto=compress&cs=tinysrgb&w=1400", "is_sample": True},
-
-    # Commercial Spaces
-    {"title": "Atelier Workroom", "description": "", "category": "Commercial Spaces", "subcategory": "Office Spaces",
-     "image": "https://images.pexels.com/photos/380769/pexels-photo-380769.jpeg?auto=compress&cs=tinysrgb&w=1400", "is_sample": True},
-    {"title": "Boutique Interior", "description": "", "category": "Commercial Spaces", "subcategory": "Retail Design",
-     "image": "https://images.pexels.com/photos/291762/pexels-photo-291762.jpeg?auto=compress&cs=tinysrgb&w=1400", "is_sample": True},
-    {"title": "Hotel Lobby", "description": "", "category": "Commercial Spaces", "subcategory": "Hospitality",
-     "image": "https://images.pexels.com/photos/1743229/pexels-photo-1743229.jpeg?auto=compress&cs=tinysrgb&w=1400", "is_sample": True},
-]
+SAMPLE_GALLERY = []  # no more seeded samples; site is fully populated from realProjects.js / admin uploads
 
 async def seed_admin_and_samples():
     # Admin seed
@@ -538,6 +521,8 @@ async def on_shutdown():
 
 # ------------------------------------------------------------------ mount
 app.include_router(api)
+# Serve uploaded gallery images
+app.mount("/api/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),

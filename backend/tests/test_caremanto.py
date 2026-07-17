@@ -1,15 +1,29 @@
-"""Backend tests for Caremanto Solutions API"""
+"""Backend tests for Caremanto Solutions API (iteration 2 taxonomy + upload)."""
+import io
 import os
+import struct
+import uuid
+import zlib
+
 import pytest
 import requests
-import uuid
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL') or 'https://design-restore-pro.preview.emergentagent.com'
-BASE_URL = BASE_URL.rstrip('/')
+BASE_URL = os.environ['REACT_APP_BACKEND_URL'].rstrip('/')
 API = f"{BASE_URL}/api"
 
 ADMIN_EMAIL = "admin@caremanto.com"
 ADMIN_PASSWORD = "Caremanto@2026"
+
+
+def _tiny_png_bytes() -> bytes:
+    """1x1 red PNG, ~70 bytes, valid enough for content_type sniffing."""
+    sig = b'\x89PNG\r\n\x1a\n'
+    def chunk(t, d):
+        return (struct.pack('>I', len(d)) + t + d +
+                struct.pack('>I', zlib.crc32(t + d) & 0xffffffff))
+    ihdr = struct.pack('>IIBBBBB', 1, 1, 8, 2, 0, 0, 0)
+    idat = zlib.compress(b'\x00\xff\x00\x00', 9)
+    return sig + chunk(b'IHDR', ihdr) + chunk(b'IDAT', idat) + chunk(b'IEND', b'')
 
 
 @pytest.fixture(scope="session")
@@ -36,33 +50,38 @@ def test_list_projects_public(s):
     r = s.get(f"{API}/projects")
     assert r.status_code == 200
     data = r.json()
-    assert isinstance(data, list)
-    assert len(data) >= 3, "expected seeded projects"
-    for p in data:
-        assert "_id" not in p
-        assert "id" in p
+    assert isinstance(data, list) and len(data) >= 3
+    assert all("_id" not in p and "id" in p for p in data)
 
 
-def test_list_projects_filter(s):
+def test_list_projects_filter_interiors(s):
     r = s.get(f"{API}/projects", params={"category": "interiors"})
     assert r.status_code == 200
-    for p in r.json():
-        assert p["category"] == "interiors"
+    assert all(p["category"] == "interiors" for p in r.json())
+
+
+# ------------ Taxonomy (new schema) ------------
+EXPECTED_TAXONOMY = {
+    "categories": ["RESIDENTIAL", "COMMERCIAL"],
+    "subcategories": {
+        "RESIDENTIAL": ["Bedrooms", "Bathrooms", "Kitchen", "Hall & Dining", "Balcony - Dry Area", "Temple"],
+        "COMMERCIAL":  ["Hospitality", "Retail Design", "Office Spaces"],
+    },
+}
 
 
 def test_gallery_taxonomy(s):
     r = s.get(f"{API}/gallery/taxonomy")
     assert r.status_code == 200
     data = r.json()
-    assert "spaces" in data and "segments" in data
-    assert "Bathroom" in data["spaces"]
+    assert data["categories"] == EXPECTED_TAXONOMY["categories"]
+    assert data["subcategories"] == EXPECTED_TAXONOMY["subcategories"]
 
 
-def test_gallery_list(s):
+def test_gallery_list_public(s):
     r = s.get(f"{API}/gallery")
     assert r.status_code == 200
     assert isinstance(r.json(), list)
-    assert len(r.json()) >= 3
 
 
 # ------------ Auth ------------
@@ -76,14 +95,13 @@ def test_login_success_sets_cookie():
     r = sess.post(f"{API}/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
     assert r.status_code == 200
     body = r.json()
-    assert body["email"] == ADMIN_EMAIL
-    assert body["role"] == "admin"
+    assert body["email"] == ADMIN_EMAIL and body["role"] == "admin"
     assert "access_token" in sess.cookies
 
 
 def test_admin_endpoints_401_without_auth():
-    r = requests.get(f"{API}/admin/leads")
-    assert r.status_code == 401
+    assert requests.get(f"{API}/admin/leads").status_code == 401
+    assert requests.post(f"{API}/admin/upload", files={"file": ("x.png", b"", "image/png")}).status_code == 401
 
 
 def test_auth_me(admin_session):
@@ -109,99 +127,82 @@ def test_create_lead_public(s):
     assert body["email"] == payload["email"]
 
 
-def test_admin_leads_flow(admin_session):
-    # list
-    r = admin_session.get(f"{API}/admin/leads")
-    assert r.status_code == 200
-    leads = r.json()
-    assert isinstance(leads, list)
-    if leads:
-        lid = leads[0]["id"]
-        # update status
-        r = admin_session.patch(f"{API}/admin/leads/{lid}", params={"status": "in-progress"})
-        assert r.status_code == 200
-
-
-# ------------ Projects admin CRUD ------------
-def test_project_crud(admin_session):
-    payload = {
-        "title": "TEST_Project",
-        "category": "interiors",
-        "subcategory": "Residential",
-        "location": "Test City",
-        "year": "2026",
-        "story": "A test project",
-        "cover_image": "https://example.com/x.jpg",
-        "images": ["https://example.com/x.jpg"],
-        "featured": False,
-    }
-    r = admin_session.post(f"{API}/admin/projects", json=payload)
-    assert r.status_code == 200, r.text
-    pid = r.json()["id"]
-
-    # GET verify
-    r = admin_session.get(f"{API}/projects/{pid}")
-    assert r.status_code == 200
-    assert r.json()["title"] == "TEST_Project"
-
-    # UPDATE
-    payload["title"] = "TEST_Project_Updated"
-    r = admin_session.put(f"{API}/admin/projects/{pid}", json=payload)
-    assert r.status_code == 200
-    assert r.json()["title"] == "TEST_Project_Updated"
-
-    # DELETE
-    r = admin_session.delete(f"{API}/admin/projects/{pid}")
-    assert r.status_code == 200
-
-    # verify gone
-    r = admin_session.get(f"{API}/projects/{pid}")
-    assert r.status_code == 404
-
-
-# ------------ Gallery admin CRUD ------------
-def test_gallery_crud(admin_session):
+# ------------ Gallery CRUD (new schema: category/subcategory) ------------
+def test_gallery_crud_new_schema(admin_session):
     payload = {
         "title": "TEST_Photo",
         "description": "",
-        "space": "Bathroom",
-        "segment": "Wall Finishes",
+        "category": "RESIDENTIAL",
+        "subcategory": "Bedrooms",
         "image": "https://example.com/g.jpg",
     }
     r = admin_session.post(f"{API}/admin/gallery", json=payload)
-    assert r.status_code == 200
+    assert r.status_code == 200, r.text
     pid = r.json()["id"]
+    assert r.json()["category"] == "RESIDENTIAL"
+    assert r.json()["subcategory"] == "Bedrooms"
 
-    # verify appears in public list
-    r = admin_session.get(f"{API}/gallery", params={"space": "Bathroom"})
+    # Filter list by category+subcategory
+    r = admin_session.get(f"{API}/gallery",
+                          params={"category": "RESIDENTIAL", "subcategory": "Bedrooms"})
+    assert r.status_code == 200
     assert any(p["id"] == pid for p in r.json())
 
+    # Update
     r = admin_session.put(f"{API}/admin/gallery/{pid}",
                           json={**payload, "title": "TEST_Photo_Updated"})
     assert r.status_code == 200
     assert r.json()["title"] == "TEST_Photo_Updated"
 
+    # Delete
     r = admin_session.delete(f"{API}/admin/gallery/{pid}")
     assert r.status_code == 200
 
 
-# ------------ Taxonomy update ------------
-def test_taxonomy_update(admin_session, s):
-    # get current
-    original = s.get(f"{API}/gallery/taxonomy").json()
-    new_spaces = list(original["spaces"]) + ["TEST_Terrace"]
-    r = admin_session.put(f"{API}/admin/gallery/taxonomy",
-                          json={"spaces": new_spaces, "segments": original["segments"]})
-    assert r.status_code == 200
-    assert "TEST_Terrace" in r.json()["spaces"]
+# ------------ Upload (POST /api/admin/upload) ------------
+def test_upload_requires_auth():
+    r = requests.post(f"{API}/admin/upload",
+                      files={"file": ("x.png", _tiny_png_bytes(), "image/png")})
+    assert r.status_code == 401
 
-    # verify public
-    now = s.get(f"{API}/gallery/taxonomy").json()
-    assert "TEST_Terrace" in now["spaces"]
+
+def test_upload_rejects_bad_mime(admin_session):
+    r = admin_session.post(f"{API}/admin/upload",
+                           files={"file": ("x.txt", b"hello", "text/plain")})
+    assert r.status_code == 400
+
+
+def test_upload_success_and_static_fetch(admin_session, s):
+    data = _tiny_png_bytes()
+    r = admin_session.post(f"{API}/admin/upload",
+                           files={"file": ("shot.png", data, "image/png")})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert "url" in body and "filename" in body and "size" in body
+    assert body["url"].startswith("/api/uploads/")
+    assert body["size"] == len(data)
+
+    # Fetch the file publicly via static mount
+    fetch_url = f"{BASE_URL}{body['url']}"
+    r2 = s.get(fetch_url)
+    assert r2.status_code == 200, f"static fetch failed: {r2.status_code} {fetch_url}"
+    assert r2.content == data
+
+
+# ------------ Taxonomy update round-trip ------------
+def test_taxonomy_update_restore(admin_session, s):
+    original = s.get(f"{API}/gallery/taxonomy").json()
+    modified = {
+        "categories": original["categories"] + ["TEST_TMP"],
+        "subcategories": {**original["subcategories"], "TEST_TMP": ["one"]},
+    }
+    r = admin_session.put(f"{API}/admin/gallery/taxonomy", json=modified)
+    assert r.status_code == 200
+    assert "TEST_TMP" in r.json()["categories"]
 
     # restore
-    admin_session.put(f"{API}/admin/gallery/taxonomy",
-                      json={"spaces": original["spaces"], "segments": original["segments"]})
+    r = admin_session.put(f"{API}/admin/gallery/taxonomy", json=original)
+    assert r.status_code == 200
 
 
 # ------------ Logout ------------

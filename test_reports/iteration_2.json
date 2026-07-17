@@ -1,0 +1,38 @@
+{
+  "summary": "Iteration 2 verified the multi-tier update. Backend: 16/16 pytest cases pass — new /api/gallery/taxonomy shape (RESIDENTIAL / COMMERCIAL + correct subs), new POST /api/admin/upload (auth-gated, MIME-checked, 12MB cap) returns {url, filename, size} with /api/uploads/... URL that is publicly fetchable via the StaticFiles mount, gallery CRUD works with the new category/subcategory schema. Frontend: hero shows 24 slides (all real), headline computed 88px at 1440px (clamp(2.4rem,6.5vw,5.5rem)), active slide advances every ~3s. Both nav dropdowns render on the cream panel with DARK text (rgb(31,26,22)) even while header is over the dark hero. Divisions section renders exactly 'INTERIORS' and 'RENOVATIONS / RESTORATIONS' with lh3.googleusercontent.com Drive URLs. /gallery renders 2 tabs (RESIDENTIAL, COMMERCIAL), 6 residential subs and 3 commercial subs match exactly, filtering by Bedrooms yields Bedrooms-only cards. /works regression: Residential ≥40 cards, Hospitality shows the 3 Baked in Bombay cards. CRITICAL FRONTEND WIRING BUG FOUND: /admin route still mounts the legacy AdminDashboardPage.jsx (not the new AdminGallery.jsx), so the required admin-file-upload-input testid does NOT exist and clicking '+ New Photo' throws a runtime error because the legacy code reads taxonomy.spaces[0]/segments[0] which no longer exist in the new taxonomy shape.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AdminDashboardPage (Gallery tab)", "issue": "Legacy component still mounted at /admin — clicking '+ New Photo' throws 'Cannot read properties of undefined (reading 0)' in emptyPhoto() because it references taxonomy.spaces[0]/segments[0] from the OLD schema. New AdminGallery.jsx (with data-testid=admin-file-upload-input and RESIDENTIAL/COMMERCIAL support) is never imported by App.js.", "selector": "[data-testid=admin-new-photo]", "priority": "CRITICAL"},
+      {"component": "AdminDashboardPage", "issue": "Button label reads '+ New Photo' (should be '+ Add Photograph' per new AdminGallery.jsx). Confirms old component is mounted.", "selector": "[data-testid=admin-new-photo]", "priority": "HIGH"},
+      {"component": "AdminDashboardPage.jsx line 259-264, 281", "issue": "References stale taxonomy.spaces / taxonomy.segments and photo.space / photo.segment fields. All admin-side gallery editing is broken until this file is replaced by AdminGallery.jsx or refactored to category/subcategory.", "selector": "n/a", "priority": "CRITICAL"}
+    ],
+    "integration_issues": [
+      {"flow": "Admin gallery file upload UI (acceptance criterion #7)", "issue": "[data-testid=admin-file-upload-input] is not present in the DOM because the new AdminGallery component isn't rendered. Backend upload endpoint itself is fine and covered by pytest.", "affected_selectors": ["[data-testid=admin-file-upload-input]", "[data-testid=admin-file-upload-label]"]}
+    ],
+    "design_issues": [
+      {"screen": "/gallery header copy", "issues": ["Intro paragraph still mentions 'four collections' and 'Home Spaces & Corners and Commercial Spaces' — stale copy after taxonomy was reduced to 2 tabs."]},
+      {"screen": "/gallery Commercial tab", "issues": ["'All Rooms' chip label reads 'All Rooms' for the COMMERCIAL tab (should be 'All Segments'). SubChip label uses cat === 'Commercial Spaces' comparison but the category is now 'COMMERCIAL'."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_caremanto.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "In /app/frontend/src/App.js, replace or refactor the /admin route so that the Gallery tab renders the new AdminGallery.jsx (from src/components/admin/AdminGallery.jsx). Easiest: import AdminGallery and use it in place of the inline gallery block inside AdminDashboardPage, then remove the stale emptyPhoto()/PhotoEditor code that reads taxonomy.spaces/segments.",
+    "Delete or migrate the legacy space/segment code in /app/frontend/src/pages/AdminDashboardPage.jsx (lines ~259-291 and PhotoEditor).",
+    "Fix /gallery intro copy to reflect only RESIDENTIAL + COMMERCIAL (no 'four collections' / 'Home Spaces & Corners' language).",
+    "Update SubChip 'All Rooms' vs 'All Segments' comparison from 'Commercial Spaces' -> 'COMMERCIAL'."
+  ],
+  "critical_code_review_comments": [
+    "Two parallel admin gallery implementations exist: /pages/AdminDashboardPage.jsx (legacy, wired to /admin route, uses old taxonomy.spaces/segments) and /components/admin/AdminGallery.jsx (new, unused, uses new categories/subcategories + upload input). This dead-code + wrong-mount is the root cause of the runtime error. Consolidate into a single component.",
+    "CORS_ORIGINS='*' with allow_credentials=True is still invalid per spec (carry-over from iter 1).",
+    "Login endpoint still has no brute-force lockout (carry-over)."
+  ],
+  "updated_files": ["/app/backend/tests/test_caremanto.py"],
+  "success_rate": {"backend": "100% (16/16)", "frontend": "Home hero + nav dropdowns + Divisions + /gallery + /works: PASS. /admin gallery upload UI: FAIL (component not wired)."},
+  "test_credentials": "admin@caremanto.com / Caremanto@2026",
+  "seed_data_creation": "No new seed data. SAMPLE_GALLERY is intentionally empty per this iteration.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend already fully green with the new taxonomy + upload flow (POST /api/admin/upload + GET /api/uploads/<file>). To retest the admin fix, log in at /admin/login (admin@caremanto.com / Caremanto@2026), open Gallery tab, click '+ Add Photograph', and confirm [data-testid=admin-file-upload-input] exists. pytest command: pytest /app/backend/tests/test_caremanto.py -v.",
+  "rca of the issue": "AdminGallery.jsx (new 2-tier + upload component) was added under src/components/admin/ but App.js still routes /admin to the legacy AdminDashboardPage.jsx. Legacy code calls taxonomy.spaces[0] / taxonomy.segments[0] which are undefined in the new taxonomy shape ({categories, subcategories}), producing the runtime TypeError on '+ New Photo' click. Fix: wire AdminGallery.jsx into the Gallery tab of AdminDashboardPage (or replace the inline gallery section with <AdminGallery/>)."
+}

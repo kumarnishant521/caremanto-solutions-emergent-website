@@ -21,15 +21,14 @@ const PLACEHOLDERS = [
 
 const buildHeroImages = () => {
   const real = realHeroImages();
-  if (real.length >= 6) return real.slice(0, 8);
-  // Real images first, then top-up with placeholders until we have 6.
+  if (real.length >= 6) return real;   // use ALL real hero entries (20+)
   const missing = 6 - real.length;
   return [...real, ...PLACEHOLDERS.slice(0, missing)];
 };
 
 const HERO_IMAGES = buildHeroImages();
-const SLIDE_HOLD_MS  = 4800;
-const CROSSFADE_MS   = 1800;
+const SLIDE_HOLD_MS  = 1600;   // ~3 s total per slide (1.6s hold + 1.4s crossfade)
+const CROSSFADE_MS   = 1400;
 const ORIGINS = ["center", "top left", "bottom right", "top right", "bottom left", "center", "center", "top center"];
 
 export default function Hero() {
@@ -83,7 +82,6 @@ export default function Hero() {
             className="hero-slide"
             data-active={idx === active ? "true" : "false"}
             style={{
-              // eslint-disable-next-line
               transitionDuration: `${CROSSFADE_MS}ms`,
             }}
           >
@@ -132,7 +130,7 @@ export default function Hero() {
 
         <h1
           data-testid="hero-headline"
-          className="font-serif tracking-[-0.02em] text-[clamp(3.2rem,10vw,9rem)] leading-[0.86] max-w-[1100px] text-[var(--on-dark)]"
+          className="font-serif tracking-[-0.02em] text-[clamp(2.4rem,6.5vw,5.5rem)] leading-[0.9] max-w-[900px] text-[var(--on-dark)]"
         >
           <span className={`reveal-mask d1 ${ready ? "in" : ""}`}><span>Redefining</span></span>{" "}
           <span className={`reveal-mask d2 ${ready ? "in" : ""}`}><span className="italic text-[var(--gold-hi)]">spaces</span></span><br />

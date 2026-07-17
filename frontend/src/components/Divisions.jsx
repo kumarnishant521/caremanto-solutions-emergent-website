@@ -3,20 +3,20 @@ import { Rise } from "./Rise";
 
 const PRACTICE = [
   {
-    tag: "01 / INTERIORS",
-    title: "RESIDENTIAL · HOSPITALITY · COMMERCIAL INTERIORS",
+    tag: "01 / DIVISION",
+    title: "INTERIORS",
     body:
       "FROM PRIVATE RESIDENCES TO BOUTIQUE HOSPITALITY, OUR INTERIOR PRACTICE IS A STUDY IN RESTRAINT — CONSIDERED MATERIAL PALETTES, QUIET LIGHTING, AND AN EDITORIAL APPROACH TO COMPOSITION.",
-    image: "https://images.pexels.com/photos/33685861/pexels-photo-33685861.jpeg?auto=compress&cs=tinysrgb&w=1400",
+    image: "https://lh3.googleusercontent.com/d/1F9U9UjI9CHuxR-AkUvJZQRrom_oF10pm=w1400",
     to: "/works?category=interiors",
     cta: "INTERIOR PORTFOLIO",
   },
   {
-    tag: "02 / RESTORATION & RENOVATION",
-    title: "HERITAGE RESTORATION & STRUCTURAL RENEWAL",
+    tag: "02 / DIVISION",
+    title: "RENOVATIONS / RESTORATIONS",
     body:
       "A DEDICATED WING FOR THE PRESERVATION AND ADAPTATION OF OLDER ARCHITECTURE — FACADE RENEWAL, STRUCTURAL RESTORATION, AND THE SENSITIVE REUSE OF BUILT HERITAGE.",
-    image: "https://images.pexels.com/photos/7389533/pexels-photo-7389533.jpeg?auto=compress&cs=tinysrgb&w=1400",
+    image: "https://lh3.googleusercontent.com/d/1tMuPICaLjYIn8smCG0cize45rzG9DKPo=w1400",
     to: "/works?category=restoration",
     cta: "RESTORATION PORTFOLIO",
   },
