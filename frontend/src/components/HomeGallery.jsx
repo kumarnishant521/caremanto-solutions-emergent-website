@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { Rise } from "./Rise";
 import { Link } from "react-router-dom";
-import { api } from "../lib/api";
 import { homeGalleryImages } from "../lib/realProjects";
 import SmartImage from "./SmartImage";
+import { useGallery } from "../lib/useGallery";
 
 /**
  * Home page image bento — the scroll section.
@@ -43,29 +43,21 @@ const PLACEHOLDERS = [
 ];
 
 export default function HomeGallery() {
+  const { photos } = useGallery();
   const [tiles, setTiles] = useState([]);
 
   useEffect(() => {
-    // First, ask the backend for any photos the admin has featured on the home page.
-    api.get("/gallery")
-      .then((r) => {
-        const featured = (r.data || []).filter((p) => p.featured_home).map((p) => p.image);
-        const real = homeGalleryImages().map((r2) => r2.src);
-        const combined = [];
-        [...featured, ...real, ...PLACEHOLDERS].forEach((src) => {
-          if (src && !combined.includes(src) && combined.length < 12) combined.push(src);
-        });
-        setTiles(combined.map((src) => ({ src })));
-      })
-      .catch(() => {
-        const real = homeGalleryImages().map((r) => r.src);
-        const combined = [];
-        [...real, ...PLACEHOLDERS].forEach((src) => {
-          if (src && !combined.includes(src) && combined.length < 12) combined.push(src);
-        });
-        setTiles(combined.map((src) => ({ src })));
-      });
-  }, []);
+    // Build the home-page bento from the shared /api/gallery cache — no
+    // additional network call. If the admin has featured photos, use those;
+    // otherwise fall back to the curated real-projects list, then placeholders.
+    const featured = (photos || []).filter((p) => p.featured_home).map((p) => p.image);
+    const real = homeGalleryImages().map((r) => r.src);
+    const combined = [];
+    [...featured, ...real, ...PLACEHOLDERS].forEach((src) => {
+      if (src && !combined.includes(src) && combined.length < 12) combined.push(src);
+    });
+    setTiles(combined.map((src) => ({ src })));
+  }, [photos]);
 
   return (
     <section

@@ -44,7 +44,7 @@ export default function SmartImage({
           alt={alt}
           loading={eager ? "eager" : "lazy"}
           decoding="async"
-          fetchpriority={eager ? "high" : "low"}
+          fetchPriority={eager ? "high" : "low"}
           onLoad={() => setLoaded(true)}
           onError={() => setFailed(true)}
           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"} ${imgClassName}`}
