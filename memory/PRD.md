@@ -47,6 +47,17 @@ Admin (cookie-auth): `POST/PUT/DELETE /admin/projects[/{id}]`, `POST/PUT/DELETE 
 - **Legacy `/api/uploads/…`** static route preserved for pre-existing files.
 - **Compatibility alias** `POST /api/upload` → `/admin/upload` for any client still on a stale bundle.
 
+### Iteration 14 (2026-07-18) — Navigation Routing Fix
+**User report**: Portfolio button + all Interior Projects / Services dropdown items landed on the same Residential page. Fixed by:
+- Nav was writing `?category=…` but WorksPage reads `?cat=…` → mismatch caused silent fallback to Residential.
+- Dropdown labels weren't mapped to the UPPERCASE constants inside WorksPage.
+- Portfolio button now uses `useNavigate('/works')` + explicit scroll-to-top + clears any stale query params.
+- New `INTERIOR_ROUTE` map resolves each dropdown label to the exact `{cat, folder}` tuple (Retail Design + Hospitality both resolve to Commercial category with the folder opened).
+- New `isRestorationService` regex routes Services items containing "Restoration"/"Renovation" to the gallery, and every other Services item opens the Consultation modal via `useConsultation().open()` — no page navigation.
+- Both desktop and mobile drawer updated.
+
+**Testing**: iteration_14 100% pass (15/15 nav flows verified live via Playwright).
+
 ### Iteration 13 (2026-07-18) — Layout Restore v2 (Picture 2 masonry)
 **User feedback**: Iteration 11's `object-cover` + fixed `aspect-ratio: 4/5` was cropping landscape shots into uniform squares and clipping the CAREMANTO watermark. User sent Picture 2 reference — true natural-aspect column masonry.
 
