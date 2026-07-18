@@ -1,0 +1,47 @@
+{
+  "summary": "Frontend-only verification of thumbnail rewrite, lazy/async decoding, aspect-ratio containers, module cache for /api/gallery, and broken-image resilience. Most fixes verified working; two issues found.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "SmartImage", "issue": "React warning: 'Invalid DOM property fetchpriority. Did you mean fetchPriority?' — JSX must use camelCase fetchPriority attribute (also invalid to pass to <img> in React without camelCase). Console pollution on every page.", "selector": "SmartImage img", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [
+      {"flow": "Home page gallery data fetch", "issue": "HomeGallery.jsx calls api.get('/gallery') directly (line 50) instead of using the new useGallery() module cache. As a result, opening '/' fires a fresh /api/gallery request (observed 2 calls on home navigation) that bypasses the 45s cache. Refactor HomeGallery to use useGallery() so all three public pages share the cache.", "affected_selectors": ["[data-testid=\"home-gallery-grid\"]"]}
+    ],
+    "design_issues": []
+  },
+  "verification_details": {
+    "works_residential_folder_cards": 5,
+    "works_commercial_folder_cards": 3,
+    "folder_container_aspect_ratio": "4 / 5",
+    "home_gallery_figure_aspect_ratio": "4 / 5",
+    "loading_lazy_present": true,
+    "decoding_async_present": true,
+    "drive_thumb_rewrite_verified": "Confirmed: e.g. https://lh3.googleusercontent.com/d/18k5sSbJaE2ny0BW6JXCUEUwi0oq5sF6A=w600 (folder card 4 on Residential tab)",
+    "api_gallery_calls_during_4_tab_flips_on_works": 0,
+    "api_gallery_calls_during_3_folder_open_back_cycles": 0,
+    "api_gallery_calls_during_gallery_tab_flips": 0,
+    "api_gallery_calls_on_fresh_/works_load": 1,
+    "api_gallery_calls_on_/gallery_navigation_from_/works": 1,
+    "api_gallery_calls_on_/_home_load": 2,
+    "broken_images_across_/_/works_/gallery": 0,
+    "lightbox_src_uses_raw_not_thumb": true,
+    "lightbox_example_src": "https://design-restore-pro.preview.emergentagent.com/api/files/caremanto/uploads/49d065a96b4548b6a9c65c0f7e752d63.jpg"
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Refactor /app/frontend/src/components/HomeGallery.jsx to consume useGallery() from /app/frontend/src/lib/useGallery.js instead of calling api.get('/gallery') directly. This unifies the module cache across / , /works and /gallery.",
+    "Fix React JSX camelCase attribute in /app/frontend/src/components/SmartImage.jsx line 47: change `fetchpriority={...}` to `fetchPriority={...}` to eliminate the DOM property warning."
+  ],
+  "critical_code_review_comments": [
+    "SmartImage.jsx uses `fetchpriority` (lowercase) which React rejects — must be `fetchPriority`.",
+    "HomeGallery.jsx duplicates gallery-fetch logic and bypasses the newly-added cache layer; single-source-of-truth via useGallery() is safer and matches WorksPage/GalleryPage."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "90%"},
+  "test_credentials": "Not needed for this run (public pages).",
+  "seed_data_creation": "None.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All performance-oriented DOM-level checks pass on /works and /gallery — SmartImage renders with loading=lazy, decoding=async, aspect-ratio 4/5, and Drive URLs are rewritten to =w600 for cards. Module cache proven: 0 /api/gallery refetches during 4 tab flips and 3 folder drill-downs. Two remaining fixes: (a) HomeGallery must use useGallery(); (b) SmartImage attribute name typo (fetchpriority -> fetchPriority). After these, re-verify that home '/' navigation issues at most 1 /api/gallery call within 45s of a prior /works or /gallery visit."
+}

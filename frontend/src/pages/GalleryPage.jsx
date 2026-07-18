@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { api } from "../lib/api";
 import { Rise } from "../components/Rise";
 import { sharePhoto } from "../lib/share";
+import SmartImage from "../components/SmartImage";
+import { useGallery } from "../lib/useGallery";
 
 /* -------------------------------------------------------------------------
  * Three top-level tabs:
@@ -31,17 +32,8 @@ export default function GalleryPage() {
   const category = params.get("cat") || RESIDENTIAL;
   const openedFolder = params.get("folder") || "";
 
-  const [photos, setPhotos] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { photos, loading } = useGallery();
   const [lightbox, setLightbox] = useState(null);
-
-  useEffect(() => {
-    setLoading(true);
-    api.get("/gallery")
-      .then((r) => setPhotos(r.data || []))
-      .catch(() => setPhotos([]))
-      .finally(() => setLoading(false));
-  }, []);
 
   const setCategory = (c) => {
     const q = new URLSearchParams();
@@ -263,14 +255,18 @@ function FolderCards({ folders, categoryLabel, coverForSub, countForSub, onOpen 
             <button
               onClick={() => onOpen(name)}
               data-testid={`folder-card-${slug(name)}`}
-              className="group relative w-full text-left overflow-hidden bg-[var(--bg-1)] aspect-[4/5]"
+              className="group relative w-full text-left overflow-hidden bg-[var(--bg-1)]"
+              style={{ aspectRatio: "4/5" }}
             >
               {cover ? (
-                <img
+                <SmartImage
                   src={cover.image}
                   alt={name}
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-[900ms] ease-[cubic-bezier(0.2,0.7,0.15,1)] group-hover:scale-[1.06]"
-                  loading="lazy"
+                  width={600}
+                  aspect="4/5"
+                  className="absolute inset-0 w-full h-full"
+                  imgClassName="transition-transform duration-[900ms] ease-[cubic-bezier(0.2,0.7,0.15,1)] group-hover:scale-[1.06]"
+                  fallbackText={name}
                 />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center text-[var(--muted)] text-[12px] tracking-widest uppercase">
@@ -324,15 +320,16 @@ function PhotoGrid({ photos, onOpen }) {
           <button
             data-testid={`gallery-item-${i}`}
             onClick={() => onOpen(ph)}
-            className="w-full text-left proj-card block group"
+            className="w-full text-left proj-card block group relative"
           >
-            <img
+            <SmartImage
               src={ph.image}
               alt={ph.title || ""}
-              loading="lazy"
-              className="w-full h-auto object-cover"
+              width={800}
+              aspect="3/4"
+              className="w-full"
             />
-            <div className="absolute inset-x-0 bottom-0 z-10 p-4 md:p-5 flex items-end justify-between gap-3">
+            <div className="absolute inset-x-0 bottom-0 z-10 p-4 md:p-5 flex items-end justify-between gap-3 bg-gradient-to-t from-black/60 to-transparent">
               <div>
                 <div className="text-[9px] tracking-[0.28em] uppercase text-[var(--gold-hi)] mb-1 font-medium">
                   {ph.category}

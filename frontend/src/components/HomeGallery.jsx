@@ -3,6 +3,7 @@ import { Rise } from "./Rise";
 import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { homeGalleryImages } from "../lib/realProjects";
+import SmartImage from "./SmartImage";
 
 /**
  * Home page image bento — the scroll section.
@@ -105,14 +106,15 @@ export default function HomeGallery() {
               delay={(i % 5) * 60}
               className="mb-4 md:mb-6 break-inside-avoid block"
             >
-              <figure className="relative overflow-hidden bg-[var(--bg-2)] group">
-                <img
+              <figure className="relative overflow-hidden bg-[var(--bg-2)] group" style={{ aspectRatio: "4/5" }}>
+                <SmartImage
                   src={t.src}
                   alt=""
-                  aria-hidden="true"
-                  loading="lazy"
-                  className="w-full h-auto block max-w-full transition-transform duration-[1200ms] ease-[cubic-bezier(0.2,0.7,0.15,1)] group-hover:scale-[1.03]"
-                  style={{ objectFit: "contain" }}
+                  width={900}
+                  aspect="4/5"
+                  className="w-full h-full"
+                  imgClassName="transition-transform duration-[1200ms] ease-[cubic-bezier(0.2,0.7,0.15,1)] group-hover:scale-[1.03]"
+                  fallbackText="—"
                 />
               </figure>
             </Rise>
