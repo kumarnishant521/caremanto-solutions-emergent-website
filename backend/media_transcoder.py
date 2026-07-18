@@ -54,6 +54,11 @@ MEDIA_CACHE_DIR = Path(os.environ.get(
 )).resolve()
 MEDIA_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
+# Skip transcoding for sources above this cap — Pillow can take 30 s+ to
+# encode a 14 MB JPEG under load, causing ingress 502s. Above the cap the
+# original is served (still Gzip-compressed by the app / Cloudflare edge).
+MAX_TRANSCODE_BYTES = int(os.environ.get("MAX_TRANSCODE_BYTES", 6 * 1024 * 1024))
+
 
 # --- format negotiation --------------------------------------------------
 
@@ -166,12 +171,18 @@ def maybe_transcoded_bytes(
     if not target:
         return None
 
-    # 1) cache hit
+    # 1) cache hit — always served regardless of source size
     cached = cached_bytes(path, target)
     if cached is not None:
         return cached, _MIME_FOR[target], target
 
-    # 2) encode & cache
+    # 2) refuse to encode extremely large sources — falls back to the raw
+    # stream so the ingress never sees a >20s hang under first cold hit.
+    if len(raw) > MAX_TRANSCODE_BYTES:
+        logger.info(f"transcode skipped (source {len(raw)}B > cap {MAX_TRANSCODE_BYTES}B) for {path}")
+        return None
+
+    # 3) encode & cache
     try:
         data, mime = transcode_image_bytes(raw, target)
     except Exception as e:

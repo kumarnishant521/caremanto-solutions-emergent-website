@@ -1089,7 +1089,14 @@ async def apply_security_headers(request: Request, call_next):
     site. Flip to enforcement (`Content-Security-Policy`) after the report
     log is clean.
     """
-    response = await call_next(request)
+    try:
+        response = await call_next(request)
+    except Exception:
+        # If the downstream handler crashed / the client disconnected mid
+        # transcode, BaseHTTPMiddleware raises "No response returned." — we
+        # let the standard error path surface the failure without adding
+        # header noise (there's no response object to attach to).
+        raise
     for header, value in SECURITY_HEADERS.items():
         # Never overwrite a header a specific route has already set intentionally.
         response.headers.setdefault(header, value)

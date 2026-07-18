@@ -47,6 +47,29 @@ Admin (cookie-auth): `POST/PUT/DELETE /admin/projects[/{id}]`, `POST/PUT/DELETE 
 - **Legacy `/api/uploads/…`** static route preserved for pre-existing files.
 - **Compatibility alias** `POST /api/upload` → `/admin/upload` for any client still on a stale bundle.
 
+### Iteration 12 (2026-07-18) — Phase 2 Media Pipeline
+**On-the-fly WebP + AVIF image transcoding at `/api/files/{path}`**
+- New `/app/backend/media_transcoder.py` — negotiates target format from HTTP Accept header (AVIF > WebP > raw), encodes via Pillow 12.3's native encoders, caches encoded copies on-disk at `/app/backend/.media_cache/{sha1}.{fmt}`.
+- Verified: **14.7 MB source JPEG → 1.16 MB WebP (92% reduction)** / 1.36 MB AVIF (91% reduction). Second request served from cache in <200 ms.
+- Safety guard: sources > 6 MB (configurable via `MAX_TRANSCODE_BYTES`) fall back to the raw stream to prevent cold-encode ingress 502s.
+- Response headers: `Content-Type: image/{webp|avif}`, `Vary: Accept`, `Cache-Control: public, max-age=31536000, immutable`, `X-Caremanto-Transcoded: {fmt}`.
+- Non-image content (videos, PDFs) passes through untouched.
+
+**Video H.265 (HEVC) transcoding on admin upload**
+- ffmpeg 5.1 installed on the container.
+- `POST /api/admin/upload` now accepts a `BackgroundTasks` — when the uploaded file is `video/*`, a background subprocess transcodes to H.265 at 2500 kbps max, uploads the smaller sibling as `{stem}.h265.mp4` to Emergent Object Storage. Never blocks the admin response.
+- Upload response includes `h265_url` and `h265_status` for video uploads so the frontend can use `<source src=h265>` with graceful fallback.
+
+**Middleware hardening**
+- `apply_security_headers` now correctly propagates downstream exceptions (client disconnect during transcode no longer surfaces as a `RuntimeError: No response returned.`).
+
+**Deliverables**
+- `/app/memory/SEO_COPY_PREVIEW.md` — side-by-side current-vs-proposed copy for user review (nothing published; awaits "publish" or edits).
+- `/app/memory/CLOUDFLARE_RUNBOOK.md` — 9-step runbook to activate Cloudflare CDN when caremanto.in DNS is switched over.
+- `/app/backend/tests/test_iteration12_transcode.py` — 11 pytest cases (100% pass, serial run).
+
+**Testing**: iteration_11 + iteration_12 combined = **24/24 pytest pass (100%)**.
+
 ### Iteration 11 (2026-07-18) — Grid Restore + SEO / Security / Performance Foundation
 **A. Grid restore (P0 hotfix):**
 - Reverted the asymmetric bento (user disliked the letterbox padding) → back to the clean CSS multi-column masonry (`columns-1 sm:columns-2 lg:columns-3`) matching the original site look.
