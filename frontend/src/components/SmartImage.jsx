@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { thumbUrl } from "../lib/thumb";
 
 /**
@@ -13,6 +13,9 @@ import { thumbUrl } from "../lib/thumb";
  *   "?" placeholder. Falls back to a subtle "coming soon" tone card.
  * - Locks the container's aspect-ratio so layout shift is eliminated during
  *   the fetch, and so a failed image doesn't collapse the surrounding grid.
+ * - Handles the browser-cache race where an <img> can `complete` BEFORE
+ *   React attaches the onLoad handler — checks `img.complete` on mount so
+ *   fast/cached images never get stuck at opacity 0.
  */
 export default function SmartImage({
   src,
@@ -27,9 +30,22 @@ export default function SmartImage({
 }) {
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const imgRef = useRef(null);
 
   useEffect(() => { setFailed(false); setLoaded(false); }, [src]);
   useEffect(() => { if (onLoadedChange) onLoadedChange(loaded); }, [loaded, onLoadedChange]);
+
+  // Race-condition guard: if the browser has already finished loading this
+  // image before React attaches `onLoad` (very common for cached assets or
+  // when the img is created client-side after HTTP cache is warm), the
+  // handler will never fire and the fade-in state stays at opacity-0
+  // forever. Check `complete` on mount + after src changes.
+  useEffect(() => {
+    const el = imgRef.current;
+    if (!el) return;
+    if (el.complete && el.naturalWidth > 0) setLoaded(true);
+    else if (el.complete && el.naturalWidth === 0) setFailed(true);
+  }, [src]);
 
   const finalSrc = thumbUrl(src, width);
 
@@ -40,6 +56,7 @@ export default function SmartImage({
     >
       {!failed && finalSrc ? (
         <img
+          ref={imgRef}
           src={finalSrc}
           alt={alt}
           loading={eager ? "eager" : "lazy"}
