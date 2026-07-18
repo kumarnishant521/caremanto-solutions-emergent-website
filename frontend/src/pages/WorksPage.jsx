@@ -9,6 +9,7 @@ import { thumbUrl } from "../lib/thumb";
 import { useGallery, prefetchImageUrls } from "../lib/useGallery";
 import Head from "../components/Head";
 import Pagination from "../components/Pagination";
+import { keywordsFor, pageTitleFor, altFor } from "../lib/seo";
 
 /* -------------------------------------------------------------------------
  * Portfolio landing (`/works`)
@@ -116,22 +117,16 @@ export default function WorksPage() {
   return (
     <main data-testid="works-page" className="pt-32 pb-24 md:pt-40 md:pb-32 bg-[var(--bg-0)] min-h-screen">
       <Head
-        title={
-          category === RESIDENTIAL
-            ? "Residential Interior Design Portfolio · Caremanto Solutions Mumbai"
-            : category === COMMERCIAL
-              ? "Commercial Interior & Fit-out Portfolio · Caremanto Solutions Mumbai"
-              : "Heritage Restoration & Renovation Portfolio · Caremanto Solutions Mumbai"
-        }
+        title={pageTitleFor({ category, folder: openedFolder })}
         description={
           category === RESIDENTIAL
-            ? "Explore Caremanto Solutions' residential portfolio — bedrooms, kitchens, bathrooms, dining halls and balcony spaces designed with editorial craft. Mumbai luxury interior designers."
+            ? "Luxury residential interior design portfolio by Caremanto Solutions Mumbai — bedrooms, kitchens, bathrooms, living rooms, balconies and temple spaces. Modular kitchen design, luxury bathroom design, home renovation India."
             : category === COMMERCIAL
-              ? "Turnkey commercial interior fit-outs by Caremanto Solutions — office spaces, retail design and boutique hospitality across Mumbai and India."
-              : "Structural renovation and heritage restoration case studies — Caremanto Solutions preserves and re-imagines legacy architecture across India."
+              ? "Turnkey commercial interior design portfolio — office interior design, modern office layout, retail store design, luxury showroom interior design, and boutique hospitality styling by Caremanto Solutions Mumbai."
+              : "Heritage building restoration, structural renovation contractors, bungalow restoration, terrace waterproofing and repair, commercial building rehabilitation across India — Caremanto Solutions Mumbai."
         }
-        canonical={`https://caremanto.in/works${category !== RESIDENTIAL ? `?cat=${encodeURIComponent(category)}` : ""}`}
-        keywords="interior design portfolio Mumbai, residential interiors India, commercial fit-out designer, heritage restoration, kitchen renovation Mumbai, boutique hospitality interior, retail store design, office interior designer"
+        canonical={`https://caremanto.in/works${category !== RESIDENTIAL ? `?cat=${encodeURIComponent(category)}` : ""}${openedFolder ? `${category !== RESIDENTIAL ? "&" : "?"}folder=${encodeURIComponent(openedFolder)}` : ""}`}
+        keywords={keywordsFor({ category, folder: openedFolder })}
       />
       <div className="max-w-[1500px] mx-auto px-6 md:px-14">
         {/* Editorial header */}
@@ -298,7 +293,7 @@ function FolderCards({ folders, categoryLabel, coverForSub, countForSub, photosB
               {cover ? (
                 <SmartImage
                   src={cover.image}
-                  alt={`${name} — ${categoryLabel} interior design by Caremanto Solutions Mumbai`}
+                  alt={altFor({ ...cover, subcategory: name }, i)}
                   width={600}
                   aspect="4/5"
                   className="absolute inset-0 w-full h-full"
@@ -417,7 +412,7 @@ function PhotoGrid({ photos, onOpen, testIdPrefix = "works-child" }) {
             >
               <img
                 src={thumbUrl(ph.image, 900)}
-                alt={`${ph.title || ph.subcategory || "Interior"} — ${ph.category === "commercial" ? "Commercial fit-out" : ph.category === "restoration" ? "Heritage restoration" : "Residential interior design"} by Caremanto Solutions`}
+                alt={altFor(ph, i)}
                 loading={i < 3 ? "eager" : "lazy"}
                 decoding="async"
                 fetchPriority={i < 3 ? "high" : "auto"}

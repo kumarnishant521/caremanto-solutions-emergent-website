@@ -8,15 +8,16 @@ import Testimonials from "../components/Testimonials";
 import ConsultButton from "../components/ConsultButton";
 import { Rise } from "../components/Rise";
 import Head from "../components/Head";
+import { keywordsFor, pageTitleFor, ANCHORS } from "../lib/seo";
 
 export default function HomePage() {
   return (
     <main data-testid="home-page">
       <Head
-        title="Caremanto Solutions · Luxury Interior Design, Renovation & Heritage Restoration Studio · Mumbai, India"
-        description="Caremanto Solutions is a Mumbai-based luxury interior design, turnkey renovation and heritage restoration studio. Residential architecture, boutique hospitality, retail and commercial fit-outs across India."
+        title={pageTitleFor()}
+        description="Caremanto Solutions — luxury interior designers in Mumbai. Residential interior architecture, turnkey commercial fit-outs, heritage restoration and renovation across India. Free interior consultation."
         canonical="https://caremanto.in/"
-        keywords="luxury interior design Mumbai, interior designers Mumbai, residential interior architecture, turnkey commercial fit-out, heritage building restoration, structural renovation Mumbai, retail spatial design, boutique hospitality interiors, kitchen renovation, bathroom design, modular kitchen, home renovation India, office interior design, restaurant interior designer, luxury villa interiors, Caremanto Solutions"
+        keywords={keywordsFor()}
       />
       <Hero />
       <EditorialMarquee />

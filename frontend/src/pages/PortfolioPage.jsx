@@ -5,6 +5,7 @@ import { thumbUrl } from "../lib/thumb";
 import { useGallery, invalidateGalleryCache } from "../lib/useGallery";
 import Head from "../components/Head";
 import ConsultButton from "../components/ConsultButton";
+import { altFor, keywordsFor, ANCHORS } from "../lib/seo";
 
 /**
  * Dedicated Portfolio page — routed at `/portfolio`.
@@ -60,10 +61,10 @@ export default function PortfolioPage() {
       className="pt-32 pb-24 md:pt-40 md:pb-32 bg-[var(--bg-0)] min-h-screen"
     >
       <Head
-        title="Portfolio · Curated Interior Design Case Studies · Caremanto Solutions Mumbai"
-        description="A curated portfolio of luxury interior design, renovation and restoration commissions by Caremanto Solutions — residential architecture, commercial fit-outs and heritage restoration across Mumbai and India."
+        title="Curated Interior Design Portfolio · Best Interior Designers in Mumbai | CAREMANTO SOLUTIONS"
+        description="A curated portfolio of luxury interior designs by Caremanto Solutions — best interior designers in Mumbai. Residential interior architecture, turnkey commercial fit-outs, heritage restoration and renovation across India. Free interior consultation."
         canonical="https://caremanto.in/portfolio"
-        keywords="portfolio, interior design portfolio Mumbai, luxury interior projects India, residential portfolio, commercial fit-out portfolio, heritage restoration case studies, Caremanto Solutions"
+        keywords={keywordsFor()}
       />
 
       <div className="max-w-[1500px] mx-auto px-6 md:px-14">
@@ -105,11 +106,7 @@ export default function PortfolioPage() {
               >
                 <img
                   src={thumbUrl(p.image, 1000)}
-                  alt={
-                    p.title
-                      ? `${p.title} — ${p.category} interior by Caremanto Solutions Mumbai`
-                      : `Caremanto Solutions luxury interior ${i + 1} — Mumbai portfolio`
-                  }
+                  alt={altFor(p, i)}
                   loading={i < 4 ? "eager" : "lazy"}
                   decoding="async"
                   fetchPriority={i < 4 ? "high" : "auto"}
@@ -142,9 +139,9 @@ export default function PortfolioPage() {
               className="btn-pill"
               data-testid="portfolio-view-works"
             >
-              Browse the Full Gallery
+              {ANCHORS.browseGallery}
             </Link>
-            <ConsultButton label="Begin a Conversation" testId="portfolio-consult" />
+            <ConsultButton label={ANCHORS.bookConsult} testId="portfolio-consult" />
           </div>
         </div>
       </div>

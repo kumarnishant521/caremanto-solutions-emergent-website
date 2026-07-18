@@ -9,6 +9,7 @@ import { thumbUrl } from "../lib/thumb";
 import { useGallery, prefetchImageUrls } from "../lib/useGallery";
 import Head from "../components/Head";
 import Pagination from "../components/Pagination";
+import { keywordsFor, pageTitleFor, altFor } from "../lib/seo";
 
 /* -------------------------------------------------------------------------
  * Three top-level tabs:
@@ -86,22 +87,16 @@ export default function GalleryPage() {
   return (
     <main data-testid="gallery-page" className="pt-[100px] bg-[var(--bg-0)] min-h-screen">
       <Head
-        title={
-          category === RESIDENTIAL
-            ? "Residential Interior Gallery · Bedrooms, Kitchens & More · Caremanto Solutions"
-            : category === COMMERCIAL
-              ? "Commercial Interiors Gallery · Office, Retail, Hospitality · Caremanto Solutions"
-              : "Restoration & Renovation Gallery · Caremanto Solutions Mumbai"
-        }
+        title={pageTitleFor({ category, folder: openedFolder })}
         description={
           category === RESIDENTIAL
-            ? "Curated residential interior gallery — hall & dining, bedrooms, bathrooms, kitchens, balcony and temple spaces designed by Caremanto Solutions."
+            ? "Luxury residential interior design gallery — hall & dining, bedrooms, bathrooms, modular kitchens, balcony and temple spaces. Best interior designers in Mumbai · Caremanto Solutions."
             : category === COMMERCIAL
-              ? "Commercial interior gallery — office spaces, retail design and boutique hospitality projects by Caremanto Solutions, Mumbai."
-              : "Heritage restoration and structural renovation gallery by Caremanto Solutions — preserving legacy, re-imagining space."
+              ? "Commercial interior design gallery — office interior design, modern office layout, retail store design, luxury showroom interior design, boutique hospitality styling. Caremanto Solutions Mumbai."
+              : "Heritage restoration and structural renovation gallery — bungalow restoration, waterproofing repair, commercial building rehabilitation. Best bungalow repairing company · Caremanto Solutions."
         }
-        canonical={`https://caremanto.in/gallery${category !== RESIDENTIAL ? `?cat=${encodeURIComponent(category)}` : ""}`}
-        keywords="interior design gallery Mumbai, residential interior photos, commercial fit-out gallery, restoration photography, luxury bedroom design, modular kitchen gallery, bathroom design gallery, office interior gallery"
+        canonical={`https://caremanto.in/gallery${category !== RESIDENTIAL ? `?cat=${encodeURIComponent(category)}` : ""}${openedFolder ? `${category !== RESIDENTIAL ? "&" : "?"}folder=${encodeURIComponent(openedFolder)}` : ""}`}
+        keywords={keywordsFor({ category, folder: openedFolder })}
       />
       {/* Editorial header */}
       <section className="max-w-[1500px] mx-auto px-6 md:px-14 pt-16 md:pt-24 pb-10">
@@ -302,7 +297,7 @@ function FolderCards({ folders, categoryLabel, coverForSub, countForSub, photosI
               {cover ? (
                 <SmartImage
                   src={cover.image}
-                  alt={`${name} — ${categoryLabel} interior design by Caremanto Solutions Mumbai`}
+                  alt={altFor({ ...cover, subcategory: name }, i)}
                   width={600}
                   aspect="4/5"
                   className="absolute inset-0 w-full h-full"
@@ -374,7 +369,7 @@ function PhotoGrid({ photos, onOpen }) {
             >
               <img
                 src={thumbUrl(ph.image, 900)}
-                alt={`${ph.title || ph.subcategory || "Interior"} — ${ph.category === "commercial" ? "Commercial interior" : ph.category === "restoration" ? "Heritage restoration" : "Residential interior"} by Caremanto Solutions Mumbai`}
+                alt={altFor(ph, i)}
                 loading={i < 3 ? "eager" : "lazy"}
                 decoding="async"
                 fetchPriority={i < 3 ? "high" : "auto"}

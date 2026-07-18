@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { homeGalleryImages } from "../lib/realProjects";
 import { thumbUrl } from "../lib/thumb";
 import { useGallery } from "../lib/useGallery";
+import { altFor } from "../lib/seo";
 
 /**
  * Home portfolio gallery — TRUE editorial masonry (Picture 2 layout).
@@ -92,7 +93,7 @@ export default function HomeGallery() {
             With Quiet Authority
           </h2>
           <Link to="/works" data-testid="home-gallery-cta" className="btn-pill">
-            Full Portfolio
+            Browse Residential, Commercial &amp; Restoration Projects
           </Link>
         </div>
 
@@ -101,7 +102,7 @@ export default function HomeGallery() {
             <PortfolioCard
               key={src}
               src={src}
-              alt={`Caremanto Solutions luxury interior ${i + 1} — Mumbai residential, commercial and restoration portfolio`}
+              alt={altFor({ category: i % 3 === 0 ? "RESIDENTIAL" : i % 3 === 1 ? "COMMERCIAL" : "RESTORATION & RENOVATIONS" }, i)}
               priority={i < 3}
             />
           ))}
