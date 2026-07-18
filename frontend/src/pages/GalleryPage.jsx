@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Rise } from "../components/Rise";
 import { sharePhoto } from "../lib/share";
 import SmartImage from "../components/SmartImage";
+import { thumbUrl } from "../lib/thumb";
 import { useGallery, prefetchImageUrls } from "../lib/useGallery";
 import Head from "../components/Head";
 
@@ -348,25 +349,22 @@ function PhotoGrid({ photos, onOpen }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.4 }}
-      className="columns-1 sm:columns-2 lg:columns-3 gap-4 md:gap-6 [column-fill:_balance]"
+      className="portfolio-gallery-container"
     >
       {photos.map((ph, i) => (
-        <Rise
-          key={ph.id}
-          delay={(i % 6) * 40}
-          className="mb-4 md:mb-6 break-inside-avoid"
-        >
+        <div key={ph.id} className="portfolio-item-card">
           <button
             data-testid={`gallery-item-${i}`}
             onClick={() => onOpen(ph)}
             className="w-full text-left proj-card block group relative"
           >
-            <SmartImage
-              src={ph.image}
+            <img
+              src={thumbUrl(ph.image, 900)}
               alt={`${ph.title || ph.subcategory || "Interior"} — ${ph.category === "commercial" ? "Commercial interior" : ph.category === "restoration" ? "Heritage restoration" : "Residential interior"} by Caremanto Solutions Mumbai`}
-              width={800}
-              aspect="3/4"
-              className="w-full"
+              loading={i < 3 ? "eager" : "lazy"}
+              decoding="async"
+              fetchPriority={i < 3 ? "high" : "auto"}
+              style={{ width: "100%", height: "auto", objectFit: "contain", display: "block", background: "var(--bg-2)" }}
             />
             <div className="absolute inset-x-0 bottom-0 z-10 p-4 md:p-5 flex items-end justify-between gap-3 bg-gradient-to-t from-black/60 to-transparent">
               <div>
@@ -383,7 +381,7 @@ function PhotoGrid({ photos, onOpen }) {
               <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
             </div>
           </button>
-        </Rise>
+        </div>
       ))}
     </motion.div>
   );

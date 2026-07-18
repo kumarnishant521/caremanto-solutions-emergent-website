@@ -1,22 +1,24 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { homeGalleryImages } from "../lib/realProjects";
-import SmartImage from "./SmartImage";
+import { thumbUrl } from "../lib/thumb";
 import { useGallery } from "../lib/useGallery";
 
 /**
- * Home portfolio grid — clean 3-column editorial masonry.
+ * Home portfolio gallery — TRUE editorial masonry (Picture 2 layout).
  *
- * Design contract (from the studio brief, restored 2026-07-18):
- *   • Three-column CSS multi-column layout — clean, quiet, matches the
- *     original look and feel (no random asymmetric bento).
- *   • Each tile fills its cell with `object-fit: cover` — no letterbox
- *     padding, no cream gaps around the photograph.
- *   • Watermark protection: `object-position: 50% 100%` anchors the image
- *     to the BOTTOM of the cell, so if any crop happens the studio's
- *     hologram at the bottom edge is always preserved (crop takes from
- *     the top instead).
- *   • Admin `home_order` sequence still drives display order 1:1.
+ * Design contract (from the studio brief, iteration 13):
+ *   • CSS multi-column layout (`column-count: 3 / 2 / 1` responsive) — the
+ *     browser packs tiles into columns of naturally-varying height.
+ *   • Each tile is a plain `<img width=100% height=auto>` — NO aspect-ratio
+ *     lock, NO absolute-positioned wrapper. Landscape shots stay wide,
+ *     portrait shots stay tall, exactly the way they were shot.
+ *   • `object-fit: contain` guarantees zero cropping — the CAREMANTO
+ *     watermark at the bottom edge is always fully visible.
+ *   • Admin `home_order` sequence still drives display order 1:1 through
+ *     the columns.
+ *   • First three images are eager + high-priority so the fold above the
+ *     scroll is instant.
  */
 
 const PLACEHOLDERS = [
@@ -31,11 +33,30 @@ const PLACEHOLDERS = [
   "https://images.pexels.com/photos/291762/pexels-photo-291762.jpeg?auto=compress&cs=tinysrgb&w=1200",
 ];
 
+/* --- individual card: plain <img>, natural aspect, watermark-safe ---- */
+
+function PortfolioCard({ src, alt, priority }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return null;
+  return (
+    <figure className="portfolio-item-card" data-testid="home-portfolio-item">
+      <img
+        src={thumbUrl(src, 900)}
+        alt={alt}
+        loading={priority ? "eager" : "lazy"}
+        decoding="async"
+        fetchPriority={priority ? "high" : "auto"}
+        onError={() => setFailed(true)}
+      />
+    </figure>
+  );
+}
+
 export default function HomeGallery() {
   const { photos } = useGallery();
 
   const tiles = useMemo(() => {
-    // Admin sequence: home_order ASC (nulls last), created_at tiebreak.
+    // Admin sequence — home_order ASC (nulls last), created_at tiebreak.
     const featured = (photos || [])
       .filter((p) => p.featured_home)
       .slice()
@@ -75,25 +96,14 @@ export default function HomeGallery() {
           </Link>
         </div>
 
-        <div
-          data-testid="home-gallery-grid"
-          className="columns-1 sm:columns-2 lg:columns-3 gap-6 md:gap-8"
-        >
+        <div className="portfolio-gallery-container" data-testid="home-gallery-grid">
           {tiles.map((src, i) => (
-            <figure
+            <PortfolioCard
               key={src}
-              data-testid={`home-bento-tile-${i}`}
-              className="break-inside-avoid mb-6 md:mb-8 overflow-hidden bg-[var(--bg-2)] group cursor-default"
-            >
-              <SmartImage
-                src={src}
-                alt={`Caremanto Solutions luxury interior design ${i + 1} — Mumbai residential, commercial and restoration portfolio`}
-                width={900}
-                aspect="4/5"
-                eager={i < 3}
-                imgClassName="!object-cover object-[50%_100%] transition-transform duration-[900ms] group-hover:scale-[1.02]"
-              />
-            </figure>
+              src={src}
+              alt={`Caremanto Solutions luxury interior ${i + 1} — Mumbai residential, commercial and restoration portfolio`}
+              priority={i < 3}
+            />
           ))}
         </div>
       </div>

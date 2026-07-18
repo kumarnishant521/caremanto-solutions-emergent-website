@@ -47,6 +47,17 @@ Admin (cookie-auth): `POST/PUT/DELETE /admin/projects[/{id}]`, `POST/PUT/DELETE 
 - **Legacy `/api/uploads/…`** static route preserved for pre-existing files.
 - **Compatibility alias** `POST /api/upload` → `/admin/upload` for any client still on a stale bundle.
 
+### Iteration 13 (2026-07-18) — Layout Restore v2 (Picture 2 masonry)
+**User feedback**: Iteration 11's `object-cover` + fixed `aspect-ratio: 4/5` was cropping landscape shots into uniform squares and clipping the CAREMANTO watermark. User sent Picture 2 reference — true natural-aspect column masonry.
+
+**Fix shipped**:
+- New `.portfolio-gallery-container` + `.portfolio-item-card` CSS in `/app/frontend/src/index.css` — exact spec from the studio brief (column-count 3/2/1, break-inside: avoid, width 100%, height auto, `object-fit: contain !important`).
+- **HomeGallery rewritten** with plain `<img width=100% height=auto>` tags — no SmartImage wrapper, no aspect-ratio lock. Natural aspect ratios preserved end-to-end. Verified 5 distinct card heights across 12 tiles at 1440 × 900 viewport.
+- **WorksPage + GalleryPage folder-photo grid** updated to the same `.portfolio-gallery-container` layout — natural-aspect masonry inside every folder modal, no cropping.
+- Every image uses `loading=eager` + `fetchPriority=high` for the first 3, `loading=lazy` for the rest — coupled with iteration 12's WebP/AVIF transcoder this delivers Picture 2 visual + Picture 1's performance goal.
+
+**Testing**: verified live — 3 columns, 24 px gap, `object-fit: contain`, watermarks visible on every photograph.
+
 ### Iteration 12 (2026-07-18) — Phase 2 Media Pipeline
 **On-the-fly WebP + AVIF image transcoding at `/api/files/{path}`**
 - New `/app/backend/media_transcoder.py` — negotiates target format from HTTP Accept header (AVIF > WebP > raw), encodes via Pillow 12.3's native encoders, caches encoded copies on-disk at `/app/backend/.media_cache/{sha1}.{fmt}`.

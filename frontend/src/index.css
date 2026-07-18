@@ -320,6 +320,50 @@ a, button, [role="button"] { cursor: pointer; }
 }
 
 /* ------------------------------------------------------------------ */
+/* Portfolio Gallery Masonry — Picture 2 layout                       */
+/*                                                                    */
+/*   CSS multi-column engine. Natural heights, watermark-safe.        */
+/*   The container distributes tiles into 3 (desktop) / 2 (tablet) /  */
+/*   1 (mobile) columns. Each card breaks intact and displays its     */
+/*   image at native aspect ratio — landscape shots stay wide,        */
+/*   portraits stay tall. Company logos at the bottom of every        */
+/*   photograph remain 100% visible.                                  */
+/* ------------------------------------------------------------------ */
+.portfolio-gallery-container {
+    column-count: 3;
+    column-gap: 24px;
+    width: 100%;
+}
+@media (max-width: 1024px) {
+    .portfolio-gallery-container { column-count: 2; column-gap: 20px; }
+}
+@media (max-width: 640px) {
+    .portfolio-gallery-container { column-count: 1; }
+}
+
+.portfolio-item-card {
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+    page-break-inside: avoid;
+    display: block;                 /* inline-block would introduce phantom baseline gaps */
+    width: 100%;
+    margin: 0 0 24px 0;
+    background: transparent;
+    overflow: hidden;
+}
+@media (max-width: 640px) {
+    .portfolio-item-card { margin-bottom: 20px; }
+}
+
+.portfolio-item-card img {
+    width: 100%;
+    height: auto !important;
+    object-fit: contain !important;
+    display: block;
+    background: var(--bg-2);         /* subtle canvas while decoding */
+}
+
+/* ------------------------------------------------------------------ */
 /* Editorial Home Bento — asymmetric masonry                          */
 /*                                                                    */
 /*   Uses a 12-col CSS Grid with 8-px row units + dense packing so    */
