@@ -1,33 +1,22 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Rise } from "./Rise";
 import { Link } from "react-router-dom";
 import { homeGalleryImages } from "../lib/realProjects";
-import SmartImage from "./SmartImage";
 import { useGallery } from "../lib/useGallery";
 
 /**
- * Home page image bento — the scroll section.
+ * Editorial Home Bento — Asymmetric Masonry.
  *
- * Priority order for the tiles:
- *   1. Gallery photographs the admin marked `featured_home` from /admin
- *   2. Real project images from /lib/realProjects.js (placement includes "home")
- *   3. Curated Pexels placeholders (final fallback)
- *
- * The 70 / 30 residential-to-commercial rule shapes the mix silently — no text.
+ * Design contract (from the studio brief):
+ *   1. NEVER crop. `object-fit: contain` + natural aspect ratio per tile.
+ *   2. Column & row spans vary per photograph, driven by its natural ratio,
+ *      so landscape shots read wide and portraits stay tall — a true fluid
+ *      editorial rhythm, not blocky squares.
+ *   3. 16-px watermark safety padding at the bottom of every cell.
+ *   4. Dense CSS-Grid packing (`grid-auto-flow: dense`) eliminates empty
+ *      gaps between clusters even as spans vary.
+ *   5. Admin `home_order` still drives the display sequence 1:1.
  */
-
-const SPANS = [
-  "md:col-span-7 md:row-span-2 aspect-[16/11]",
-  "md:col-span-5 aspect-[4/5]",
-  "md:col-span-5 md:mt-[-20px] aspect-[4/5]",
-  "md:col-span-4 aspect-[4/5]",
-  "md:col-span-3 md:mt-16 aspect-[3/4]",
-  "md:col-span-6 md:mt-[-30px] aspect-[16/10]",
-  "md:col-span-5 md:mt-16 aspect-[3/4]",
-  "md:col-span-5 aspect-[16/10]",
-  "md:col-span-6 aspect-[16/10]",
-  "md:col-span-7 aspect-[16/11]",
-];
 
 const PLACEHOLDERS = [
   "https://images.pexels.com/photos/34688219/pexels-photo-34688219.jpeg?auto=compress&cs=tinysrgb&w=1400",
@@ -42,17 +31,117 @@ const PLACEHOLDERS = [
   "https://images.pexels.com/photos/1743229/pexels-photo-1743229.jpeg?auto=compress&cs=tinysrgb&w=1200",
 ];
 
+/* ---------- responsive grid dimensions ---------- */
+
+function useGridCols() {
+  const [cols, setCols] = useState(12);
+  useEffect(() => {
+    const compute = () => {
+      const w = window.innerWidth;
+      setCols(w < 640 ? 4 : w < 1024 ? 8 : 12);
+    };
+    compute();
+    window.addEventListener("resize", compute);
+    return () => window.removeEventListener("resize", compute);
+  }, []);
+  return cols;
+}
+
+/* Column span from aspect ratio — landscape wide, portrait narrow, editorial. */
+function colSpanFor(ratio, cols, index) {
+  // Deterministic fallback pattern until the natural ratio is known.
+  const fallback = [6, 4, 5, 3, 4, 6, 3, 5, 4, 6, 4, 3];
+  if (!ratio) {
+    const s = fallback[index % fallback.length];
+    return Math.min(s, cols);
+  }
+  let span;
+  if (cols >= 12) {
+    if (ratio >= 1.55)      span = 7;   // panorama
+    else if (ratio >= 1.25) span = 6;   // wide landscape
+    else if (ratio >= 1.05) span = 5;   // slight landscape
+    else if (ratio >= 0.85) span = 4;   // square-ish
+    else if (ratio >= 0.65) span = 4;   // gentle portrait
+    else                    span = 3;   // tall portrait
+  } else if (cols >= 8) {
+    if (ratio >= 1.35)      span = 5;
+    else if (ratio >= 1.05) span = 4;
+    else if (ratio >= 0.85) span = 4;
+    else                    span = 3;
+  } else {
+    // Mobile: two columns per row for interest, but full-width for panoramas.
+    span = ratio >= 1.4 ? 4 : 2;
+  }
+  return Math.min(span, cols);
+}
+
+/* ---------- tile component ---------- */
+
+const ROW_UNIT = 8;   // px — matches grid-auto-rows in index.css
+const GAP = 20;       // px — matches gap in index.css (desktop)
+
+function BentoTile({ src, index, cols, priority }) {
+  const cellRef = useRef(null);
+  const [ratio, setRatio] = useState(null);
+  const [rowSpan, setRowSpan] = useState(30);
+
+  const handleImgLoad = (e) => {
+    const w = e.currentTarget.naturalWidth;
+    const h = e.currentTarget.naturalHeight;
+    if (w && h) setRatio(w / h);
+  };
+
+  // Measure rendered height → derive grid row-span so masonry packs tightly.
+  useLayoutEffect(() => {
+    if (!cellRef.current) return;
+    const el = cellRef.current;
+    const compute = () => {
+      const rect = el.getBoundingClientRect();
+      const h = rect.height;
+      if (!h) return;
+      const gap = window.innerWidth < 640 ? 12 : window.innerWidth < 1024 ? 16 : GAP;
+      const span = Math.ceil((h + gap) / (ROW_UNIT + gap));
+      setRowSpan(span);
+    };
+    compute();
+    const ro = new ResizeObserver(compute);
+    ro.observe(el);
+    window.addEventListener("resize", compute);
+    return () => { ro.disconnect(); window.removeEventListener("resize", compute); };
+  }, [ratio, cols]);
+
+  const colSpan = colSpanFor(ratio, cols, index);
+
+  return (
+    <figure
+      className="bento-cell group"
+      data-testid={`home-bento-tile-${index}`}
+      data-loading={ratio == null ? "true" : "false"}
+      style={{ gridColumn: `span ${colSpan}`, gridRow: `span ${rowSpan}` }}
+    >
+      <div ref={cellRef} className="bento-inner">
+        <img
+          src={src}
+          alt=""
+          loading={priority ? "eager" : "lazy"}
+          decoding="async"
+          fetchpriority={priority ? "high" : "auto"}
+          onLoad={handleImgLoad}
+          className="bento-img"
+        />
+      </div>
+    </figure>
+  );
+}
+
+/* ---------- section ---------- */
+
 export default function HomeGallery() {
   const { photos } = useGallery();
-  const [tiles, setTiles] = useState([]);
+  const cols = useGridCols();
 
-  useEffect(() => {
-    // Build the home-page bento from the shared /api/gallery cache — no
-    // additional network call. If the admin has featured photos, use those;
-    // otherwise fall back to the curated real-projects list, then placeholders.
-    // Strictly respect the admin's saved sequence: sort by `home_order` asc
-    // (nulls last), then created_at as a stable tiebreaker. This keeps the
-    // homepage bento in exact 1:1 sync with /admin → Home Sequence.
+  const tiles = useMemo(() => {
+    // Strict admin sequence: home_order asc (nulls last), created_at tiebreak.
     const featured = (photos || [])
       .filter((p) => p.featured_home)
       .slice()
@@ -68,7 +157,7 @@ export default function HomeGallery() {
     [...featured, ...real, ...PLACEHOLDERS].forEach((src) => {
       if (src && !combined.includes(src) && combined.length < 12) combined.push(src);
     });
-    setTiles(combined.map((src) => ({ src })));
+    return combined;
   }, [photos]);
 
   return (
@@ -95,33 +184,19 @@ export default function HomeGallery() {
           </Rise>
         </div>
 
-        {/*
-          Masonry columns preserve every image's natural aspect ratio, so
-          nothing is cropped (watermarks at the bottom edge stay visible)
-          and tiles pack tightly with no wide blank margins.
-        */}
         <div
           data-testid="home-gallery-grid"
-          className="columns-1 sm:columns-2 lg:columns-3 gap-4 md:gap-6 [column-fill:_balance]"
+          className="home-bento-grid"
+          key={cols /* re-flow spans cleanly on breakpoint change */}
         >
-          {tiles.map((t, i) => (
-            <Rise
-              key={i}
-              delay={(i % 5) * 60}
-              className="mb-4 md:mb-6 break-inside-avoid block"
-            >
-              <figure className="relative overflow-hidden bg-[var(--bg-2)] group" style={{ aspectRatio: "4/5" }}>
-                <SmartImage
-                  src={t.src}
-                  alt=""
-                  width={900}
-                  aspect="4/5"
-                  className="w-full h-full"
-                  imgClassName="transition-transform duration-[1200ms] ease-[cubic-bezier(0.2,0.7,0.15,1)] group-hover:scale-[1.03]"
-                  fallbackText="—"
-                />
-              </figure>
-            </Rise>
+          {tiles.map((src, i) => (
+            <BentoTile
+              key={src}
+              src={src}
+              index={i}
+              cols={cols}
+              priority={i < 3}
+            />
           ))}
         </div>
       </div>

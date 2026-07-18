@@ -1,0 +1,54 @@
+{
+  "summary": "Iteration 10 focused frontend test on the new Home bento (asymmetric masonry). Grid contract mostly holds: dense CSS-Grid packing, object-fit:contain, 16-px inner padding, 12 tiles rendered, admin home_order sequence respected via useGallery. However, the requirement of at least 3 distinct grid-column span values is NOT met at desktop 1920 — only 'span 4' and 'span 6' appear in practice because all landscape source images share ratio ~1.5 (falls in the 6-span bucket) and all portraits fall in the 4-span bucket. Regressions (Consult modal validation, 'Other Services' dropdown, WhatsApp placement, footer) all pass.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "HomeGallery (colSpanFor)",
+        "issue": "At desktop 1920×1080, only 2 unique grid-column span values are emitted ('span 4' and 'span 6') across all 12 tiles. Spec requires >=3 distinct spans (e.g., 3, 4, 5, 6, 7). Root cause: real project images all share ratio ~1.5 (→ 6-span bucket) and portraits share ratio ~0.7-0.78 (→ 4-span bucket); no image ever satisfies the >=1.55 (span 7), 1.05-1.25 (span 5), or <0.65 (span 3) branches. Suggestion: mix in the deterministic fallback pattern [6,4,5,3,4,6,3,5,4,6,4,3] as a secondary variation source (e.g., blend index-based nudge for ratios sitting on bucket boundaries), or widen the range bands, or explicitly override 3-4 tiles to span 3/5/7 by index to guarantee visual rhythm.",
+        "selector": "[data-testid^=home-bento-tile-]",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Home bento (desktop)", "issues": ["Because only 2 span sizes appear, wide (span 6) tiles pair well but the layout reads slightly more repetitive than the editorial brief intends. Not blocky-square (heights vary 484-708 px), but variety could be richer."]}
+    ]
+  },
+  "verification_evidence": {
+    "tile_count": 12,
+    "grid_display": "grid",
+    "grid_auto_flow": "dense",
+    "grid_template_columns_desktop": "12 x 97.33px",
+    "grid_template_columns_mobile": "4 x 76.5px",
+    "gap_desktop": "20px",
+    "gap_mobile": "12px",
+    "object_fit_all_tiles": "contain",
+    "inner_padding_bottom_all_tiles": "16px",
+    "unique_col_spans_desktop": ["span 4", "span 6"],
+    "unique_col_spans_mobile": ["span 2", "span 4"],
+    "unique_tile_widths_desktop_px": [449, 684],
+    "unique_tile_heights_desktop_px": [484, 596, 624, 652, 680, 708],
+    "unique_tile_widths_mobile_px": [165, 342],
+    "unique_tile_heights_mobile_px": [248, 268],
+    "horizontal_overflow_mobile": "none (docW=390, winW=390)",
+    "consult_modal": "opens, validation shows 'Please enter your name', 'Other Services' present in Service Type dropdown along with Interiors and Restoration & Renovation",
+    "whatsapp_icons_home": "footer-whatsapp (in footer) + consultation-whatsapp (inside modal only). No WhatsApp icon next to on-page ConsultButtons.",
+    "admin_sequence_logic": "HomeGallery.jsx sorts featured photos by home_order asc (nulls last) then created_at — matches spec"
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Increase span diversity so >=3 distinct grid-column values render in real data. Options: (a) intercalate the fallback deterministic pattern based on tile index for a portion of tiles, (b) widen buckets so 1600×1067 (ratio 1.5) sometimes maps to span 5 or span 7 by rotating on index, (c) explicitly override tiles at indexes [0, 4, 8] to span 3/5/7 for editorial rhythm."
+  ],
+  "critical_code_review_comments": [
+    "colSpanFor is purely ratio-driven and ignores the index fallback pattern once ratio is known — this creates the 2-span-only pathology when source data has homogeneous ratios. Consider a hybrid: `if(index in [0,4,8,11]) return fallback[index]` then ratio-based for the rest.",
+    "grid-row-span calculation uses gap value that differs from CSS at each breakpoint — currently hard-coded {12,16,20}. This works but should ideally derive from CSS custom properties to stay DRY if gaps ever change.",
+    "PLACEHOLDERS array uses 10 Pexels URLs but the useMemo cap is 12; if realProjects + featured yield <2 items, mobile users see mostly stock photography. Consider bumping to 12 placeholders."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (per request)", "frontend": "8/9 checks pass (~89%)"},
+  "seed_data_creation": "None — public gallery already returns enough photos to fill 12 tiles.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "The bento is at [data-testid=home-gallery-section] with tiles [data-testid=home-bento-tile-{0..11}]. Use section.scroll_into_view_if_needed() — Lenis intercepts window.scrollTo. To verify the >=3 span fix, evaluate `[...new Set(Array.from(document.querySelectorAll('[data-testid^=home-bento-tile-]')).map(t=>getComputedStyle(t).gridColumn))]` at 1920×1080 after tiles finish loading (2-3s wait after scroll). Mobile is 4-col layout with spans 2 and 4 (acceptable for 4-col viewport)."
+}
