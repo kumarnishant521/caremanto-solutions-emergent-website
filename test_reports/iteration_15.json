@@ -1,0 +1,32 @@
+{
+  "summary": "Iteration 15 tested — Portfolio page (/portfolio) and Services dropdown pre-fill of Consultation modal both work correctly. Backend integration for featured_portfolio verified end-to-end. One functional bug found in admin folder-drawer portfolio toggle button (UI does not sync after click; consecutive clicks send the same value, breaking the second toggle).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "PUT /api/admin/gallery/{id}", "issue": "Endpoint requires the FULL photo body (category, image, ...) — sending {featured_portfolio: true} alone returns 422. Not a regression, but documented for future tests: caller must merge with existing record."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AdminFolderManager (folder drawer)", "issue": "The [data-testid^=folder-drawer-portfolio-] toggle button does NOT re-render with the new state after a click. Backend PUT succeeds and DB flips featured_portfolio, but the button caption stays on the pre-click value (e.g. shows '☆ Portfolio' even though DB is now true). Consecutive clicks send the SAME value (both PUTs contain featured_portfolio: true), so the second click does NOT toggle the flag back. Likely cause: the parent (AdminFolderManager) does not refresh the drawer's `inFolder` list after onChanged() — the child button captures `photo.featured_portfolio` from a stale prop closure. Only the 'active cover' card in the drawer header renders with fresh state.", "selector": "[data-testid^=folder-drawer-portfolio-]", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Fix AdminFolderManager: after togglePortfolio's PUT succeeds, update the local `inFolder` list (or re-fetch the drawer's photos) so each card's button re-renders with the new featured_portfolio value. Currently only onChanged() (parent refresh) fires — the child drawer keeps stale props. A quick fix is to optimistically update the photo in local state OR key the button on featured_portfolio so React remounts."
+  ],
+  "critical_code_review_comments": [
+    "ConsultationModal correctly surfaces the pre-filled service label as the FIRST <option> when it's not one of the standard three ('interiors','restoration','other'). Verified: Sound Proofing / Water-Proofing / Modernisation all show up as first option and are selected.",
+    "PortfolioPage invalidates useGallery cache on mount AND on window focus — good pattern.",
+    "PUT /api/admin/gallery/{id} requires the full pydantic model. If frontend calls sometimes send partial patches, they'll 422. The AdminFolderManager togglePortfolio correctly spreads `...photo`, so this is fine — but this API design is fragile."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (all requested endpoints work)", "frontend": "~92% (7/8 flows; admin drawer portfolio toggle broken)"},
+  "seed_data_creation": "None. Toggled photo 462f4335-8271-4066-a463-9c28ee7909d5 during testing; RESTORED featured_portfolio=false via API cleanup call.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend has 20 photos with featured_portfolio=true pre-seeded so /portfolio grid is non-empty. Passless admin login: POST /api/auth/passless-login (no body → returns {token}). PUT /api/admin/gallery/{id} MUST include full pydantic body — merge with existing record. Restoration dropdown item indices: 0=Restoration & Renovations (routes to /works), 1=Structural Renovations & Facade Renewal (routes to /works — restoration regex match), 2=Sound Proofing (modal prefill), 3=Water-Proofing (modal prefill), 4=Heritage Restoration (routes to /works), 5=Modernisation (modal prefill).",
+  "rca of the issue": "AdminFolderManager togglePortfolio calls api.put + onChanged(). onChanged is the parent's refresh hook, but the folder-drawer component that renders each card's button (`FolderDrawer` or equivalent) evidently receives `inFolder` from the parent that is NOT re-computed with the new featured_portfolio value after PUT. Each PhotoCard's onClick handler closes over the initial `photo.featured_portfolio`, so both clicks compute `!photo.featured_portfolio = true` and PUT the same payload twice. Fix: after successful PUT, patch the local `photo.featured_portfolio` value in-state (optimistic update) OR ensure the drawer re-reads the updated photo from the refreshed useGallery cache."
+}

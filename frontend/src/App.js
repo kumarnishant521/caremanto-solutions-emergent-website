@@ -12,6 +12,7 @@ import { useLenis } from "@/lib/useLenis";
 
 import HomePage from "@/pages/HomePage";
 import WorksPage from "@/pages/WorksPage";
+import PortfolioPage from "@/pages/PortfolioPage";
 import ProjectDetailPage from "@/pages/ProjectDetailPage";
 import GalleryPage from "@/pages/GalleryPage";
 import StudioPage from "@/pages/StudioPage";
@@ -55,6 +56,7 @@ function SiteRoot() {
             <PublicShell>
               <Routes>
                 <Route path="/" element={<HomePage />} />
+                <Route path="/portfolio" element={<PortfolioPage />} />
                 <Route path="/works" element={<WorksPage />} />
                 <Route path="/works/:id" element={<ProjectDetailPage />} />
                 <Route path="/gallery" element={<GalleryPage />} />

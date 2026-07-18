@@ -173,6 +173,26 @@ function FolderDrawer({ categories, taxonomy, category, subcategory, allPhotos, 
     finally { setBusy(false); }
   };
 
+  // Toggle the portfolio flag on any photograph directly from the folder
+  // drawer. When enabled the photo appears on the dedicated /portfolio page.
+  const togglePortfolio = async (photo) => {
+    setBusy(true);
+    try {
+      await api.put(`/admin/gallery/${photo.id}`, {
+        ...photo,
+        featured_portfolio: !photo.featured_portfolio,
+      });
+      toast.success(
+        !photo.featured_portfolio ? "Added to Portfolio." : "Removed from Portfolio."
+      );
+      onChanged();
+    } catch {
+      toast.error("Portfolio toggle failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const bulkMove = async () => {
     if (!destCategory) return toast.error("Choose a destination category.");
     const destSubsForCat = taxonomy[destCategory] || [];
@@ -323,7 +343,7 @@ function FolderDrawer({ categories, taxonomy, category, subcategory, allPhotos, 
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {inFolder.map((p) => (
-                    <div key={p.id} className="relative aspect-square overflow-hidden">
+                    <div key={p.id} className="relative aspect-square overflow-hidden group">
                       <img src={p.image} alt="" className="w-full h-full object-cover" />
                       <button
                         data-testid={`folder-drawer-cover-${p.id}`}
@@ -336,6 +356,23 @@ function FolderDrawer({ categories, taxonomy, category, subcategory, allPhotos, 
                         }`}
                       >
                         {p.is_cover ? "● Active Cover — click to clear" : "○ Set as Cover"}
+                      </button>
+                      {/* Portfolio toggle — sits on top of the cover button,
+                          top-right corner. Clicking it does NOT propagate to
+                          the cover click below. */}
+                      <button
+                        type="button"
+                        data-testid={`folder-drawer-portfolio-${p.id}`}
+                        onClick={(e) => { e.stopPropagation(); togglePortfolio(p); }}
+                        disabled={busy}
+                        title={p.featured_portfolio ? "Remove from /portfolio page" : "Add to /portfolio page"}
+                        className={`absolute top-2 right-2 z-10 px-2 py-1 text-[9px] tracking-[0.24em] uppercase transition-all ${
+                          p.featured_portfolio
+                            ? "bg-[var(--gold-hi)] text-black"
+                            : "bg-black/70 text-white opacity-0 group-hover:opacity-100"
+                        }`}
+                      >
+                        {p.featured_portfolio ? "★ Portfolio" : "☆ Portfolio"}
                       </button>
                     </div>
                   ))}

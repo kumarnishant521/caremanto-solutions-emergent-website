@@ -11,10 +11,19 @@ import { STUDIO } from "../lib/studio";
  */
 const initialForm = { name: "", phone: "", email: "", service_type: "interiors", pincode: "" };
 
-export default function ConsultationModal({ isOpen, onClose }) {
+export default function ConsultationModal({ isOpen, onClose, prefill }) {
   const [form, setForm] = useState(initialForm);
   const [submitting, setSubmitting] = useState(false);
   const [confirmation, setConfirmation] = useState(null); // { customer_uid }
+
+  // When the modal opens with a `prefill` (e.g. from the Services dropdown
+  // clicking "Water-Proofing"), pre-select the matching Service Type so the
+  // lead is already qualified before the visitor types a single character.
+  useEffect(() => {
+    if (isOpen && prefill && typeof prefill === "object") {
+      setForm((f) => ({ ...f, ...prefill }));
+    }
+  }, [isOpen, prefill]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -139,6 +148,14 @@ export default function ConsultationModal({ isOpen, onClose }) {
                       data-testid="consultation-service"
                       onChange={(e) => setForm({ ...form, service_type: e.target.value })}
                     >
+                      {/* If a Services-dropdown item pre-filled a specific
+                          service (e.g. "Water-Proofing"), surface it at the
+                          top of the list so the visitor sees the exact
+                          service they clicked already selected. */}
+                      {form.service_type &&
+                        !["interiors", "restoration", "other"].includes(form.service_type) && (
+                          <option value={form.service_type}>{form.service_type}</option>
+                        )}
                       <option value="interiors">Interiors</option>
                       <option value="restoration">Restoration &amp; Renovation</option>
                       <option value="other">Other Services</option>

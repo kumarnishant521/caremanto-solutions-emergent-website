@@ -116,10 +116,10 @@ export default function Nav() {
     setMobileOpen(false);
   };
 
-  // Portfolio nav — clears any prior category filter and navigates to the
-  // full editorial portfolio (defaults to Residential inside WorksPage).
+  // Portfolio nav — dedicated `/portfolio` page rendering ONLY admin-flagged
+  // (`featured_portfolio: true`) photographs. Fresh cache on every entry.
   const goPortfolio = () => {
-    nav("/works");
+    nav("/portfolio");
     window.scrollTo({ top: 0, behavior: "instant" });
     setOpen(null);
     setMobileOpen(false);
@@ -135,14 +135,14 @@ export default function Nav() {
   };
 
   // Services dropdown click — restoration items → gallery, everything
-  // else → consultation modal.
+  // else → consultation modal pre-filled with the exact service clicked.
   const goServiceItem = (label) => {
     if (isRestorationService(label)) {
       goWorks("RESTORATION & RENOVATIONS");
     } else {
       setOpen(null);
       setMobileOpen(false);
-      openConsult();
+      openConsult({ service_type: label });
     }
   };
 
@@ -176,7 +176,7 @@ export default function Nav() {
             type="button"
             onClick={goPortfolio}
             data-testid="nav-portfolio"
-            className={`nav-link nav-label ${active("/works") ? "text-[var(--gold)]" : ""}`}
+            className={`nav-link nav-label ${active("/portfolio") ? "text-[var(--gold)]" : ""}`}
           >
             Portfolio
           </button>
