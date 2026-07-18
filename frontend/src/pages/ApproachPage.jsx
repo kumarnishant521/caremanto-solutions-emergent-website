@@ -1,5 +1,6 @@
 import { Rise } from "../components/Rise";
 import ConsultButton from "../components/ConsultButton";
+import Head from "../components/Head";
 
 const STEPS = [
   { n: "I", title: "Listen", body: "Every commission begins with a slow, unhurried conversation. We learn how a client lives — not just what they want." },
@@ -12,6 +13,12 @@ const STEPS = [
 export default function ApproachPage() {
   return (
     <main data-testid="approach-page" className="pt-32 pb-24 md:pt-40 md:pb-32 bg-[var(--bg-0)]">
+      <Head
+        title="Our Design Approach & Process · Caremanto Solutions Mumbai"
+        description="The Caremanto Solutions design process — how a luxury interior, renovation or restoration commission moves from first conversation to on-site delivery."
+        canonical="https://caremanto.in/approach"
+        keywords="interior design process, luxury renovation methodology, restoration workflow, turnkey fit-out approach, Caremanto Solutions design brief"
+      />
       <div className="max-w-[1440px] mx-auto px-6 md:px-14">
         <Rise>
           <div className="flex items-center gap-3 mb-6">

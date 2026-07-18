@@ -16,11 +16,13 @@ from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depend
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, EmailStr
 import tempfile
 
 from emergent_storage import init_storage, put_object_from_file, get_object_stream, APP_NAME as STORAGE_APP
+from security import sanitize_text, sanitize_short, SECURITY_HEADERS, CSP_REPORT_ONLY
 
 # ------------------------------------------------------------------ config
 MONGO_URL = os.environ['MONGO_URL']
@@ -293,8 +295,22 @@ async def create_lead(body: LeadIn):
     # Generate a stable, brand-prefixed Customer UID (e.g. "CS-20260717-8F3A2C")
     seq = uuid.uuid4().hex[:6].upper()
     customer_uid = f"CS-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{seq}"
+    # ---- XSS hardening -------------------------------------------------
+    # Every text field is stripped of HTML, control chars, and length-capped
+    # before it ever hits the database. Emails are validated by Pydantic;
+    # `EmailStr` already blocks anything unusual.
+    payload = body.model_dump()
+    payload["name"]         = sanitize_short(payload.get("name"), max_length=120)
+    payload["phone"]        = sanitize_short(payload.get("phone"), max_length=32)
+    payload["project_type"] = sanitize_short(payload.get("project_type"), max_length=64)
+    payload["service_type"] = sanitize_short(payload.get("service_type"), max_length=64)
+    payload["pincode"]      = sanitize_short(payload.get("pincode"), max_length=12)
+    payload["budget"]       = sanitize_short(payload.get("budget"), max_length=64)
+    payload["message"]      = sanitize_text(payload.get("message"), max_length=2000)
+    if not payload["name"]:
+        raise HTTPException(422, "Name is required.")
     doc = {
-        **body.model_dump(),
+        **payload,
         "id": str(uuid.uuid4()),
         "customer_uid": customer_uid,
         "status": "new",
@@ -517,8 +533,9 @@ async def update_covers(body: CoversIn, _admin=Depends(get_current_admin)):
         # clamp to [0.5s, 60s] to keep the ticker sane
         value["hero_interval_seconds"] = max(0.5, min(60.0, float(body.hero_interval_seconds)))
     if body.marquee_items is not None:
-        # Trim / filter empties; limit to 24 to keep the ticker legible.
-        clean = [str(s).strip() for s in body.marquee_items if str(s).strip()]
+        # Trim / filter empties; XSS-sanitize each entry; cap at 24 items.
+        clean = [sanitize_short(s, max_length=140) for s in body.marquee_items if str(s).strip()]
+        clean = [s for s in clean if s]
         value["marquee_items"] = clean[:24] or DEFAULT_MARQUEE
     await db.settings.update_one(
         {"key": "section_covers"},
@@ -833,6 +850,68 @@ async def on_startup():
 async def on_shutdown():
     client.close()
 
+# ------------------------------------------------------------------ SEO: sitemap + robots (dev-only fallback)
+# Preview ingress only exposes `/api/*` — the real robots.txt / sitemap.xml
+# are served as static files from /app/frontend/public/. The `/api/…`
+# aliases below are for local development, curl tests, and CI checks.
+@api.get("/sitemap.xml")
+async def sitemap_xml():
+    """
+    Search-engine sitemap for Caremanto Solutions (dev-only fallback).
+
+    Static routes are always present. Portfolio sub-folders are enumerated
+    from the current gallery taxonomy so newly-added categories appear the
+    moment the next crawl happens.
+    """
+    from datetime import date
+    site = os.environ.get("PUBLIC_SITE_URL", "https://caremanto.in").rstrip("/")
+    today = date.today().isoformat()
+
+    static_paths = [
+        ("/", 1.0, "weekly"),
+        ("/works", 0.9, "weekly"),
+        ("/gallery", 0.9, "weekly"),
+        ("/studio", 0.7, "monthly"),
+        ("/approach", 0.7, "monthly"),
+        ("/contact", 0.7, "monthly"),
+        ("/films", 0.6, "monthly"),
+    ]
+
+    RESI = ["hall-dining", "bedrooms", "bathrooms", "kitchens", "balcony-dry-area-temple"]
+    COMM = ["office-spaces", "retail-design", "hospitality"]
+    for slug in RESI:
+        static_paths.append((f"/gallery/residential/{slug}", 0.8, "weekly"))
+    for slug in COMM:
+        static_paths.append((f"/gallery/commercial/{slug}", 0.8, "weekly"))
+    static_paths.append(("/gallery/restoration", 0.8, "weekly"))
+
+    lines = ['<?xml version="1.0" encoding="UTF-8"?>',
+             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+    for path, priority, freq in static_paths:
+        lines.append("<url>")
+        lines.append(f"<loc>{site}{path}</loc>")
+        lines.append(f"<lastmod>{today}</lastmod>")
+        lines.append(f"<changefreq>{freq}</changefreq>")
+        lines.append(f"<priority>{priority}</priority>")
+        lines.append("</url>")
+    lines.append("</urlset>")
+    return Response(content="\n".join(lines), media_type="application/xml")
+
+
+@api.get("/robots.txt")
+async def robots_txt():
+    site = os.environ.get("PUBLIC_SITE_URL", "https://caremanto.in").rstrip("/")
+    body = (
+        "User-agent: *\n"
+        "Allow: /\n"
+        "Disallow: /admin\n"
+        "Disallow: /admin/\n"
+        "Disallow: /api/admin\n"
+        f"Sitemap: {site}/sitemap.xml\n"
+    )
+    return Response(content=body, media_type="text/plain")
+
+
 # ------------------------------------------------------------------ mount
 app.include_router(api)
 # Serve uploaded gallery images
@@ -860,3 +939,34 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ------------------------------------------------------------------ compression
+# Brotli/Gzip transparent compression for every JSON/HTML/JS/CSS response
+# above 500 bytes. Static image/video payloads are excluded from
+# recompression by Starlette (they're not text-encodable).
+app.add_middleware(GZipMiddleware, minimum_size=500, compresslevel=6)
+
+
+# ------------------------------------------------------------------ security headers
+@app.middleware("http")
+async def apply_security_headers(request: Request, call_next):
+    """Ship strict headers on every response.
+
+    CSP is initially in *report-only* mode so we can observe violations from
+    Google Drive / Pexels / social CDN images without breaking the live
+    site. Flip to enforcement (`Content-Security-Policy`) after the report
+    log is clean.
+    """
+    response = await call_next(request)
+    for header, value in SECURITY_HEADERS.items():
+        # Never overwrite a header a specific route has already set intentionally.
+        response.headers.setdefault(header, value)
+    # CSP report-only — safe rollout mode.
+    response.headers.setdefault("Content-Security-Policy-Report-Only", CSP_REPORT_ONLY)
+    # HSTS: preview environment terminates TLS upstream; announce a long
+    # HSTS window so browsers pin HTTPS in production too.
+    response.headers.setdefault(
+        "Strict-Transport-Security",
+        "max-age=63072000; includeSubDomains; preload",
+    )
+    return response

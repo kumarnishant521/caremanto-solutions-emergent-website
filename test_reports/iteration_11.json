@@ -1,0 +1,36 @@
+{
+  "summary": "Iteration 11 backend + frontend regression. All 13 pytest cases pass in /app/backend/tests/test_iteration11_security.py covering security headers, XSS sanitization on POST /api/leads, gzip compression on /api/gallery, Cache-Control on /api/files/*, /api/gallery + /api/gallery/home-sequence + admin folder/home-sequence auth guards, /api/covers schema, and static /robots.txt + /sitemap.xml. Frontend regression: HomeGallery renders 12 tiles inside [data-testid=home-gallery-grid], column-count=3 at 1440px, all 12 imgs are opacity 1 with object-fit:cover and object-position 50% 100% (blank-tile bug from iteration 10 confirmed fixed). Per-route <title>, description and <link rel=canonical> change correctly during SPA navigation on / /works /works?cat=COMMERCIAL /studio /contact. JSON-LD LocalBusiness/ArchitectureOffice is present with name='Caremanto Solutions', telephone='+91-95959-44417', address.postalCode='400078', addressLocality='Mumbai'. Consultation modal opens and includes an internal WhatsApp CTA. Gallery folder-card hover fires without console errors.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/files/*", "issue": "Origin correctly returns Cache-Control: public, max-age=31536000, immutable, but Cloudflare in front of the preview environment overrides it to 'no-store, no-cache, must-revalidate' because of the __cf_bm bot-management Set-Cookie. In production behind caremanto.in this may need Cloudflare Cache Rule override or removal of the bot cookie for /api/files. Non-blocking for functionality; blocks browser HTTP caching of images at the edge in preview only."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration11_security.py",
+    "/app/test_reports/pytest/iter11.xml"
+  ],
+  "action_items": [
+    "OPTIONAL: For production caremanto.in, add a Cloudflare Page/Cache Rule that preserves origin Cache-Control on /api/files/* (or strips __cf_bm there) so gallery images can be served from browser cache."
+  ],
+  "critical_code_review_comments": [
+    "security.py `sanitize_text` uses bleach.clean(strip=True) with empty allowlists — this correctly removes both dangerous tags AND any inner content of tags like <img> (image tag has no textContent so 'Hi' survives, script tag content stays as text 'alert(1)' which is what the review request expected — verified).",
+    "server.py: `no_store_for_dynamic_api` correctly excludes /api/uploads and /api/files, but relies on `response.headers.setdefault` inside `apply_security_headers` — order of add_middleware matters. Current order works because `apply_security_headers` runs OUTERMOST and does not touch Cache-Control. Leave as-is.",
+    "public/index.html uses JSON-LD via @graph which is fully supported by Google; tests should parse @graph explicitly. Documented in test file.",
+    "Frontend robots.txt is being served via the preview gateway wrapped in an HTML shell (`<pre>...</pre>`) — the request returns 200 with content-type text/plain but the body is HTML-wrapped by the emergent preview ingress. In production this static file will be served straight from CDN; no code fix needed."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration11_security.py (NEW)"
+  ],
+  "success_rate": {"backend": "100% (13/13)", "frontend": "100% on validated checks"},
+  "test_credentials": "Passless admin via POST /api/auth/passless-login (no body). Legacy admin@caremanto.com / Caremanto@2026 also accepted.",
+  "seed_data_creation": "Created + deleted 2 TEST leads during sanitization tests (cleaned up).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "test_iteration11_security.py is a permanent regression guard — run before any auth/middleware refactor. Backend correctly returns security headers Content-Security-Policy-Report-Only, X-Frame-Options: DENY, X-Content-Type-Options: nosniff, Referrer-Policy, Permissions-Policy, Strict-Transport-Security on all /api routes. GZip works (compressed /api/gallery is ~7% of raw size). XSS sanitization strips <script>...</script> keeping the text content ('alert(1)Bob') and strips <img onerror> tags entirely. Home grid at 1440px: [data-testid=home-gallery-grid] column-count=3, columnGap=32px, 12 <img>, all opacity=1 after 2.5s, object-fit:cover, object-position:50% 100%. JSON-LD is inside <script type='application/ld+json'> using @graph array — search for LocalBusiness/ArchitectureOffice inside @graph."
+}

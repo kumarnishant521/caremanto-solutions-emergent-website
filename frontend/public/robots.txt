@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /api/admin
+Disallow: /api/admin/
+
+# Explicitly allow indexing of the portfolio
+Allow: /works
+Allow: /gallery
+
+Sitemap: https://caremanto.in/sitemap.xml

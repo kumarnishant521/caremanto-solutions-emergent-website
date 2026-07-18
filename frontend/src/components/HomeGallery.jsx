@@ -87,7 +87,7 @@ export default function HomeGallery() {
             >
               <SmartImage
                 src={src}
-                alt=""
+                alt={`Caremanto Solutions luxury interior design ${i + 1} — Mumbai residential, commercial and restoration portfolio`}
                 width={900}
                 aspect="4/5"
                 eager={i < 3}

@@ -1,5 +1,6 @@
 import { Rise } from "../components/Rise";
 import ConsultButton from "../components/ConsultButton";
+import Head from "../components/Head";
 
 /**
  * About / Studio page.
@@ -56,6 +57,12 @@ const FEATURES = [
 export default function StudioPage() {
   return (
     <main data-testid="studio-page" className="pt-32 pb-24 md:pt-40 md:pb-32 bg-[var(--bg-0)]">
+      <Head
+        title="About the Studio · Caremanto Solutions · Luxury Interior Design Mumbai"
+        description="Founded 2018 in Mumbai, Caremanto Solutions is a luxury interior design, renovation and restoration studio. Meet the team, philosophy, and craft standard behind our editorial work."
+        canonical="https://caremanto.in/studio"
+        keywords="interior design studio Mumbai, luxury interior designer India, Caremanto Solutions team, boutique architecture firm, restoration studio Mumbai"
+      />
       <div className="max-w-[1440px] mx-auto px-6 md:px-14">
         {/* --------- Editorial header --------- */}
         <Rise>

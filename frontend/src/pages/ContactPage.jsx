@@ -2,6 +2,7 @@ import { useState } from "react";
 import { api, formatApiError } from "../lib/api";
 import { Rise } from "../components/Rise";
 import { toast } from "sonner";
+import Head from "../components/Head";
 
 const PROJECT_TYPES = [
   "Residential Interior",
@@ -49,6 +50,12 @@ export default function ContactPage() {
 
   return (
     <main data-testid="contact-page" className="pt-32 pb-24 md:pt-40 md:pb-32 bg-[var(--bg-0)]">
+      <Head
+        title="Contact & Consultation · Caremanto Solutions · Interior Designer Mumbai"
+        description="Request a consultation with Caremanto Solutions — Mumbai luxury interior design, renovation and restoration studio. Direct phone, email and WhatsApp."
+        canonical="https://caremanto.in/contact"
+        keywords="interior design consultation Mumbai, hire interior designer India, renovation quote, restoration inquiry, Caremanto contact"
+      />
       <div className="max-w-[1200px] mx-auto px-6 md:px-14">
         <Rise>
           <div className="flex items-center gap-3 mb-6">

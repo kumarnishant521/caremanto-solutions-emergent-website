@@ -6,6 +6,7 @@ import { Rise } from "../components/Rise";
 import { sharePhoto } from "../lib/share";
 import SmartImage from "../components/SmartImage";
 import { useGallery, prefetchImageUrls } from "../lib/useGallery";
+import Head from "../components/Head";
 
 /* -------------------------------------------------------------------------
  * Portfolio landing (`/works`)
@@ -112,6 +113,24 @@ export default function WorksPage() {
 
   return (
     <main data-testid="works-page" className="pt-32 pb-24 md:pt-40 md:pb-32 bg-[var(--bg-0)] min-h-screen">
+      <Head
+        title={
+          category === RESIDENTIAL
+            ? "Residential Interior Design Portfolio · Caremanto Solutions Mumbai"
+            : category === COMMERCIAL
+              ? "Commercial Interior & Fit-out Portfolio · Caremanto Solutions Mumbai"
+              : "Heritage Restoration & Renovation Portfolio · Caremanto Solutions Mumbai"
+        }
+        description={
+          category === RESIDENTIAL
+            ? "Explore Caremanto Solutions' residential portfolio — bedrooms, kitchens, bathrooms, dining halls and balcony spaces designed with editorial craft. Mumbai luxury interior designers."
+            : category === COMMERCIAL
+              ? "Turnkey commercial interior fit-outs by Caremanto Solutions — office spaces, retail design and boutique hospitality across Mumbai and India."
+              : "Structural renovation and heritage restoration case studies — Caremanto Solutions preserves and re-imagines legacy architecture across India."
+        }
+        canonical={`https://caremanto.in/works${category !== RESIDENTIAL ? `?cat=${encodeURIComponent(category)}` : ""}`}
+        keywords="interior design portfolio Mumbai, residential interiors India, commercial fit-out designer, heritage restoration, kitchen renovation Mumbai, boutique hospitality interior, retail store design, office interior designer"
+      />
       <div className="max-w-[1500px] mx-auto px-6 md:px-14">
         {/* Editorial header */}
         <Rise>
@@ -277,7 +296,7 @@ function FolderCards({ folders, categoryLabel, coverForSub, countForSub, photosB
               {cover ? (
                 <SmartImage
                   src={cover.image}
-                  alt={name}
+                  alt={`${name} — ${categoryLabel} interior design by Caremanto Solutions Mumbai`}
                   width={600}
                   aspect="4/5"
                   className="absolute inset-0 w-full h-full"
@@ -378,7 +397,7 @@ function PhotoGrid({ photos, onOpen }) {
           >
             <SmartImage
               src={ph.image}
-              alt={ph.title || ""}
+              alt={`${ph.title || ph.subcategory || "Interior"} — ${ph.category === "commercial" ? "Commercial fit-out" : ph.category === "restoration" ? "Heritage restoration" : "Residential interior design"} by Caremanto Solutions`}
               width={800}
               aspect="3/4"
               className="w-full"
