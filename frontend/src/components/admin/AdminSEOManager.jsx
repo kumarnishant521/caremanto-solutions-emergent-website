@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../lib/api";
 import { toast } from "sonner";
 
@@ -67,10 +67,16 @@ const emptyDoc = {
 
 export default function AdminSEOManager() {
   const [doc, setDoc]         = useState(emptyDoc);
+  const docRef                = useRef(emptyDoc);      // always mirrors latest doc
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
   const [tab, setTab]         = useState("seo");            // "seo" | "footer" | "nav"
   const [activeSection, setActiveSection] = useState("home");
+
+  // Keep the ref in lock-step with the doc — reads inside save() are guaranteed
+  // to see the most recent state even if the user clicks Publish immediately
+  // after typing.
+  useEffect(() => { docRef.current = doc; }, [doc]);
 
   const load = async () => {
     setLoading(true);
@@ -95,8 +101,12 @@ export default function AdminSEOManager() {
 
   const save = async () => {
     setSaving(true);
+    // Read the latest doc synchronously via functional setState so rapid
+    // edits made just before the click are guaranteed to be persisted.
+    let latest;
+    setDoc((cur) => { latest = cur; return cur; });
     try {
-      await api.put("/admin/seo", doc);
+      await api.put("/admin/seo", latest);
       toast.success("Settings published — visible instantly across the site.");
       // Invalidate the site-settings cache so the next page load reads fresh.
       try { localStorage.removeItem("caremanto:site-settings"); } catch {}
@@ -323,7 +333,7 @@ function SEOTab({ sections, activeSection, setActiveSection, patchSection }) {
             >Add</button>
           </div>
 
-          <details className="mt-4">
+          <details open className="mt-4">
             <summary className="cursor-pointer text-[11px] text-[#F5EEE0]/60 hover:text-[var(--gold-hi)] transition">
               Bulk import (comma or newline separated)
             </summary>

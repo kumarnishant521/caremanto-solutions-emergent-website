@@ -22,6 +22,13 @@ Public: `GET /`, `GET /projects[?category=…]`, `GET /projects/{id}`, `GET /gal
 Auth: `POST /auth/login`, `GET /auth/me`, `POST /auth/logout`
 Admin (cookie-auth): `POST/PUT/DELETE /admin/projects[/{id}]`, `POST/PUT/DELETE /admin/gallery[/{id}]`, `PUT /admin/gallery/taxonomy`, `GET /admin/leads`, `PATCH/DELETE /admin/leads/{id}`
 
+## What's Implemented (2026-07-18 · v4 — Dynamic SEO/Footer/Nav CMS)
+
+### Dynamic SEO Manager (NEW)
+- **Backend**: `GET /api/seo` (public) + `PUT /api/admin/seo` (auth). Single `settings` doc with key `seo_settings` stores `sections` (home/residential/commercial/restoration/portfolio/studio × {title, description, og_image, keywords[]}), `footer` (tagline_1/2, email, phone, phone_dial, whatsapp_number, whatsapp_message, address_line1/2, socials[]), and `nav` (labels{home/portfolio/interior_projects/services/process/about_us/consult}, interior_items[], services_items[]). Deep-merge fallback so defaults always fill missing keys. XSS-hardened via bleach + html.unescape so `&` renders correctly. Keyword & social dedup are case-insensitive.
+- **Frontend**: `SiteSettingsProvider` (`lib/useSiteSettings.jsx`) fetches once at boot, caches to `localStorage['caremanto:site-settings']` for zero-flicker rerenders. `useSEOFor({sectionKey, category, folder})` hook feeds `Head.jsx` on HomePage / WorksPage / GalleryPage / PortfolioPage. Nav.jsx + Footer.jsx consume dynamic labels / dropdown items / contact block / socials with static fallbacks.
+- **Admin UI**: New `SEO · Content` tab in AdminDashboardPage. Three subtabs (SEO Keywords & Meta / Footer Content / Navigation Text). Per-section chip editor with add/remove/bulk-import. Instant publish (Save = live). Verified via 12/12 pytest + admin E2E (iteration_20.json).
+
 ## What's Implemented (2026-07-17 · v3 — resilience + unlimited storage)
 
 ### Public site

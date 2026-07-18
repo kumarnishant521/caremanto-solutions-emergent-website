@@ -132,10 +132,10 @@ export default function Footer() {
               className="flex items-center gap-3"
               aria-label="Social media"
             >
-              {socials.map(({ key, label, href }) => {
+              {socials.map(({ key, label, href }, idx) => {
                 const Icon = SOCIAL_ICONS[key] || Globe;
                 return (
-                  <li key={key}>
+                  <li key={`${key}-${idx}`}>
                     <a
                       href={href}
                       target="_blank"

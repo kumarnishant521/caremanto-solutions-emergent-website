@@ -764,6 +764,15 @@ class SEOUpdateIn(BaseModel):
     nav:      Optional[SEONavIn] = None
 
 
+import html as _html
+
+def _sane_visible(value: Optional[str], *, max_length: int = 400) -> str:
+    """Strip HTML tags for XSS safety, then decode entities so ampersands and
+    quotes render as themselves on the public site (SEO title/description
+    fields should not display literal `&amp;`)."""
+    return _html.unescape(sanitize_short(value, max_length=max_length))
+
+
 @api.get("/seo")
 async def get_seo_settings():
     doc = await db.settings.find_one({"key": "seo_settings"}, {"_id": 0})
@@ -777,10 +786,13 @@ def _clean_kw_list(items) -> list[str]:
     seen = set()
     out = []
     for it in items:
-        s = sanitize_short(str(it), max_length=140)
-        if not s or s in seen:
+        s = _sane_visible(str(it), max_length=140)
+        if not s:
             continue
-        seen.add(s)
+        key = s.strip().lower()
+        if key in seen:
+            continue
+        seen.add(key)
         out.append(s)
     return out[:300]
 
@@ -801,9 +813,9 @@ async def update_seo_settings(body: SEOUpdateIn, _admin=Depends(get_current_admi
             key = sanitize_short(key, max_length=64) or key
             existing = value["sections"].get(key) or {"title": "", "description": "", "og_image": "", "keywords": []}
             if "title" in incoming:
-                existing["title"] = sanitize_short(incoming.get("title"), max_length=180)
+                existing["title"] = _sane_visible(incoming.get("title"), max_length=180)
             if "description" in incoming:
-                existing["description"] = sanitize_text(incoming.get("description"), max_length=400)
+                existing["description"] = _sane_visible(incoming.get("description"), max_length=400)
             if "og_image" in incoming:
                 existing["og_image"] = sanitize_short(incoming.get("og_image"), max_length=600)
             if "keywords" in incoming:
@@ -816,17 +828,24 @@ async def update_seo_settings(body: SEOUpdateIn, _admin=Depends(get_current_admi
         for k, v in f.items():
             if k == "socials" and isinstance(v, list):
                 clean = []
-                for s in v[:12]:
+                seen_keys = set()
+                for s in v[:24]:
                     if not isinstance(s, dict):
                         continue
-                    clean.append({
-                        "key":   sanitize_short(str(s.get("key", "")), max_length=32),
-                        "label": sanitize_short(str(s.get("label", "")), max_length=64),
+                    row = {
+                        "key":   sanitize_short(str(s.get("key", "")), max_length=32).lower(),
+                        "label": _sane_visible(str(s.get("label", "")), max_length=64),
                         "href":  sanitize_short(str(s.get("href", "")),  max_length=400),
-                    })
-                value["footer"]["socials"] = [x for x in clean if x["key"] and x["href"]]
+                    }
+                    if not row["key"] or not row["href"]:
+                        continue
+                    if row["key"] in seen_keys:
+                        continue    # dedupe by key so public footer never gets duplicate React keys
+                    seen_keys.add(row["key"])
+                    clean.append(row)
+                value["footer"]["socials"] = clean[:12]
             elif isinstance(v, str):
-                value["footer"][k] = sanitize_short(v, max_length=400)
+                value["footer"][k] = _sane_visible(v, max_length=400)
 
     # ---- nav merge --------------------------------------------------------
     if body.nav:
@@ -834,11 +853,11 @@ async def update_seo_settings(body: SEOUpdateIn, _admin=Depends(get_current_admi
         if isinstance(n.get("labels"), dict):
             for k, v in n["labels"].items():
                 if isinstance(v, str) and v.strip():
-                    value["nav"]["labels"][sanitize_short(k, max_length=64)] = sanitize_short(v, max_length=80)
+                    value["nav"]["labels"][sanitize_short(k, max_length=64)] = _sane_visible(v, max_length=80)
         if isinstance(n.get("interior_items"), list):
-            value["nav"]["interior_items"] = [sanitize_short(s, max_length=80) for s in n["interior_items"] if str(s).strip()][:12]
+            value["nav"]["interior_items"] = [_sane_visible(s, max_length=80) for s in n["interior_items"] if str(s).strip()][:12]
         if isinstance(n.get("services_items"), list):
-            value["nav"]["services_items"] = [sanitize_short(s, max_length=80) for s in n["services_items"] if str(s).strip()][:12]
+            value["nav"]["services_items"] = [_sane_visible(s, max_length=80) for s in n["services_items"] if str(s).strip()][:12]
 
     await db.settings.update_one(
         {"key": "seo_settings"},
