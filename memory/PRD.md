@@ -47,6 +47,15 @@ Admin (cookie-auth): `POST/PUT/DELETE /admin/projects[/{id}]`, `POST/PUT/DELETE 
 - **Legacy `/api/uploads/…`** static route preserved for pre-existing files.
 - **Compatibility alias** `POST /api/upload` → `/admin/upload` for any client still on a stale bundle.
 
+### Iteration 9 (2026-07-18) — Studio polish batch
+- **Homepage sequence DB sync**: `HomeGallery` now sorts featured photos strictly by `home_order` (ASC, nulls last, created_at tiebreaker). Saving the admin sequence invalidates the shared `useGallery` cache so live site updates on next page mount.
+- **Aesthetic Grid Assistant**: New side-panel overlay (`[data-testid=aesthetic-assistant-panel]`) launched from the Home Sequence toolbar (`[data-testid=home-seq-assistant-toggle]`). Ships five studio-tested composition rules — alternate scale, break same-category clusters, lead with negative space, give heroes breathing room, front-load hero shots — each with a coloured Do/Avoid mini-grid.
+- **Smart Grid Layout (admin-only, save-time)**: New section inside each folder drawer (`[data-testid=smart-layout-section]`). "Apply Smart Layout" runs a one-shot rebalance that (a) deletes exact-duplicate uploads (same image URL) and (b) interleaves the created_at-sorted halves to prevent burst uploads from clustering. Persisted via new endpoint `PUT /api/admin/gallery/folder-order` and honoured by both `/works` and `/gallery` (photos now sort by `folder_order` before `created_at`).
+- **Hover prefetch**: Folder cards on `/works` and `/gallery` warm the browser image cache on `onMouseEnter` / `onFocus` / `onTouchStart` via `prefetchImageUrls(urls, 8)`. First few photos in a folder modal load instantly on click.
+- **Consultation Modal validation + Other Services**: Field-level validation with per-field toasts (name, phone shape 7–15 digits, email format, pincode ≠ 6 digits). Added "Other Services" as a third option in the Service Type dropdown. Form now uses `noValidate` so custom error messaging surfaces cleanly.
+- **WhatsApp cleanup**: `ConsultButton` no longer renders the small green WhatsApp square next to the gold CTA. The channel now lives only inside `ConsultationModal` and `Footer`, per studio directive.
+- **Testing**: iteration_9 hit 100% pass (backend pytest 4/4 + all 10 frontend acceptance items).
+
 ## Test Credentials
 - Admin URL: `/admin/login` (auto-signs in; no credentials required)
 - Fallback (still works): `admin@caremanto.com` / `Caremanto@2026`
