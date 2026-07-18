@@ -47,7 +47,16 @@ Admin (cookie-auth): `POST/PUT/DELETE /admin/projects[/{id}]`, `POST/PUT/DELETE 
 - **Legacy `/api/uploads/…`** static route preserved for pre-existing files.
 - **Compatibility alias** `POST /api/upload` → `/admin/upload` for any client still on a stale bundle.
 
-### Iteration 14 (2026-07-18) — Navigation Routing Fix
+### Iteration 17 (2026-07-18) — Admin drawer resilience (iteration 16 retest)
+**MEDIUM regression from iteration 16 FIXED**: `AdminFolderManager.load()` used to wipe `photos` state on any transient empty `/gallery` response, which collapsed the open FolderDrawer body to 'No photographs' mid-interaction. Guard added: only replace `photos` when response is a non-empty array; otherwise keep the last-good snapshot.
+- **Retest verified 100%** — Hall & Dining drawer stays populated at 156 tiles across 3 rapid Portfolio toggles. Pagination surfaces all still work. Portfolio page renders 21 curated photos.
+
+### Iteration 16 (2026-07-18) — Editorial Pagination + Admin Toggle Fix
+**A. Pagination**: Every sub-category folder now caps at 15 photos per page with a minimalist `Page NN of NN · ← Previous · Next →` switcher (`/app/frontend/src/components/Pagination.jsx`). Instant scroll-to-top on page change. Single-page folders (≤ 15 photos) render NO pagination. Solves the 'half photos missing' issue for large folders (Hall & Dining = 156, Bedrooms = 82) — browser no longer overwhelmed by 100+ lazy-loading images at once.
+**B. Admin Portfolio toggle stale-closure bug** (iteration_15 HIGH bug) — fixed via optimistic-patch local state in FolderDrawer. Button caption flips instantly (<500 ms); rolls back on PUT failure.
+- Testing: iteration_16 → 95% pass, iteration_17 retest → **100% pass** on all pagination + toggle scenarios.
+
+### Iteration 15 (2026-07-18) — Dedicated /portfolio + Services Prefill
 **User report**: Portfolio button + all Interior Projects / Services dropdown items landed on the same Residential page. Fixed by:
 - Nav was writing `?category=…` but WorksPage reads `?cat=…` → mismatch caused silent fallback to Residential.
 - Dropdown labels weren't mapped to the UPPERCASE constants inside WorksPage.
