@@ -1,0 +1,34 @@
+{
+  "summary": "Iteration 12 media pipeline tested end-to-end. Wrote /app/backend/tests/test_iteration12_transcode.py — 11 tests covering WebP/AVIF negotiation, on-disk cache, 404 propagation, regression (leads, security headers, gzip) and admin upload contract (image vs video H.265). All 11 pass sequentially.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/files/{path}", "issue": "First uncached WebP encode of the 14.7MB sample takes ~30-35s over the public preview URL, causing ingress 502s when multiple parallel workers hit the same asset. Serial runs are fine and subsequent hits are cached (<200ms). Consider warming cache at boot or lowering Pillow AVIF/WebP effort for first-encode latency."},
+      {"endpoint": "BaseHTTPMiddleware apply_security_headers", "issue": "During the parallel run backend logged 'RuntimeError: No response returned.' from starlette BaseHTTPMiddleware when a client disconnected mid-transcode. Non-fatal (response already aborted) but worth switching to a pure ASGI middleware or catching ClientDisconnect."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iteration12_transcode.py",
+    "/app/test_reports/pytest/iter12.xml"
+  ],
+  "action_items": [
+    "Consider pre-warming the /app/backend/.media_cache/ for hot gallery assets on startup so first-time visitors don't pay the ~30s encode cost through the public ingress.",
+    "Harden apply_security_headers against client disconnects (or move to pure ASGI middleware) to eliminate the 'No response returned.' log noise seen under load."
+  ],
+  "critical_code_review_comments": [
+    "media_transcoder.py is clean, well-scoped, has safe fallbacks, and correctly caches on disk keyed by sha1(path)+fmt.",
+    "server.py:733-770 buffers the entire image into memory before transcoding — acceptable for photos but do NOT let this branch be reached for very large PNGs; consider a max-buffer guard (e.g. 20MB) before entering the transcode branch.",
+    "_background_transcode_video is fire-and-forget with no persistence of failure state — if ffmpeg fails, the API still advertises h265_url that will 404 forever. Consider persisting h265_status somewhere or letting the frontend fall back gracefully (which it does per the note in the source)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration12_transcode.py (new)"
+  ],
+  "success_rate": {"backend": "100% (11/11)", "frontend": "not tested (per request)"},
+  "test_credentials": "POST /api/auth/passless-login (no body) — returns admin token; per /app/memory/test_credentials.md",
+  "seed_data_creation": "Uploaded transient TEST_iter12.jpg + TEST_iter12.mp4 via /api/admin/upload; not cleaned up explicitly (small footprint).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Run tests with `-n 0` (serial) because pytest.ini forces 2 xdist workers by default; parallel workers cause ingress 502s while the first WebP/AVIF encode of the 14.7MB sample runs (~30s). Cache under /app/backend/.media_cache/ is persistent so the second run is fast. Sample image path used: caremanto/uploads/1448ad41014747fbbc8eefce7abe2fe5.jpg. Video test spins up a 1s libx264 mp4 via ffmpeg lavfi.",
+  "rca of the issue": "N/A — no unresolved bugs. The one apparent regression in the earlier parallel run (502s + 'No response returned' middleware error) was tracked to (a) ingress read timeout during first cold WebP encode, and (b) BaseHTTPMiddleware not tolerating client disconnects; both flagged as minor."
+}

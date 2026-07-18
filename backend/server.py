@@ -12,7 +12,7 @@ import jwt
 import httpx
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Literal
-from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, UploadFile, File
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, UploadFile, File, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
@@ -23,6 +23,14 @@ import tempfile
 
 from emergent_storage import init_storage, put_object_from_file, get_object_stream, APP_NAME as STORAGE_APP
 from security import sanitize_text, sanitize_short, SECURITY_HEADERS, CSP_REPORT_ONLY
+from media_transcoder import (
+    is_transcodable_image,
+    negotiate_image_format,
+    maybe_transcoded_bytes,
+    transcode_video_h265_async,
+    ffmpeg_available,
+    MEDIA_CACHE_DIR,
+)
 
 # ------------------------------------------------------------------ config
 MONGO_URL = os.environ['MONGO_URL']
@@ -557,11 +565,48 @@ ALLOWED_MIME = {
 # (Uvicorn / reverse-proxy will still enforce their own transport limits.)
 MAX_UPLOAD_BYTES = None
 
+async def _background_transcode_video(src_path: str, fname: str, ext: str) -> None:
+    """Background task: transcode a freshly-uploaded video to H.265 and push the
+    smaller sibling to Emergent Object Storage. Runs after the upload response
+    has already been returned so the admin never waits.
+    """
+    src_p = Path(src_path)
+    if not src_p.exists():
+        return
+    base = fname.rsplit(".", 1)[0]
+    h265_local = UPLOAD_DIR / f"__bg_{base}.h265.mp4"
+    h265_storage = f"{STORAGE_APP}/uploads/{base}.h265.mp4"
+    try:
+        ok = await transcode_video_h265_async(str(src_p), str(h265_local))
+        if not ok:
+            logger.info(f"H.265 transcode declined for {fname}")
+            return
+        try:
+            await put_object_from_file(h265_storage, h265_local, "video/mp4")
+            logger.info(f"H.265 sibling uploaded: {h265_storage}")
+        except Exception as e:
+            logger.warning(f"H.265 upload failed for {fname}: {e}")
+    finally:
+        for p in (src_p, h265_local):
+            try:
+                if p.exists(): p.unlink()
+            except OSError:
+                pass
+
+
 @api.post("/admin/upload")
-async def upload_image(file: UploadFile = File(...), _admin=Depends(get_current_admin)):
+async def upload_image(
+    file: UploadFile = File(...),
+    background: BackgroundTasks = None,
+    _admin=Depends(get_current_admin),
+):
     """Uploads a file (image or video) to Emergent Object Storage via a
     streaming disk temp file — RAM stays flat regardless of size. Falls back
     to local disk storage if object storage is unavailable at the moment.
+
+    Video uploads: after the primary URL is returned, a background task
+    transcodes the source to H.265 (HEVC) at a capped bitrate and uploads
+    the smaller sibling alongside. This never blocks the admin response.
     """
     if file.content_type not in ALLOWED_MIME:
         raise HTTPException(400, f"Unsupported type: {file.content_type}")
@@ -601,14 +646,44 @@ async def upload_image(file: UploadFile = File(...), _admin=Depends(get_current_
             Path(tmp.name).rename(local_path)
             url = f"/api/uploads/{fname}"
             backend = "local"
+            tmp_kept = str(local_path)
         else:
-            # Object storage succeeded — remove the temp file.
-            try: Path(tmp.name).unlink()
-            except Exception: pass
+            # Object storage succeeded — schedule any post-processing BEFORE
+            # deleting the temp file. If nothing wants it we clean up here.
+            tmp_kept = None
+            is_video = (file.content_type or "").startswith("video/")
+            if is_video and background is not None and ffmpeg_available():
+                # Move the temp file to a persistent location so the background
+                # transcode still has the source after this handler returns.
+                bg_src = UPLOAD_DIR / f"__bg_{fname}"
+                try:
+                    Path(tmp.name).replace(bg_src)
+                    background.add_task(
+                        _background_transcode_video,
+                        str(bg_src),
+                        fname,
+                        ext,
+                    )
+                except Exception as e:
+                    logger.warning(f"couldn't schedule H.265 transcode: {e}")
+                    try: Path(tmp.name).unlink()
+                    except Exception: pass
+            else:
+                try: Path(tmp.name).unlink()
+                except Exception: pass
 
-        return {"url": url, "filename": fname, "size": total, "content_type": file.content_type, "backend": backend}
+        response: dict = {
+            "url": url, "filename": fname, "size": total,
+            "content_type": file.content_type, "backend": backend,
+        }
+        if (file.content_type or "").startswith("video/"):
+            # The H.265 sibling lives at a predictable path; the frontend can
+            # try it as a <source> and fall back to the primary URL if the
+            # transcode hasn't finished yet.
+            response["h265_url"] = f"/api/files/{STORAGE_APP}/uploads/{fname.rsplit('.', 1)[0]}.h265.mp4"
+            response["h265_status"] = "processing" if ffmpeg_available() else "unavailable"
+        return response
     except HTTPException:
-        # Clean up on validation failure
         try: Path(tmp.name).unlink()
         except Exception: pass
         raise
@@ -632,13 +707,70 @@ async def upload_image_alias(file: UploadFile = File(...), _admin=Depends(get_cu
 # Uses HTTP streaming so large videos (multi-GB) play with zero server-side
 # buffering.
 @api.get("/files/{path:path}")
-async def get_file(path: str):
+async def get_file(path: str, request: Request):
+    """
+    Streaming proxy for Emergent Object Storage assets.
+
+    * Video / PDF / octet-stream — streamed byte-for-byte, no transcoding.
+    * JPEG / PNG — buffered in memory (typical asset ≤ 2 MB) and re-encoded
+      to AVIF or WebP when the browser advertises support. Re-encoded
+      copies are cached on-disk under MEDIA_CACHE_DIR so subsequent hits
+      pay zero CPU.
+
+    Falls back to the untouched raw stream if transcoding fails for any
+    reason — never leaves the client without a byte.
+    """
     try:
         upstream, content_type = await get_object_stream(path)
     except Exception as e:
         logger.warning(f"Object fetch failed for {path}: {e}")
         raise HTTPException(404, "File not found")
 
+    accept = request.headers.get("accept") or ""
+    long_cache = "public, max-age=31536000, immutable"
+
+    # --- 1) transcodable image branch -------------------------------------
+    if is_transcodable_image(content_type) and negotiate_image_format(accept):
+        try:
+            # Buffer the whole file to memory — safe for the ≤ few-MB photos
+            # served here. Videos hit the streaming branch below.
+            buf = bytearray()
+            async for chunk in upstream.aiter_bytes(chunk_size=64 * 1024):
+                buf.extend(chunk)
+            await upstream.aclose()
+            client = getattr(upstream, "_caremanto_client", None)
+            if client is not None:
+                try: await client.aclose()
+                except Exception: pass
+
+            raw = bytes(buf)
+            result = maybe_transcoded_bytes(path, raw, content_type, accept)
+            if result is not None:
+                data, mime, fmt = result
+                return Response(
+                    content=data,
+                    media_type=mime,
+                    headers={
+                        "Cache-Control": long_cache,
+                        "Vary": "Accept",
+                        "X-Caremanto-Transcoded": fmt,
+                    },
+                )
+            # Transcoding declined → serve the raw bytes we already buffered.
+            return Response(
+                content=raw,
+                media_type=content_type,
+                headers={"Cache-Control": long_cache, "Vary": "Accept"},
+            )
+        except Exception as e:
+            logger.warning(f"transcode branch failed for {path}: {e}")
+            # If we already consumed the upstream body, re-open it below.
+            try:
+                upstream, content_type = await get_object_stream(path)
+            except Exception:
+                raise HTTPException(500, "File stream failed")
+
+    # --- 2) plain streaming branch (videos, PDFs, unsupported images) -----
     async def _iter():
         try:
             async for chunk in upstream.aiter_bytes(chunk_size=64 * 1024):
@@ -651,7 +783,7 @@ async def get_file(path: str):
                 try: await client.aclose()
                 except Exception: pass
 
-    headers = {"Cache-Control": "public, max-age=31536000, immutable"}
+    headers = {"Cache-Control": long_cache, "Vary": "Accept"}
     if "Content-Length" in upstream.headers:
         headers["Content-Length"] = upstream.headers["Content-Length"]
     return StreamingResponse(_iter(), media_type=content_type, headers=headers)
