@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Rise } from "../components/Rise";
 import { sharePhoto } from "../lib/share";
 import SmartImage from "../components/SmartImage";
-import { useGallery } from "../lib/useGallery";
+import { useGallery, prefetchImageUrls } from "../lib/useGallery";
 
 /* -------------------------------------------------------------------------
  * Three top-level tabs:
@@ -53,16 +53,27 @@ export default function GalleryPage() {
 
   const photosByCategory = useMemo(() => photos.filter((p) => p.category === category), [photos, category]);
 
+  // Sort helper — folder_order asc (nulls last), created_at tiebreaker.
+  const folderSort = (a, b) => {
+    const ao = a.folder_order == null ? Number.POSITIVE_INFINITY : a.folder_order;
+    const bo = b.folder_order == null ? Number.POSITIVE_INFINITY : b.folder_order;
+    if (ao !== bo) return ao - bo;
+    return (a.created_at || "").localeCompare(b.created_at || "");
+  };
+
+  const photosInSub = (sub) =>
+    photos.filter((p) => p.category === category && p.subcategory === sub).slice().sort(folderSort);
+
   const coverForSub = (sub) => {
-    const pool = photos.filter((p) => p.category === category && p.subcategory === sub);
+    const pool = photosInSub(sub);
     return pool.find((p) => p.is_cover) || pool[0] || null;
   };
-  const countForSub = (sub) =>
-    photos.filter((p) => p.category === category && p.subcategory === sub).length;
+  const countForSub = (sub) => photosInSub(sub).length;
 
   const folderPhotos = useMemo(() => {
     if (!openedFolder) return [];
-    return photos.filter((p) => p.category === category && p.subcategory === openedFolder);
+    return photosInSub(openedFolder);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openedFolder, photos, category]);
 
   const folders = category === RESIDENTIAL ? RESIDENTIAL_FOLDERS
@@ -149,6 +160,7 @@ export default function GalleryPage() {
             categoryLabel={category === RESIDENTIAL ? "Residential" : "Commercial"}
             coverForSub={coverForSub}
             countForSub={countForSub}
+            photosInSub={photosInSub}
             onOpen={openFolder}
           />
         ) : null}
@@ -244,16 +256,24 @@ export default function GalleryPage() {
 
 /* ============================================================= */
 
-function FolderCards({ folders, categoryLabel, coverForSub, countForSub, onOpen }) {
+function FolderCards({ folders, categoryLabel, coverForSub, countForSub, photosInSub, onOpen }) {
   return (
     <div data-testid="folder-cards" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
       {folders.map((name, i) => {
         const cover = coverForSub(name);
         const count = countForSub(name);
+        const prefetch = () => {
+          if (!photosInSub) return;
+          const urls = photosInSub(name).map((p) => p.image);
+          prefetchImageUrls(urls, 8);
+        };
         return (
           <Rise key={name} delay={i * 60}>
             <button
               onClick={() => onOpen(name)}
+              onMouseEnter={prefetch}
+              onFocus={prefetch}
+              onTouchStart={prefetch}
               data-testid={`folder-card-${slug(name)}`}
               className="group relative w-full text-left overflow-hidden bg-[var(--bg-1)]"
               style={{ aspectRatio: "4/5" }}

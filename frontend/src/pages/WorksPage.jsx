@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Rise } from "../components/Rise";
 import { sharePhoto } from "../lib/share";
 import SmartImage from "../components/SmartImage";
-import { useGallery } from "../lib/useGallery";
+import { useGallery, prefetchImageUrls } from "../lib/useGallery";
 
 /* -------------------------------------------------------------------------
  * Portfolio landing (`/works`)
@@ -75,12 +75,22 @@ export default function WorksPage() {
   );
 
   // Group featured photos by sub-category so each folder is derived exactly once.
+  // Within each folder, honour the admin's Smart Layout ordering (folder_order
+  // ascending, nulls last, created_at tiebreaker).
   const photosBySub = useMemo(() => {
     const map = new Map();
     for (const p of photosInCategory) {
       const key = p.subcategory || "";
       if (!map.has(key)) map.set(key, []);
       map.get(key).push(p);
+    }
+    for (const [k, arr] of map) {
+      arr.sort((a, b) => {
+        const ao = a.folder_order == null ? Number.POSITIVE_INFINITY : a.folder_order;
+        const bo = b.folder_order == null ? Number.POSITIVE_INFINITY : b.folder_order;
+        if (ao !== bo) return ao - bo;
+        return (a.created_at || "").localeCompare(b.created_at || "");
+      });
     }
     return map;
   }, [photosInCategory]);
@@ -184,6 +194,7 @@ export default function WorksPage() {
             categoryLabel={category}
             coverForSub={coverForSub}
             countForSub={countForSub}
+            photosBySub={photosBySub}
             onOpen={openFolder}
           />
         )}
@@ -239,17 +250,25 @@ export default function WorksPage() {
 
 /* ============================================================= */
 
-function FolderCards({ folders, categoryLabel, coverForSub, countForSub, onOpen }) {
+function FolderCards({ folders, categoryLabel, coverForSub, countForSub, photosBySub, onOpen }) {
   return (
     <div data-testid="works-folder-cards" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
       {folders.map((name, i) => {
         const cover = coverForSub(name);
         const count = countForSub(name);
         const empty = count === 0;
+        const prefetch = () => {
+          if (empty || !photosBySub) return;
+          const urls = (photosBySub.get(name) || []).map((p) => p.image);
+          prefetchImageUrls(urls, 8);
+        };
         return (
           <Rise key={name} delay={i * 60}>
             <button
               onClick={() => empty ? null : onOpen(name)}
+              onMouseEnter={prefetch}
+              onFocus={prefetch}
+              onTouchStart={prefetch}
               disabled={empty}
               data-testid={`works-folder-card-${slug(name)}`}
               className={`group relative w-full text-left overflow-hidden bg-[var(--bg-1)] ${empty ? "cursor-not-allowed opacity-70" : ""}`}

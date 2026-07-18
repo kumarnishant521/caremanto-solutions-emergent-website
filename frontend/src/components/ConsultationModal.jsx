@@ -26,18 +26,40 @@ export default function ConsultationModal({ isOpen, onClose }) {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.name.trim() || !form.email.trim() || !form.phone.trim() || !form.pincode.trim()) {
-      toast.error("Please fill every field.");
+    const name = form.name.trim();
+    const email = form.email.trim();
+    const phone = form.phone.trim();
+    const pincode = form.pincode.trim();
+
+    // Mandatory fields — Name / Phone / Email / Pincode.
+    if (!name)    { toast.error("Please enter your name.");    return; }
+    if (!phone)   { toast.error("Please enter your phone number."); return; }
+    if (!email)   { toast.error("Please enter your email.");   return; }
+    if (!pincode) { toast.error("Please enter the project pincode."); return; }
+
+    // Shape validation — surface clear feedback before the API call.
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error("That email doesn't look right. Please check it.");
       return;
     }
+    const phoneDigits = phone.replace(/\D/g, "");
+    if (phoneDigits.length < 7 || phoneDigits.length > 15) {
+      toast.error("Please enter a valid phone number (7–15 digits).");
+      return;
+    }
+    if (!/^\d{6}$/.test(pincode)) {
+      toast.error("Pincode must be exactly 6 digits.");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const r = await api.post("/leads", {
-        name: form.name.trim(),
-        email: form.email.trim(),
-        phone: form.phone.trim(),
+        name,
+        email,
+        phone,
         service_type: form.service_type,
-        pincode: form.pincode.trim(),
+        pincode,
       });
       setConfirmation({ customer_uid: r.data.customer_uid });
       toast.success("Request received.");
@@ -105,10 +127,10 @@ export default function ConsultationModal({ isOpen, onClose }) {
                   Share a few details — our studio will respond within one business day.
                 </p>
 
-                <form onSubmit={submit} data-testid="consultation-form" className="space-y-4">
-                  <Field label="Name" testid="consultation-name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} required />
-                  <Field label="Phone" testid="consultation-phone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} required type="tel" />
-                  <Field label="Email" testid="consultation-email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} required type="email" />
+                <form onSubmit={submit} data-testid="consultation-form" noValidate className="space-y-4">
+                  <Field label="Name" testid="consultation-name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} required autoComplete="name" minLength={2} />
+                  <Field label="Phone" testid="consultation-phone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} required type="tel" autoComplete="tel" inputMode="tel" pattern="[0-9+\-\s]{7,15}" />
+                  <Field label="Email" testid="consultation-email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} required type="email" autoComplete="email" />
                   <label className="block">
                     <span className="text-[10px] tracking-[0.28em] uppercase text-[var(--muted)] block mb-1.5">Service Type</span>
                     <select
@@ -119,9 +141,10 @@ export default function ConsultationModal({ isOpen, onClose }) {
                     >
                       <option value="interiors">Interiors</option>
                       <option value="restoration">Restoration &amp; Renovation</option>
+                      <option value="other">Other Services</option>
                     </select>
                   </label>
-                  <Field label="Project Pincode" testid="consultation-pincode" value={form.pincode} onChange={(v) => setForm({ ...form, pincode: v })} required inputMode="numeric" maxLength={6} />
+                  <Field label="Project Pincode" testid="consultation-pincode" value={form.pincode} onChange={(v) => setForm({ ...form, pincode: v.replace(/\D/g, "").slice(0, 6) })} required inputMode="numeric" maxLength={6} pattern="\d{6}" autoComplete="postal-code" />
 
                   <div className="flex flex-col sm:flex-row items-stretch gap-3 pt-4">
                     <button type="submit" disabled={submitting} className="btn-gold flex-1 disabled:opacity-60" data-testid="consultation-submit">

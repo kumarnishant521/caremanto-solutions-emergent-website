@@ -133,6 +133,8 @@ class GalleryPhotoIn(BaseModel):
 class GalleryPhoto(GalleryPhotoIn):
     id: str
     created_at: str
+    home_order: Optional[int] = None      # position on the homepage bento (admin-set)
+    folder_order: Optional[int] = None    # position inside its folder (Smart Layout)
 
 class TaxonomyIn(BaseModel):
     categories: List[str]
@@ -408,6 +410,16 @@ async def set_home_sequence(body: HomeOrderIn, _admin=Depends(get_current_admin)
     """Persist the exact display order for photos featured on the home page."""
     for idx, pid in enumerate(body.order):
         await db.gallery.update_one({"id": pid}, {"$set": {"home_order": idx, "featured_home": True}})
+    return {"ok": True, "count": len(body.order)}
+
+class FolderOrderIn(BaseModel):
+    order: List[str]     # ordered list of photo ids inside one folder
+
+@api.put("/admin/gallery/folder-order")
+async def set_folder_order(body: FolderOrderIn, _admin=Depends(get_current_admin)):
+    """Persist the admin's Smart Grid Layout — a per-folder photo ordering."""
+    for idx, pid in enumerate(body.order):
+        await db.gallery.update_one({"id": pid}, {"$set": {"folder_order": idx}})
     return {"ok": True, "count": len(body.order)}
 
 @api.post("/admin/gallery", response_model=GalleryPhoto)

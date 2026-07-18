@@ -50,7 +50,19 @@ export default function HomeGallery() {
     // Build the home-page bento from the shared /api/gallery cache — no
     // additional network call. If the admin has featured photos, use those;
     // otherwise fall back to the curated real-projects list, then placeholders.
-    const featured = (photos || []).filter((p) => p.featured_home).map((p) => p.image);
+    // Strictly respect the admin's saved sequence: sort by `home_order` asc
+    // (nulls last), then created_at as a stable tiebreaker. This keeps the
+    // homepage bento in exact 1:1 sync with /admin → Home Sequence.
+    const featured = (photos || [])
+      .filter((p) => p.featured_home)
+      .slice()
+      .sort((a, b) => {
+        const ao = a.home_order == null ? Number.POSITIVE_INFINITY : a.home_order;
+        const bo = b.home_order == null ? Number.POSITIVE_INFINITY : b.home_order;
+        if (ao !== bo) return ao - bo;
+        return (a.created_at || "").localeCompare(b.created_at || "");
+      })
+      .map((p) => p.image);
     const real = homeGalleryImages().map((r) => r.src);
     const combined = [];
     [...featured, ...real, ...PLACEHOLDERS].forEach((src) => {

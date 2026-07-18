@@ -216,6 +216,68 @@ function FolderDrawer({ categories, taxonomy, category, subcategory, allPhotos, 
     finally { setBusy(false); }
   };
 
+  /**
+   * Smart Grid Layout — admin-only, applied at save time.
+   *
+   * Step A: Remove exact duplicate uploads (same image URL) — keep the earliest.
+   * Step B: Reorder the remaining photos so back-to-back near-neighbours (photos
+   *         uploaded together, likely showing the same angle) get spread across
+   *         the folder. We split the created_at-sorted list in half and
+   *         interleave the two halves, then persist a `folder_order` index.
+   */
+  const applySmartLayout = async () => {
+    if (inFolder.length < 2) return toast.error("Need at least two photographs to rebalance.");
+    if (!window.confirm(
+      "Apply Smart Grid Layout?\n\n" +
+      "This will remove exact-duplicate uploads and re-sequence the remaining " +
+      "photographs to avoid similar shots clustering together. Cannot be undone."
+    )) return;
+    setBusy(true);
+    try {
+      // --- A. Dedupe by exact image URL, keep the oldest ---
+      const byImage = new Map();
+      const sortedByTime = inFolder
+        .slice()
+        .sort((a, b) => (a.created_at || "").localeCompare(b.created_at || ""));
+      const dupes = [];
+      const keep = [];
+      for (const p of sortedByTime) {
+        if (byImage.has(p.image)) { dupes.push(p); }
+        else { byImage.set(p.image, p); keep.push(p); }
+      }
+      for (const d of dupes) {
+        try { await api.delete(`/admin/gallery/${d.id}`); } catch { /* ignore */ }
+      }
+
+      // --- B. Interleave first-half / second-half to spread near-neighbours ---
+      const half = Math.ceil(keep.length / 2);
+      const first = keep.slice(0, half);
+      const second = keep.slice(half);
+      const rebalanced = [];
+      for (let i = 0; i < half; i++) {
+        if (first[i])  rebalanced.push(first[i]);
+        if (second[i]) rebalanced.push(second[i]);
+      }
+
+      // --- C. Persist folder_order via bulk endpoint ---
+      await api.put("/admin/gallery/folder-order", {
+        order: rebalanced.map((p) => p.id),
+      });
+
+      const removed = dupes.length;
+      toast.success(
+        removed > 0
+          ? `Smart Layout applied · ${removed} duplicate${removed === 1 ? "" : "s"} removed · ${rebalanced.length} resequenced.`
+          : `Smart Layout applied · ${rebalanced.length} photograph${rebalanced.length === 1 ? "" : "s"} resequenced.`
+      );
+      onChanged();
+    } catch (e) {
+      toast.error("Smart Layout failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const title = subcategory || category;
 
   return (
@@ -358,6 +420,37 @@ function FolderDrawer({ categories, taxonomy, category, subcategory, allPhotos, 
                   >
                     Delete Selected
                   </button>
+                </div>
+              </section>
+
+              {/* Smart Grid Layout — admin-only, applied at save time */}
+              <section
+                data-testid="smart-layout-section"
+                className="border border-[var(--gold-hi)]/30 bg-[#241D16] p-5 md:p-6"
+              >
+                <div className="flex items-start justify-between gap-4 mb-3">
+                  <div>
+                    <div className="overline text-[var(--gold-hi)] mb-1">✦ Smart Grid Layout</div>
+                    <p className="text-[11.5px] text-[#F5EEE0]/70 leading-relaxed max-w-md">
+                      Runs a one-shot rebalance on this folder:
+                      <br />
+                      <span className="text-[#F5EEE0]/90">1.</span> Removes exact-duplicate uploads (same file URL).
+                      <br />
+                      <span className="text-[#F5EEE0]/90">2.</span> Re-sequences the remaining photographs so similar
+                      angles uploaded together get spread across the folder instead of clustering.
+                    </p>
+                  </div>
+                  <button
+                    onClick={applySmartLayout}
+                    disabled={busy || inFolder.length < 2}
+                    className="admin-btn disabled:opacity-60 whitespace-nowrap"
+                    data-testid="folder-drawer-smart-layout"
+                  >
+                    Apply Smart Layout
+                  </button>
+                </div>
+                <div className="text-[10px] tracking-[0.24em] uppercase text-[#F5EEE0]/50">
+                  Admin-only · Applied at save time · Live site updates on refresh
                 </div>
               </section>
             </>

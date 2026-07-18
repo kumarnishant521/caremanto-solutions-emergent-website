@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { api } from "../../lib/api";
 import { toast } from "sonner";
 import { thumbUrl } from "../../lib/thumb";
+import { invalidateGalleryCache } from "../../lib/useGallery";
 
 /**
  * Homepage Media Sequence Control.
@@ -22,6 +24,7 @@ export default function AdminHomeSequence() {
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -83,6 +86,7 @@ export default function AdminHomeSequence() {
     setSaving(true);
     try {
       await api.put("/admin/gallery/home-sequence", { order: seq.map((p) => p.id) });
+      invalidateGalleryCache();
       toast.success("Home page sequence published.");
       setDirty(false);
     } catch { toast.error("Failed to save sequence."); }
@@ -102,6 +106,12 @@ export default function AdminHomeSequence() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setAssistantOpen(true)}
+            className="admin-btn ghost"
+            data-testid="home-seq-assistant-toggle"
+            title="Show the studio's grid composition guidelines"
+          >✦ Aesthetic Grid Assistant</button>
           <button
             onClick={() => setPickerOpen((v) => !v)}
             className="admin-btn ghost"
@@ -217,6 +227,157 @@ export default function AdminHomeSequence() {
           ))}
         </ul>
       )}
+
+      {/* AESTHETIC GRID ASSISTANT — side-panel with do/don't examples */}
+      <AnimatePresence>
+        {assistantOpen && (
+          <AestheticAssistantPanel onClose={() => setAssistantOpen(false)} />
+        )}
+      </AnimatePresence>
     </section>
+  );
+}
+
+/* ============================================================= */
+
+function AestheticAssistantPanel({ onClose }) {
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60]"
+      />
+      <motion.aside
+        initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
+        transition={{ type: "spring", stiffness: 280, damping: 34 }}
+        role="dialog"
+        aria-modal="true"
+        data-testid="aesthetic-assistant-panel"
+        className="fixed right-0 top-0 h-screen w-full md:w-[560px] bg-[#1B1611] border-l border-[#F5EEE0]/10 z-[61] flex flex-col"
+      >
+        <div className="flex items-start justify-between p-6 md:p-8 border-b border-[#F5EEE0]/10">
+          <div>
+            <div className="overline text-[var(--gold-hi)] mb-1">Aesthetic Grid Assistant</div>
+            <h3 className="font-serif text-[24px] md:text-[28px] leading-tight text-white">
+              Compose like an <span className="italic text-[var(--gold-hi)]">editor.</span>
+            </h3>
+            <p className="text-[11px] text-[#F5EEE0]/60 mt-2 max-w-md">
+              Five studio-tested guidelines to sequence a home page bento that reads as
+              intentional, layered, and quietly luxurious.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            data-testid="aesthetic-assistant-close"
+            className="w-10 h-10 border border-[#F5EEE0]/25 text-white hover:border-[var(--gold-hi)] hover:text-[var(--gold-hi)] transition-colors flex-shrink-0"
+          >×</button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 text-[#F5EEE0]">
+          <Rule
+            n="01"
+            title="Alternate scale — never two heroes in a row"
+            body="Put a wide architectural hero next to a tight detail shot. Two wide shots stacked kills rhythm and makes the page read as a slideshow, not a story."
+            good={["wide", "tight", "wide", "tight"]}
+            bad={["wide", "wide", "wide", "tight"]}
+          />
+          <Rule
+            n="02"
+            title="Break clusters of similar rooms"
+            body="Don't sequence three bedrooms in a row. Interleave a bathroom or hallway between them so the eye resets and each room feels distinct."
+            good={["bed", "bath", "bed", "living"]}
+            bad={["bed", "bed", "bed", "bath"]}
+            palette={{ bed: "#7A6852", bath: "#B6AA8A", living: "#4E3D2E" }}
+          />
+          <Rule
+            n="03"
+            title="Lead with negative space — end on warmth"
+            body="Open the sequence with a bright, airy plate. Close it with a deep, warm-toned interior. This gives the scroll a beginning and an end."
+            good={["airy", "mid", "mid", "warm"]}
+            bad={["warm", "warm", "airy", "mid"]}
+            palette={{ airy: "#EDE4D2", mid: "#A99A82", warm: "#38281A" }}
+          />
+          <Rule
+            n="04"
+            title="Give hero shots breathing room"
+            body="Follow your #01 pick with a smaller, quieter image. Don't stack two attention-heavy compositions — the second will always steal from the first."
+            good={["hero", "quiet", "quiet", "hero"]}
+            bad={["hero", "hero", "quiet", "quiet"]}
+          />
+          <Rule
+            n="05"
+            title="Front-load your strongest chapters"
+            body="Positions #1–#6 do 80% of the storytelling work — most visitors never scroll past card 8. Put your best shots in the first two rows."
+            good={["★", "★", "★", "★", "○", "○"]}
+            bad={["○", "○", "★", "○", "○", "★"]}
+          />
+
+          <div className="pt-4 border-t border-[#F5EEE0]/10">
+            <div className="overline text-[var(--gold-hi)] mb-2">Quick checklist</div>
+            <ul className="space-y-2 text-[13px] leading-relaxed text-[#F5EEE0]/85">
+              <li>✓ Front-loaded your strongest hero in #1?</li>
+              <li>✓ No two same-category rooms adjacent?</li>
+              <li>✓ Alternating scale (wide / tight) at least every other tile?</li>
+              <li>✓ Warm-toned close in the final position?</li>
+              <li>✓ Total tiles ≤ 12 (the grid caps at 12 on the live site)?</li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="p-4 md:p-6 border-t border-[#F5EEE0]/10 text-right">
+          <button onClick={onClose} className="admin-btn ghost" data-testid="aesthetic-assistant-done">
+            Got it
+          </button>
+        </div>
+      </motion.aside>
+    </>
+  );
+}
+
+function Rule({ n, title, body, good, bad, palette }) {
+  return (
+    <div>
+      <div className="flex items-baseline gap-3 mb-2">
+        <span className="font-mono text-[10px] text-[var(--gold-hi)]">{n}</span>
+        <h4 className="font-serif text-[17px] leading-tight text-white">{title}</h4>
+      </div>
+      <p className="text-[12.5px] text-[#F5EEE0]/70 mb-3 leading-relaxed">{body}</p>
+      <div className="grid grid-cols-2 gap-3">
+        <MiniGrid label="Do" tone="good" tiles={good} palette={palette} />
+        <MiniGrid label="Avoid" tone="bad" tiles={bad} palette={palette} />
+      </div>
+    </div>
+  );
+}
+
+function MiniGrid({ label, tone, tiles, palette }) {
+  const good = tone === "good";
+  const swatch = (kind) => {
+    if (palette && palette[kind]) return palette[kind];
+    if (kind === "wide") return "#6B5A44";
+    if (kind === "tight") return "#B0A084";
+    if (kind === "hero") return "#4E3D2E";
+    if (kind === "quiet") return "#D6C7A8";
+    if (kind === "★") return "#C9A667";
+    if (kind === "○") return "#3A2E24";
+    return "#8A7A5F";
+  };
+  return (
+    <div className={`border ${good ? "border-[var(--gold-hi)]/40" : "border-red-500/30"} p-3`}>
+      <div className={`text-[9px] tracking-[0.28em] uppercase mb-2 ${good ? "text-[var(--gold-hi)]" : "text-red-400/85"}`}>
+        {good ? "◉ Do" : "✕ Avoid"} · {label}
+      </div>
+      <div className="grid grid-cols-2 gap-1.5">
+        {tiles.map((t, i) => (
+          <div
+            key={i}
+            className={`${t === "wide" || t === "hero" ? "col-span-2 h-6" : "h-6"}`}
+            style={{ background: swatch(t) }}
+            title={t}
+          />
+        ))}
+      </div>
+    </div>
   );
 }

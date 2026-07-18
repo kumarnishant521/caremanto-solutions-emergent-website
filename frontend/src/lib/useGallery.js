@@ -58,3 +58,20 @@ export function useGallery() {
 }
 
 export function invalidateGalleryCache() { _cache = null; }
+
+/**
+ * Warm the browser's image cache for a set of URLs. Used by folder cards
+ * `onMouseEnter` — by the time the user clicks, the first few photos in
+ * the folder modal are already decoded and instant to render.
+ */
+const _prefetched = new Set();
+export function prefetchImageUrls(urls, limit = 8) {
+  if (!urls || !urls.length || typeof window === "undefined") return;
+  for (const u of urls.slice(0, limit)) {
+    if (!u || _prefetched.has(u)) continue;
+    _prefetched.add(u);
+    const img = new Image();
+    img.decoding = "async";
+    img.src = u;
+  }
+}
