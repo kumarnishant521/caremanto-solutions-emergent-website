@@ -137,18 +137,42 @@ export function pageTitleFor({ category, folder } = {}) {
 }
 
 // ---------------------------------------------------------- KEYWORDS FOR ROUTE
+// Home / Portfolio surfaces get an explicitly-curated bundle so no
+// high-intent phrase is dropped by array reordering. Category surfaces
+// get the full bucket for their practice.
+const HOME_KEYWORDS_EXTRA = [
+  "Free home interior consultation",
+  "Free designing consultation",
+  "Luxury interior designs",
+  "Luxury interior designer near me",
+  "Luxury designing in budget",
+  "Interior designers near me",
+  "Home interior designer",
+  "Modular kitchen design",
+  "Luxury bedroom designs",
+  "Luxury bathroom design",
+  "Office interior design",
+  "Retail store designers",
+  "Boutique hospitality styling",
+  "Turnkey commercial design execution",
+  "Luxury showroom interior design",
+  "Home renovation",
+  "Bungalow restoration",
+  "Heritage architectural restoration",
+  "Structural renovations contractors",
+  "Building waterproofing and repair",
+  "All in one contractor near me",
+];
+
 export function keywordsFor({ category, folder } = {}) {
   const base = [...KEYWORDS.brand];
   if (category === "RESIDENTIAL") base.push(...KEYWORDS.residential);
   else if (category === "COMMERCIAL") base.push(...KEYWORDS.commercial);
   else if (category === "RESTORATION & RENOVATIONS") base.push(...KEYWORDS.restoration);
   else {
-    // Home / Portfolio — a curated top slice across every practice
-    base.push(
-      ...KEYWORDS.residential.slice(0, 8),
-      ...KEYWORDS.commercial.slice(0, 6),
-      ...KEYWORDS.restoration.slice(0, 6),
-    );
+    // Home / Portfolio — explicit curated bundle guarantees every
+    // high-intent phrase is present (avoids array-slice truncation).
+    base.push(...HOME_KEYWORDS_EXTRA);
   }
   // Dedupe while preserving order.
   return Array.from(new Set(base)).join(", ");
