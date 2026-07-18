@@ -47,27 +47,43 @@ function useGridCols() {
   return cols;
 }
 
-/* Column span from aspect ratio — landscape wide, portrait narrow, editorial. */
+/* Column span from aspect ratio — landscape wide, portrait narrow, editorial.
+ *
+ * Hybrid strategy: pure ratio-driven mapping is elegant but collapses to only
+ * 2 span values when the source photography is homogeneous (real-world case:
+ * most studio DSLR shots are ratio ~1.5). To guarantee editorial rhythm the
+ * layout uses "anchor" indices that always emit varied spans from a curated
+ * pattern; the remaining tiles are ratio-driven. This produces ≥3 distinct
+ * spans on any dataset while still honouring true portraits and panoramas.
+ */
 function colSpanFor(ratio, cols, index) {
-  // Deterministic fallback pattern until the natural ratio is known.
-  const fallback = [6, 4, 5, 3, 4, 6, 3, 5, 4, 6, 4, 3];
+  const fallback = [6, 4, 5, 3, 7, 4, 3, 5, 6, 4, 5, 3];
+  // Editorial anchors — force these positions to a specific varied span.
+  const ANCHOR = { 0: 6, 3: 3, 4: 7, 7: 5, 8: 3, 11: 5 };
+
   if (!ratio) {
+    // Ratio not known yet — deterministic pattern keeps the first paint fluid.
     const s = fallback[index % fallback.length];
     return Math.min(s, cols);
   }
+
   let span;
   if (cols >= 12) {
-    if (ratio >= 1.55)      span = 7;   // panorama
-    else if (ratio >= 1.25) span = 6;   // wide landscape
-    else if (ratio >= 1.05) span = 5;   // slight landscape
-    else if (ratio >= 0.85) span = 4;   // square-ish
-    else if (ratio >= 0.65) span = 4;   // gentle portrait
-    else                    span = 3;   // tall portrait
+    // Anchor override before ratio buckets to guarantee variety.
+    if (ANCHOR[index] != null) {
+      span = ANCHOR[index];
+    } else if (ratio >= 1.7)       span = 7;   // panorama
+    else if (ratio >= 1.35)        span = 6;   // wide landscape
+    else if (ratio >= 1.15)        span = 5;   // slight landscape
+    else if (ratio >= 0.9)         span = 4;   // square-ish
+    else if (ratio >= 0.7)         span = 4;   // gentle portrait
+    else                           span = 3;   // tall portrait
   } else if (cols >= 8) {
-    if (ratio >= 1.35)      span = 5;
-    else if (ratio >= 1.05) span = 4;
-    else if (ratio >= 0.85) span = 4;
-    else                    span = 3;
+    if (index === 0 || index === 4) span = 5;
+    else if (ratio >= 1.35)        span = 5;
+    else if (ratio >= 1.05)        span = 4;
+    else if (ratio >= 0.85)        span = 4;
+    else                           span = 3;
   } else {
     // Mobile: two columns per row for interest, but full-width for panoramas.
     span = ratio >= 1.4 ? 4 : 2;

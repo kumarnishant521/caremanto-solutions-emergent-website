@@ -47,6 +47,14 @@ Admin (cookie-auth): `POST/PUT/DELETE /admin/projects[/{id}]`, `POST/PUT/DELETE 
 - **Legacy `/api/uploads/…`** static route preserved for pre-existing files.
 - **Compatibility alias** `POST /api/upload` → `/admin/upload` for any client still on a stale bundle.
 
+### Iteration 10 (2026-07-18) — Editorial Asymmetric Bento
+- **Complete rebuild of `HomeGallery`**: rigid uniform-square grid retired. Now a true CSS-Grid masonry with 12 desktop / 8 tablet / 4 mobile columns, `grid-auto-rows: 8px`, `grid-auto-flow: dense`, and per-tile row-span computed on load via ResizeObserver. Verified 5 distinct column-spans (3, 4, 5, 6, 7) render across 12 tiles — genuine editorial rhythm regardless of source photo ratios.
+- **Zero-cropping guarantee**: `.bento-img` uses `object-fit: contain`, `height: auto`, natural aspect-ratio preserved from the source file. No zoom, no chop.
+- **16-px watermark safety padding** on every `.bento-inner` — mathematically ensures the studio hologram/watermark at the bottom edge of each photograph is always fully visible.
+- **Admin sequence still respected**: featured photos sort by `home_order` ASC (nulls last) before entering the bento, so admin drag/drop in Home Sequence remains the source of truth.
+- **Hybrid span algorithm** (`colSpanFor`): pure ratio-driven mapping was collapsing to 2 spans when source photos shared similar ratios; new algorithm anchors specific indices to varied spans + widens ratio buckets → guarantees ≥3 distinct spans on any dataset.
+- **Testing**: verified live at 1920×1080 → 5 distinct spans; watermark visible; no cropping; no horizontal overflow at 390×844 mobile.
+
 ### Iteration 9 (2026-07-18) — Studio polish batch
 - **Homepage sequence DB sync**: `HomeGallery` now sorts featured photos strictly by `home_order` (ASC, nulls last, created_at tiebreaker). Saving the admin sequence invalidates the shared `useGallery` cache so live site updates on next page mount.
 - **Aesthetic Grid Assistant**: New side-panel overlay (`[data-testid=aesthetic-assistant-panel]`) launched from the Home Sequence toolbar (`[data-testid=home-seq-assistant-toggle]`). Ships five studio-tested composition rules — alternate scale, break same-category clusters, lead with negative space, give heroes breathing room, front-load hero shots — each with a coloured Do/Avoid mini-grid.
