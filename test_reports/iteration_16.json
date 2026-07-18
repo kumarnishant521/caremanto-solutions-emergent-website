@@ -1,0 +1,33 @@
+{
+  "summary": "Iteration 16 frontend-only tested. (A) HIGH-priority iteration-15 regression FIXED: AdminFolderManager folder-drawer Portfolio toggle now updates the button caption INSTANTLY on click via optimistic patch — verified <500ms flip in both directions (☆→★ and ★→☆), and the backend PUT is sent with the correct featured_portfolio value. (B) Editorial pagination on WorksPage and GalleryPage works correctly — 15 photos per page, counter format 'Page NN of NN', Prev/Next enable/disable states correct, scroll-to-top on page change confirmed (scrollY=466 → 0), single-page folders (e.g., Restoration & Renovations flat with 4 photos) correctly render NO pagination. (C) Photo-visibility regression addressed — on Hall & Dining page 1 all 15 <img> elements report complete=true and naturalWidth>0 after 5s dwell, no broken/half-loaded frames. However, one NEW side-effect regression was observed in the admin folder drawer (see frontend_issues below).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "AdminFolderManager · FolderDrawer",
+        "issue": "After a successful portfolio-toggle PUT, the parent's onChanged() → load() refresh causes the drawer BODY to render as empty ('No photographs') even though the parent 'photos' state clearly still contains the folder's tiles (main grid outside drawer still shows them, and the drawer HEADER still says 'Hall & Dining · Folder'). Effect: only the FIRST toggle click on any drawer session works — the button is unmounted afterwards so a user cannot immediately toggle the same photo back without closing/reopening the folder chip. Optimistic caption update itself works correctly; the bug is that the drawer's inFolder useMemo re-evaluates to [] after the parent refresh. Likely cause: (i) load() briefly setting photos=[] via `r.data || []` when the /gallery response is transiently empty (45s cache invalidation window mentioned in the brief), or (ii) an unrelated re-render swapping the FolderDrawer key. Suggested fix: in FolderDrawer, DO NOT rely solely on parent allPhotos — keep the drawer's inFolder derived from a locally-stable snapshot of allPhotos AT open-time, then merge the `patches` layer on top (already implemented). Alternatively, in AdminFolderManager.load(), only replace photos when r.data is a non-empty array so a transient empty response doesn't wipe the drawer.",
+        "selector": "[data-testid=folder-drawer]",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "In /app/frontend/src/components/admin/AdminFolderManager.jsx, guard load() so a transient empty /gallery response does not wipe `photos` (e.g. `if (Array.isArray(r.data) && r.data.length) setPhotos(r.data)`), OR make FolderDrawer resilient to allPhotos temporarily going empty by keeping its own last-non-empty snapshot. This will keep the drawer usable for consecutive toggles without needing to reopen the folder chip."
+  ],
+  "critical_code_review_comments": [
+    "Pagination.jsx is clean, minimalist, and correctly returns null when totalPages<2. Good component.",
+    "WorksPage.PhotoGrid + GalleryPage.PhotoGrid pagination logic correctly slices photos and resets to page 1 on folder change. Instant scroll-to-top confirmed.",
+    "AdminFolderManager togglePortfolio's optimistic-patch pattern is correct and instantly re-renders the caption. The remaining edge case is the drawer emptying on parent refresh (see ui_bug above)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only iteration)", "frontend": "~95% (pagination A+B fully pass, admin toggle caption fix passes; drawer-body-empties side effect is medium-severity)"},
+  "test_credentials": "Passless admin login via /admin/login (auto-invokes POST /api/auth/passless-login).",
+  "seed_data_creation": "Portfolio flag for photo 0ab64f1c-5fa1-42b9-8947-d194ba3349ac (Hall & Dining, first tile) was toggled twice during testing. Final DB state: featured_portfolio=false (removed). No cleanup needed.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Pagination is stable and verified on all three surfaces (works-child, works-restoration flat = single page, gallery-pagination). The admin folder-drawer optimistic caption fix works for a single click; however parent's load() refresh appears to empty the drawer body (see ui_bug). If main agent applies the guard on load() / preserves last non-empty snapshot, retest by opening Hall & Dining drawer and toggling the SAME photo Portfolio button twice consecutively — both PUTs should fire with alternating featured_portfolio values, and drawer photo tiles should stay visible throughout.",
+  "rca of the issue": "Optimistic caption fix works. Secondary regression root cause hypothesis: AdminFolderManager.load() replaces photos state via `setPhotos(r.data || [])`. If /gallery ever returns a transient empty payload (or during the ~45s cache window an unrelated GET returns []), photos becomes [], collapsing the drawer's inFolder filter to [] and unmounting every folder-drawer-portfolio-* button. Fix suggestion above."
+}

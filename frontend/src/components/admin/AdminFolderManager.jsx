@@ -126,9 +126,21 @@ export default function AdminFolderManager() {
 /* ============================================================= */
 
 function FolderDrawer({ categories, taxonomy, category, subcategory, allPhotos, onClose, onChanged }) {
+  // Base folder photos derived from parent's `allPhotos`. We also maintain
+  // an in-drawer optimistic-patch layer so toggles (Portfolio, Cover, etc.)
+  // reflect INSTANTLY in the drawer UI without waiting for the parent
+  // refresh round-trip. Whenever `allPhotos` refreshes we merge the patch
+  // over the fresh data so we never render stale values.
+  const [patches, setPatches] = useState({}); // { photoId: partialPhotoDiff }
+  const patchPhoto = (id, diff) =>
+    setPatches((prev) => ({ ...prev, [id]: { ...(prev[id] || {}), ...diff } }));
+
   const inFolder = useMemo(
-    () => allPhotos.filter((p) => p.category === category && (subcategory === null ? true : p.subcategory === subcategory)),
-    [allPhotos, category, subcategory]
+    () =>
+      allPhotos
+        .filter((p) => p.category === category && (subcategory === null ? true : p.subcategory === subcategory))
+        .map((p) => ({ ...p, ...(patches[p.id] || {}) })),
+    [allPhotos, category, subcategory, patches]
   );
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [destCategory, setDestCategory] = useState("");
@@ -175,18 +187,26 @@ function FolderDrawer({ categories, taxonomy, category, subcategory, allPhotos, 
 
   // Toggle the portfolio flag on any photograph directly from the folder
   // drawer. When enabled the photo appears on the dedicated /portfolio page.
+  //
+  // Optimistic update: we flip the value in local state BEFORE the network
+  // round-trip so the button re-renders immediately. If the PUT fails we
+  // roll back and toast the error. This fixes the stale-closure bug where
+  // consecutive clicks would send the same payload twice.
   const togglePortfolio = async (photo) => {
+    const nextValue = !photo.featured_portfolio;
+    // 1) optimistic patch
+    patchPhoto(photo.id, { featured_portfolio: nextValue });
     setBusy(true);
     try {
       await api.put(`/admin/gallery/${photo.id}`, {
         ...photo,
-        featured_portfolio: !photo.featured_portfolio,
+        featured_portfolio: nextValue,
       });
-      toast.success(
-        !photo.featured_portfolio ? "Added to Portfolio." : "Removed from Portfolio."
-      );
+      toast.success(nextValue ? "Added to Portfolio." : "Removed from Portfolio.");
       onChanged();
     } catch {
+      // 2) rollback on failure
+      patchPhoto(photo.id, { featured_portfolio: photo.featured_portfolio });
       toast.error("Portfolio toggle failed.");
     } finally {
       setBusy(false);

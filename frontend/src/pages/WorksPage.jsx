@@ -8,6 +8,7 @@ import SmartImage from "../components/SmartImage";
 import { thumbUrl } from "../lib/thumb";
 import { useGallery, prefetchImageUrls } from "../lib/useGallery";
 import Head from "../components/Head";
+import Pagination from "../components/Pagination";
 
 /* -------------------------------------------------------------------------
  * Portfolio landing (`/works`)
@@ -205,7 +206,7 @@ export default function WorksPage() {
               subtitle="Our restoration & renovation portfolio is being curated. Please check back shortly."
             />
           ) : (
-            <PhotoGrid photos={photosInCategory} onOpen={setLightbox} />
+            <PhotoGrid photos={photosInCategory} onOpen={setLightbox} testIdPrefix="works-restoration" />
           )
         ) : (
           /* -------- Residential / Commercial: folder grid (exactly N unique cards) -------- */
@@ -377,46 +378,76 @@ function FolderChildView({ categoryLabel, folderName, photos, onBack, onOpenPhot
   );
 }
 
-function PhotoGrid({ photos, onOpen }) {
+function PhotoGrid({ photos, onOpen, testIdPrefix = "works-child" }) {
+  // Pagination: strict 15-per-page budget. Prevents 100+ image folders from
+  // hammering the browser and gives visitors a clean editorial flow.
+  const PAGE_SIZE = 15;
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(photos.length / PAGE_SIZE));
+
+  // Reset to page 1 whenever the source photos change (folder switch).
+  useEffect(() => { setPage(1); }, [photos]);
+
+  const start = (page - 1) * PAGE_SIZE;
+  const paged = photos.slice(start, start + PAGE_SIZE);
+
+  const changePage = (n) => {
+    setPage(n);
+    // Instant top-scroll so the visitor never lands mid-frame after a
+    // page shift. Use "instant" (not smooth) — smooth on a 6-row bento
+    // feels janky.
+    window.scrollTo({ top: 0, behavior: "instant" });
+  };
+
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.4 }}
-      className="portfolio-gallery-container"
-    >
-      {photos.map((ph, i) => (
-        <div key={ph.id} className="portfolio-item-card">
-          <button
-            data-testid={`works-child-item-${i}`}
-            onClick={() => onOpen(ph)}
-            className="w-full text-left proj-card block group relative"
-          >
-            <img
-              src={thumbUrl(ph.image, 900)}
-              alt={`${ph.title || ph.subcategory || "Interior"} — ${ph.category === "commercial" ? "Commercial fit-out" : ph.category === "restoration" ? "Heritage restoration" : "Residential interior design"} by Caremanto Solutions`}
-              loading={i < 3 ? "eager" : "lazy"}
-              decoding="async"
-              fetchPriority={i < 3 ? "high" : "auto"}
-              style={{ width: "100%", height: "auto", objectFit: "contain", display: "block", background: "var(--bg-2)" }}
-            />
-            <div className="absolute inset-x-0 bottom-0 z-10 p-4 md:p-5 flex items-end justify-between gap-3 bg-gradient-to-t from-black/60 to-transparent">
-              <div>
-                <div className="text-[9px] tracking-[0.28em] uppercase text-[var(--gold-hi)] mb-1 font-medium">
-                  {ph.category}{ph.subcategory ? ` · ${ph.subcategory}` : ""}
-                </div>
-                {ph.title && (
-                  <div className="font-serif text-[18px] md:text-[20px] leading-tight text-white">
-                    {ph.title}
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4 }}
+        className="portfolio-gallery-container"
+        key={page /* remounts children so eager/lazy priorities reset per page */}
+      >
+        {paged.map((ph, i) => (
+          <div key={ph.id} className="portfolio-item-card">
+            <button
+              data-testid={`${testIdPrefix}-item-${i}`}
+              onClick={() => onOpen(ph)}
+              className="w-full text-left proj-card block group relative"
+            >
+              <img
+                src={thumbUrl(ph.image, 900)}
+                alt={`${ph.title || ph.subcategory || "Interior"} — ${ph.category === "commercial" ? "Commercial fit-out" : ph.category === "restoration" ? "Heritage restoration" : "Residential interior design"} by Caremanto Solutions`}
+                loading={i < 3 ? "eager" : "lazy"}
+                decoding="async"
+                fetchPriority={i < 3 ? "high" : "auto"}
+                style={{ width: "100%", height: "auto", objectFit: "contain", display: "block", background: "var(--bg-2)" }}
+              />
+              <div className="absolute inset-x-0 bottom-0 z-10 p-4 md:p-5 flex items-end justify-between gap-3 bg-gradient-to-t from-black/60 to-transparent">
+                <div>
+                  <div className="text-[9px] tracking-[0.28em] uppercase text-[var(--gold-hi)] mb-1 font-medium">
+                    {ph.category}{ph.subcategory ? ` · ${ph.subcategory}` : ""}
                   </div>
-                )}
+                  {ph.title && (
+                    <div className="font-serif text-[18px] md:text-[20px] leading-tight text-white">
+                      {ph.title}
+                    </div>
+                  )}
+                </div>
+                <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
               </div>
-              <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
-            </div>
-          </button>
-        </div>
-      ))}
-    </motion.div>
+            </button>
+          </div>
+        ))}
+      </motion.div>
+
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        onChange={changePage}
+        testIdPrefix={`${testIdPrefix}-pagination`}
+      />
+    </>
   );
 }
 

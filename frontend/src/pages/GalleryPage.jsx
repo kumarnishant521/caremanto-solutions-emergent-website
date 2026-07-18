@@ -8,6 +8,7 @@ import SmartImage from "../components/SmartImage";
 import { thumbUrl } from "../lib/thumb";
 import { useGallery, prefetchImageUrls } from "../lib/useGallery";
 import Head from "../components/Head";
+import Pagination from "../components/Pagination";
 
 /* -------------------------------------------------------------------------
  * Three top-level tabs:
@@ -337,6 +338,17 @@ function FolderCards({ folders, categoryLabel, coverForSub, countForSub, photosI
 }
 
 function PhotoGrid({ photos, onOpen }) {
+  const PAGE_SIZE = 15;
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(photos.length / PAGE_SIZE));
+  useEffect(() => { setPage(1); }, [photos]);
+  const start = (page - 1) * PAGE_SIZE;
+  const paged = photos.slice(start, start + PAGE_SIZE);
+  const changePage = (n) => {
+    setPage(n);
+    window.scrollTo({ top: 0, behavior: "instant" });
+  };
+
   if (!photos.length) {
     return (
       <div className="py-24 text-center">
@@ -345,44 +357,54 @@ function PhotoGrid({ photos, onOpen }) {
     );
   }
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.4 }}
-      className="portfolio-gallery-container"
-    >
-      {photos.map((ph, i) => (
-        <div key={ph.id} className="portfolio-item-card">
-          <button
-            data-testid={`gallery-item-${i}`}
-            onClick={() => onOpen(ph)}
-            className="w-full text-left proj-card block group relative"
-          >
-            <img
-              src={thumbUrl(ph.image, 900)}
-              alt={`${ph.title || ph.subcategory || "Interior"} — ${ph.category === "commercial" ? "Commercial interior" : ph.category === "restoration" ? "Heritage restoration" : "Residential interior"} by Caremanto Solutions Mumbai`}
-              loading={i < 3 ? "eager" : "lazy"}
-              decoding="async"
-              fetchPriority={i < 3 ? "high" : "auto"}
-              style={{ width: "100%", height: "auto", objectFit: "contain", display: "block", background: "var(--bg-2)" }}
-            />
-            <div className="absolute inset-x-0 bottom-0 z-10 p-4 md:p-5 flex items-end justify-between gap-3 bg-gradient-to-t from-black/60 to-transparent">
-              <div>
-                <div className="text-[9px] tracking-[0.28em] uppercase text-[var(--gold-hi)] mb-1 font-medium">
-                  {ph.category}
-                  {ph.subcategory ? ` · ${ph.subcategory}` : ""}
-                </div>
-                {ph.title && (
-                  <div className="font-serif text-[18px] md:text-[20px] leading-tight text-white">
-                    {ph.title}
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4 }}
+        className="portfolio-gallery-container"
+        key={page}
+      >
+        {paged.map((ph, i) => (
+          <div key={ph.id} className="portfolio-item-card">
+            <button
+              data-testid={`gallery-item-${i}`}
+              onClick={() => onOpen(ph)}
+              className="w-full text-left proj-card block group relative"
+            >
+              <img
+                src={thumbUrl(ph.image, 900)}
+                alt={`${ph.title || ph.subcategory || "Interior"} — ${ph.category === "commercial" ? "Commercial interior" : ph.category === "restoration" ? "Heritage restoration" : "Residential interior"} by Caremanto Solutions Mumbai`}
+                loading={i < 3 ? "eager" : "lazy"}
+                decoding="async"
+                fetchPriority={i < 3 ? "high" : "auto"}
+                style={{ width: "100%", height: "auto", objectFit: "contain", display: "block", background: "var(--bg-2)" }}
+              />
+              <div className="absolute inset-x-0 bottom-0 z-10 p-4 md:p-5 flex items-end justify-between gap-3 bg-gradient-to-t from-black/60 to-transparent">
+                <div>
+                  <div className="text-[9px] tracking-[0.28em] uppercase text-[var(--gold-hi)] mb-1 font-medium">
+                    {ph.category}
+                    {ph.subcategory ? ` · ${ph.subcategory}` : ""}
                   </div>
-                )}
+                  {ph.title && (
+                    <div className="font-serif text-[18px] md:text-[20px] leading-tight text-white">
+                      {ph.title}
+                    </div>
+                  )}
+                </div>
+                <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
               </div>
-              <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
-            </div>
-          </button>
-        </div>
-      ))}
-    </motion.div>
+            </button>
+          </div>
+        ))}
+      </motion.div>
+
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        onChange={changePage}
+        testIdPrefix="gallery-pagination"
+      />
+    </>
   );
 }
