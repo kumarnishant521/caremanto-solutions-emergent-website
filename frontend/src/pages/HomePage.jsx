@@ -8,16 +8,19 @@ import Testimonials from "../components/Testimonials";
 import ConsultButton from "../components/ConsultButton";
 import { Rise } from "../components/Rise";
 import Head from "../components/Head";
-import { keywordsFor, pageTitleFor, ANCHORS } from "../lib/seo";
+import { ANCHORS } from "../lib/seo";
+import { useSEOFor } from "../lib/useSiteSettings";
 
 export default function HomePage() {
+  const seo = useSEOFor({ sectionKey: "home" });
   return (
     <main data-testid="home-page">
       <Head
-        title={pageTitleFor()}
-        description="Caremanto Solutions — luxury interior designers in Mumbai. Residential interior architecture, turnkey commercial fit-outs, heritage restoration and renovation across India. Free interior consultation."
+        title={seo.title}
+        description={seo.description}
         canonical="https://caremanto.in/"
-        keywords={keywordsFor()}
+        keywords={seo.keywords}
+        image={seo.image}
       />
       <Hero />
       <EditorialMarquee />

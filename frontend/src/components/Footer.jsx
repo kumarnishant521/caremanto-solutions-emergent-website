@@ -1,20 +1,46 @@
 import { Link } from "react-router-dom";
-import { Instagram, Linkedin, Twitter, Youtube } from "lucide-react";
+import { Instagram, Linkedin, Twitter, Youtube, Globe } from "lucide-react";
 import { useConsultation } from "../lib/useConsultation";
 import { STUDIO } from "../lib/studio";
+import { useSiteSettings } from "../lib/useSiteSettings";
 import { WhatsAppIcon } from "./ConsultationModal";
 
-// Placeholder handles — routes forward to the studio's future social presence.
-// Update the base URLs here once the handles are live.
-const SOCIALS = [
-  { key: "instagram", label: "Instagram", href: "https://www.instagram.com/caremanto/", Icon: Instagram },
-  { key: "linkedin",  label: "LinkedIn",  href: "https://www.linkedin.com/company/caremanto/", Icon: Linkedin  },
-  { key: "twitter",   label: "Twitter",   href: "https://twitter.com/caremanto",         Icon: Twitter   },
-  { key: "youtube",   label: "YouTube",   href: "https://www.youtube.com/@caremanto",    Icon: Youtube   },
+// Icon map — allows admins to reference an icon by key when editing socials.
+const SOCIAL_ICONS = {
+  instagram: Instagram,
+  linkedin:  Linkedin,
+  twitter:   Twitter,
+  youtube:   Youtube,
+};
+
+// Compiled-in defaults — used as fallback until admin overrides arrive.
+const DEFAULT_SOCIALS = [
+  { key: "instagram", label: "Instagram", href: "https://www.instagram.com/caremanto/" },
+  { key: "linkedin",  label: "LinkedIn",  href: "https://www.linkedin.com/company/caremanto/" },
+  { key: "twitter",   label: "Twitter",   href: "https://twitter.com/caremanto"        },
+  { key: "youtube",   label: "YouTube",   href: "https://www.youtube.com/@caremanto"   },
 ];
 
 export default function Footer() {
   const { open: openConsult } = useConsultation();
+  const { settings } = useSiteSettings();
+  const f = settings.footer || {};
+  const tagline1  = f.tagline_1 || "Let's compose";
+  const tagline2  = f.tagline_2 || "something enduring.";
+  const email     = f.email     || STUDIO.email;
+  const phoneStr  = f.phone     || STUDIO.phone;
+  const phoneDial = f.phone_dial || STUDIO.phoneDial;
+  const address1  = f.address_line1 || "C-213, Eastern Business District,";
+  const address2  = f.address_line2 || "Mumbai — 400 078";
+  const whatsappHref = (() => {
+    const num = f.whatsapp_number;
+    if (!num) return STUDIO.whatsapp;
+    const msg = encodeURIComponent(f.whatsapp_message || "Hi Caremanto, I'd like to begin a conversation.");
+    return `https://wa.me/${num}?text=${msg}`;
+  })();
+  const socials = (Array.isArray(f.socials) && f.socials.length ? f.socials : DEFAULT_SOCIALS)
+    .filter((s) => s && s.href && s.key);
+
   return (
     <footer
       data-testid="site-footer"
@@ -24,8 +50,8 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-6">
           <div className="md:col-span-5">
             <div className="font-serif text-[clamp(2.5rem,5vw,4.5rem)] tracking-[-0.02em] leading-[0.95]">
-              Let's compose <br />
-              <span className="italic text-[var(--gold)]">something enduring.</span>
+              {tagline1} <br />
+              <span className="italic text-[var(--gold)]">{tagline2}</span>
             </div>
             <div className="mt-8 inline-flex items-center gap-2">
               <button
@@ -37,7 +63,7 @@ export default function Footer() {
                 Request Consultation
               </button>
               <a
-                href={STUDIO.whatsapp}
+                href={whatsappHref}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Chat on WhatsApp"
@@ -75,28 +101,28 @@ export default function Footer() {
             <ul className="space-y-2 text-[13px] text-[var(--ink)]/80">
               <li>
                 <a
-                  href="mailto:care@caremanto.in"
+                  href={`mailto:${email}`}
                   data-testid="footer-email"
                   className="hover:text-[var(--gold)] transition-colors"
                 >
-                  care@caremanto.in
+                  {email}
                 </a>
               </li>
               <li>
                 <a
-                  href="tel:+919595944417"
+                  href={`tel:${phoneDial}`}
                   data-testid="footer-phone"
                   className="hover:text-[var(--gold)] transition-colors uppercase tracking-[0.14em] text-[12px]"
                 >
-                  +91 95959 44417
+                  {phoneStr}
                 </a>
               </li>
               <li
                 data-testid="footer-address"
                 className="text-[11px] uppercase tracking-[0.18em] leading-relaxed text-[var(--ink)]/70 pt-2"
               >
-                C-213, Eastern Business District,<br />
-                Mumbai — 400 078
+                {address1}<br />
+                {address2}
               </li>
             </ul>
 
@@ -106,21 +132,24 @@ export default function Footer() {
               className="flex items-center gap-3"
               aria-label="Social media"
             >
-              {SOCIALS.map(({ key, label, href, Icon }) => (
-                <li key={key}>
-                  <a
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={label}
-                    title={label}
-                    data-testid={`social-${key}`}
-                    className="inline-flex items-center justify-center w-9 h-9 border border-[var(--line-strong)] text-[var(--ink)]/80 hover:text-[var(--gold)] hover:border-[var(--gold)] transition-colors"
-                  >
-                    <Icon size={16} strokeWidth={1.6} />
-                  </a>
-                </li>
-              ))}
+              {socials.map(({ key, label, href }) => {
+                const Icon = SOCIAL_ICONS[key] || Globe;
+                return (
+                  <li key={key}>
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={label || key}
+                      title={label || key}
+                      data-testid={`social-${key}`}
+                      className="inline-flex items-center justify-center w-9 h-9 border border-[var(--line-strong)] text-[var(--ink)]/80 hover:text-[var(--gold)] hover:border-[var(--gold)] transition-colors"
+                    >
+                      <Icon size={16} strokeWidth={1.6} />
+                    </a>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </div>

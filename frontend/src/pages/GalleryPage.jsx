@@ -9,7 +9,8 @@ import { thumbUrl } from "../lib/thumb";
 import { useGallery, prefetchImageUrls } from "../lib/useGallery";
 import Head from "../components/Head";
 import Pagination from "../components/Pagination";
-import { keywordsFor, pageTitleFor, altFor } from "../lib/seo";
+import { altFor } from "../lib/seo";
+import { useSEOFor } from "../lib/useSiteSettings";
 
 /* -------------------------------------------------------------------------
  * Three top-level tabs:
@@ -38,6 +39,11 @@ export default function GalleryPage() {
 
   const { photos, loading } = useGallery();
   const [lightbox, setLightbox] = useState(null);
+
+  const sectionKey = category === COMMERCIAL ? "commercial"
+                   : category === RESTORATION ? "restoration"
+                   : "residential";
+  const seo = useSEOFor({ sectionKey, category, folder: openedFolder });
 
   const setCategory = (c) => {
     const q = new URLSearchParams();
@@ -87,16 +93,11 @@ export default function GalleryPage() {
   return (
     <main data-testid="gallery-page" className="pt-[100px] bg-[var(--bg-0)] min-h-screen">
       <Head
-        title={pageTitleFor({ category, folder: openedFolder })}
-        description={
-          category === RESIDENTIAL
-            ? "Luxury residential interior design gallery — hall & dining, bedrooms, bathrooms, modular kitchens, balcony and temple spaces. Best interior designers in Mumbai · Caremanto Solutions."
-            : category === COMMERCIAL
-              ? "Commercial interior design gallery — office interior design, modern office layout, retail store design, luxury showroom interior design, boutique hospitality styling. Caremanto Solutions Mumbai."
-              : "Heritage restoration and structural renovation gallery — bungalow restoration, waterproofing repair, commercial building rehabilitation. Best bungalow repairing company · Caremanto Solutions."
-        }
+        title={seo.title}
+        description={seo.description}
         canonical={`https://caremanto.in/gallery${category !== RESIDENTIAL ? `?cat=${encodeURIComponent(category)}` : ""}${openedFolder ? `${category !== RESIDENTIAL ? "&" : "?"}folder=${encodeURIComponent(openedFolder)}` : ""}`}
-        keywords={keywordsFor({ category, folder: openedFolder })}
+        keywords={seo.keywords}
+        image={seo.image}
       />
       {/* Editorial header */}
       <section className="max-w-[1500px] mx-auto px-6 md:px-14 pt-16 md:pt-24 pb-10">

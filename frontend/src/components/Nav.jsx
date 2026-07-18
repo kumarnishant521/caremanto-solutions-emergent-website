@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { NAV_CATEGORIES } from "../lib/api";
 import { useConsultation } from "../lib/useConsultation";
+import { useSiteSettings } from "../lib/useSiteSettings";
 import CMLogo from "./CMLogo";
 
 /**
@@ -89,6 +90,25 @@ export default function Nav() {
   const nav = useNavigate();
   const loc = useLocation();
   const { open: openConsult } = useConsultation();
+  const { settings } = useSiteSettings();
+
+  // Dynamic (admin-editable) nav config with static fallbacks.
+  const navLabels     = (settings.nav && settings.nav.labels) || {};
+  const interiorItems = (settings.nav && Array.isArray(settings.nav.interior_items) && settings.nav.interior_items.length)
+    ? settings.nav.interior_items
+    : NAV_CATEGORIES.interiors.items;
+  const servicesItems = (settings.nav && Array.isArray(settings.nav.services_items) && settings.nav.services_items.length)
+    ? settings.nav.services_items
+    : NAV_CATEGORIES.restoration.items;
+  const L = {
+    home:       navLabels.home       || "Home",
+    portfolio:  navLabels.portfolio  || "Portfolio",
+    interiors:  navLabels.interior_projects || "Interior Projects",
+    services:   navLabels.services   || RESTORATION_SHORT,
+    process:    navLabels.process    || "Process",
+    about:      navLabels.about_us   || "About Us",
+    consult:    navLabels.consult    || "Consult",
+  };
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -171,14 +191,14 @@ export default function Nav() {
 
         {/* Desktop nav */}
         <nav className="hidden xl:flex items-center gap-7 2xl:gap-9">
-          <Link to="/" data-testid="nav-home" className={`nav-link nav-label ${active("/") ? "text-[var(--gold)]" : ""}`}>Home</Link>
+          <Link to="/" data-testid="nav-home" className={`nav-link nav-label ${active("/") ? "text-[var(--gold)]" : ""}`}>{L.home}</Link>
           <button
             type="button"
             onClick={goPortfolio}
             data-testid="nav-portfolio"
             className={`nav-link nav-label ${active("/portfolio") ? "text-[var(--gold)]" : ""}`}
           >
-            Portfolio
+            {L.portfolio}
           </button>
 
           {/* Interior Projects */}
@@ -197,8 +217,8 @@ export default function Nav() {
               <Chevron open={open === "interiors"} />
             </button>
             <DropdownPanel open={open === "interiors"} align="center" testid="dropdown-panel-interiors">
-              <PanelHeader label="Interior Projects — Practices" />
-              {NAV_CATEGORIES.interiors.items.map((item, i) => (
+              <PanelHeader label={`${L.interiors} — Practices`} />
+              {interiorItems.map((item, i) => (
                 <PanelItem
                   key={item}
                   data-testid={`dropdown-item-interiors-${i}`}
@@ -222,12 +242,12 @@ export default function Nav() {
               onClick={() => goWorks("RESTORATION & RENOVATIONS")}
               className="nav-link nav-label flex items-center gap-2 whitespace-nowrap"
             >
-              {RESTORATION_SHORT}
+              {L.services}
               <Chevron open={open === "restoration"} />
             </button>
             <DropdownPanel open={open === "restoration"} align="center" wide testid="dropdown-panel-restoration">
-              <PanelHeader label="Services — Restoration & Renovation" />
-              {NAV_CATEGORIES.restoration.items.map((item, i) => (
+              <PanelHeader label={`${L.services} — Restoration & Renovation`} />
+              {servicesItems.map((item, i) => (
                 <PanelItem
                   key={item}
                   data-testid={`dropdown-item-restoration-${i}`}
@@ -239,8 +259,8 @@ export default function Nav() {
             </DropdownPanel>
           </div>
 
-          <Link to="/approach" data-testid="nav-process" className={`nav-link nav-label ${active("/approach") ? "text-[var(--gold)]" : ""}`}>Process</Link>
-          <Link to="/studio" data-testid="nav-about" className={`nav-link nav-label ${active("/studio") ? "text-[var(--gold)]" : ""}`}>About Us</Link>
+          <Link to="/approach" data-testid="nav-process" className={`nav-link nav-label ${active("/approach") ? "text-[var(--gold)]" : ""}`}>{L.process}</Link>
+          <Link to="/studio" data-testid="nav-about" className={`nav-link nav-label ${active("/studio") ? "text-[var(--gold)]" : ""}`}>{L.about}</Link>
 
           <button
             type="button"
@@ -248,7 +268,7 @@ export default function Nav() {
             data-testid="nav-cta"
             className="ml-2 btn-pill text-[10px] py-[10px] px-5"
           >
-            Consult
+            {L.consult}
           </button>
         </nav>
 
@@ -294,7 +314,7 @@ export default function Nav() {
                   INTERIOR PROJECTS →
                 </button>
                 <div className="grid grid-cols-1 gap-1 pl-1">
-                  {NAV_CATEGORIES.interiors.items.map((it, i) => (
+                  {interiorItems.map((it, i) => (
                     <button
                       key={it}
                       data-testid={`mobile-item-interiors-${i}`}
@@ -318,7 +338,7 @@ export default function Nav() {
                   SERVICES →
                 </button>
                 <div className="grid grid-cols-1 gap-1 pl-1">
-                  {NAV_CATEGORIES.restoration.items.map((it, i) => (
+                  {servicesItems.map((it, i) => (
                     <button
                       key={it}
                       data-testid={`mobile-item-restoration-${i}`}

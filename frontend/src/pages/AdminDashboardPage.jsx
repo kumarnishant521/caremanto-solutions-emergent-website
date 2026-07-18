@@ -9,6 +9,7 @@ import AdminCovers from "../components/admin/AdminCovers";
 import AdminVideos from "../components/admin/AdminVideos";
 import AdminPortfolio from "../components/admin/AdminPortfolio";
 import AdminHomeSequence from "../components/admin/AdminHomeSequence";
+import AdminSEOManager from "../components/admin/AdminSEOManager";
 
 const TABS = [
   { key: "gallery",      label: "Gallery"       },
@@ -17,6 +18,7 @@ const TABS = [
   { key: "covers",       label: "Hero · Covers" },
   { key: "videos",       label: "Videos"        },
   { key: "projects",     label: "Projects"      },
+  { key: "seo",          label: "SEO · Content" },
   { key: "leads",        label: "Leads"         },
 ];
 
@@ -76,6 +78,7 @@ export default function AdminDashboardPage() {
         {tab === "portfolio" && <AdminPortfolio />}
         {tab === "videos"    && <AdminVideos    />}
         {tab === "covers"    && <AdminCovers    />}
+        {tab === "seo"       && <AdminSEOManager />}
         {tab === "leads"     && <AdminLeads     />}
       </div>
     </main>

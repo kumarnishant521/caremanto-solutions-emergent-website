@@ -552,6 +552,302 @@ async def update_covers(body: CoversIn, _admin=Depends(get_current_admin)):
     )
     return value
 
+# ------------------------------------------------------------------ SEO settings (dynamic CMS)
+# One MongoDB document controls: per-section SEO (title, description, keywords,
+# og_image), the footer contact block, and the top-nav labels + dropdown items.
+# Public route is `/api/seo` (no auth); admin writes via `/api/admin/seo`.
+
+BRAND_TAG = "CAREMANTO SOLUTIONS"
+
+DEFAULT_SEO_SECTIONS = {
+    "home": {
+        "title": f"Luxury Interior Design, Renovation & Restoration Studio · Mumbai | {BRAND_TAG}",
+        "description": "Caremanto Solutions — luxury interior design, turnkey commercial fit-outs, heritage restoration and structural renovations across Mumbai and India.",
+        "og_image": "",
+        "keywords": [
+            "Caremanto Solutions", "Best interior designers in Mumbai", "Top designer firms in Mumbai",
+            "Best designer company in India", "Best designing company in Mumbai", "Most reliable interior firm",
+            "Most reliable interior designer near me", "Most reliable interior company",
+            "All in one contractor near me", "Interior designers near me",
+            "Free home interior consultation", "Free designing consultation",
+            "Luxury interior designs", "Luxury interior designer near me", "Luxury designing in budget",
+            "Home interior designer", "Best bungalow interior designer in Mumbai",
+            "Best bungalow interior designer near me", "Modular kitchen design", "Luxury bedroom designs",
+            "Luxury bathroom design", "Office interior design", "Best office interior designer near me",
+            "Best office interior designers in Mumbai", "Best office design company in India",
+            "Retail store designers", "Best luxury store designer", "Best luxury store designing company",
+            "Boutique hospitality styling", "Best boutique designer", "Best boutique designer in Mumbai",
+            "Turnkey commercial design execution", "Luxury showroom interior design",
+            "Home renovation", "Bungalow restoration", "Heritage architectural restoration",
+            "Structural renovations contractors", "Building waterproofing and repair",
+        ],
+    },
+    "residential": {
+        "title": f"Luxury Residential Interior Design Portfolio | {BRAND_TAG}",
+        "description": "Luxury residential interior design portfolio by Caremanto Solutions — bungalows, apartments, modular kitchens, bathrooms and bespoke living rooms in Mumbai.",
+        "og_image": "",
+        "keywords": [
+            "Luxury interior designs", "Luxury interior designer near me", "Home interior designer",
+            "Best home interiors", "Best house design", "Best bungalow interior firm",
+            "Best bungalow interior designer in Mumbai", "Best bungalow interior designer near me",
+            "Best outhouse designer", "Unique house ideas", "Unique home design",
+            "Unique bedroom designs", "Modular kitchen design", "Modular bathroom design",
+            "Bedroom design", "Luxury bedroom designs", "Hall design", "Living room design",
+            "Luxury living room design", "Bathroom design", "Luxury bathroom design",
+            "Balcony renovations", "Temple designs", "Interiors studio",
+            "Luxury designing in budget", "Budgeted renovations", "Fast interiors",
+            "Free home interior consultation", "Free designing consultation",
+        ],
+    },
+    "commercial": {
+        "title": f"Turnkey Commercial Design & Office Fit-out Portfolio | {BRAND_TAG}",
+        "description": "Turnkey commercial interior design & fit-out by Caremanto Solutions — offices, retail, hospitality and luxury showrooms across India.",
+        "og_image": "",
+        "keywords": [
+            "Office interior design", "Modern office layout", "Best office interior designer near me",
+            "Best office interior designers in Mumbai", "Best office design company in India",
+            "Boutique hospitality styling", "Boutique designer", "Best boutique designer",
+            "Best boutique designer in Mumbai", "Best hotel interior designer",
+            "Retail store designers", "Retail spatial design", "Commercial space fit out",
+            "Store design", "Unique store design", "Luxury store design",
+            "Best luxury store designer", "Best luxury store designing company",
+            "Turnkey commercial design execution", "Turnkey contractor", "Luxury showroom interior design",
+        ],
+    },
+    "restoration": {
+        "title": f"Heritage Restoration, Structural Renovation & Building Repairs | {BRAND_TAG}",
+        "description": "Heritage architectural restoration, structural renovations and building repair by Caremanto Solutions — waterproofing, seepage, facade and adaptive reuse.",
+        "og_image": "",
+        "keywords": [
+            "Home repair", "Home renovation", "Bungalow repairs", "Bungalow restoration",
+            "Best bungalow repairing company", "Old property renovation", "Old property repairs",
+            "Old property restoration", "Heritage architectural restoration",
+            "Heritage architectural repairs", "Structural renovations contractors",
+            "Building waterproofing and repair", "Terrace waterproofing and repair",
+            "Swimming pool and basement structural repairs", "Leakage and seepage repair",
+            "Commercial building repair", "Commercial building rehabilitation",
+            "Fast renovations", "Quick repairs", "Quick interiors and renovations",
+        ],
+    },
+    "portfolio": {
+        "title": f"The Portfolio · Luxury Interior & Restoration Commissions | {BRAND_TAG}",
+        "description": "Curated commissions by Caremanto Solutions — a selection of luxury residential, commercial and restoration projects photographed at studio quality.",
+        "og_image": "",
+        "keywords": [],   # inherits home keywords via frontend fallback
+    },
+    "studio": {
+        "title": f"The Studio · Caremanto Solutions | {BRAND_TAG}",
+        "description": "About Caremanto Solutions — a design and restoration studio composing enduring spaces with craft, restraint, and turnkey delivery.",
+        "og_image": "",
+        "keywords": [],
+    },
+}
+
+DEFAULT_FOOTER_SETTINGS = {
+    "tagline_1": "Let's compose",
+    "tagline_2": "something enduring.",
+    "email": "care@caremanto.in",
+    "phone": "+91 95959 44417",
+    "phone_dial": "+919595944417",
+    "whatsapp_number": "919595944417",
+    "whatsapp_message": "Hi Caremanto, I'd like to begin a conversation.",
+    "address_line1": "C-213, Eastern Business District,",
+    "address_line2": "Mumbai — 400 078",
+    "socials": [
+        {"key": "instagram", "label": "Instagram", "href": "https://www.instagram.com/caremanto/"},
+        {"key": "linkedin",  "label": "LinkedIn",  "href": "https://www.linkedin.com/company/caremanto/"},
+        {"key": "twitter",   "label": "Twitter",   "href": "https://twitter.com/caremanto"},
+        {"key": "youtube",   "label": "YouTube",   "href": "https://www.youtube.com/@caremanto"},
+    ],
+}
+
+DEFAULT_NAV_SETTINGS = {
+    "labels": {
+        "home":              "Home",
+        "portfolio":         "Portfolio",
+        "interior_projects": "Interior Projects",
+        "services":          "Services",
+        "process":           "Process",
+        "about_us":          "About Us",
+        "consult":           "Consult",
+    },
+    "interior_items": ["Residential", "Commercial", "Retail Design", "Hospitality"],
+    "services_items": [
+        "Restoration & Renovations",
+        "Structural Renovations & Facade Renewal",
+        "Sound Proofing",
+        "Water-Proofing",
+        "Heritage Restoration",
+        "Modernisation",
+    ],
+}
+
+DEFAULT_SEO_SETTINGS = {
+    "sections": DEFAULT_SEO_SECTIONS,
+    "footer":   DEFAULT_FOOTER_SETTINGS,
+    "nav":      DEFAULT_NAV_SETTINGS,
+}
+
+def _merge_seo(stored: dict) -> dict:
+    """Deep-merge a stored partial doc over the default settings so newly-added
+    keys always exist in the response even if the admin's edit was partial."""
+    out = {
+        "sections": {},
+        "footer":   {**DEFAULT_FOOTER_SETTINGS},
+        "nav":      {**DEFAULT_NAV_SETTINGS, "labels": {**DEFAULT_NAV_SETTINGS["labels"]}},
+    }
+    # Sections merge (per-section overlay)
+    for key, default in DEFAULT_SEO_SECTIONS.items():
+        overlay = ((stored.get("sections") or {}).get(key)) or {}
+        out["sections"][key] = {
+            "title":       overlay.get("title", default["title"]),
+            "description": overlay.get("description", default["description"]),
+            "og_image":    overlay.get("og_image", default.get("og_image", "")),
+            "keywords":    list(overlay.get("keywords") or default["keywords"]),
+        }
+    # Include any custom sections the admin added
+    for key, overlay in (stored.get("sections") or {}).items():
+        if key not in out["sections"]:
+            out["sections"][key] = {
+                "title":       overlay.get("title", ""),
+                "description": overlay.get("description", ""),
+                "og_image":    overlay.get("og_image", ""),
+                "keywords":    list(overlay.get("keywords") or []),
+            }
+    # Footer merge
+    stored_footer = stored.get("footer") or {}
+    for k, v in stored_footer.items():
+        if k == "socials" and isinstance(v, list):
+            out["footer"]["socials"] = v
+        elif isinstance(v, str):
+            out["footer"][k] = v
+    # Nav merge
+    stored_nav = stored.get("nav") or {}
+    if isinstance(stored_nav.get("labels"), dict):
+        out["nav"]["labels"] = {**out["nav"]["labels"], **stored_nav["labels"]}
+    if isinstance(stored_nav.get("interior_items"), list):
+        out["nav"]["interior_items"] = stored_nav["interior_items"]
+    if isinstance(stored_nav.get("services_items"), list):
+        out["nav"]["services_items"] = stored_nav["services_items"]
+    return out
+
+
+class SEOSectionIn(BaseModel):
+    title: Optional[str] = ""
+    description: Optional[str] = ""
+    og_image: Optional[str] = ""
+    keywords: List[str] = Field(default_factory=list)
+
+
+class SEOFooterIn(BaseModel):
+    tagline_1: Optional[str] = None
+    tagline_2: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    phone_dial: Optional[str] = None
+    whatsapp_number: Optional[str] = None
+    whatsapp_message: Optional[str] = None
+    address_line1: Optional[str] = None
+    address_line2: Optional[str] = None
+    socials: Optional[List[dict]] = None
+
+
+class SEONavIn(BaseModel):
+    labels: Optional[dict] = None
+    interior_items: Optional[List[str]] = None
+    services_items: Optional[List[str]] = None
+
+
+class SEOUpdateIn(BaseModel):
+    sections: Optional[dict] = None   # {home: SEOSectionIn dict, residential: ..., ...}
+    footer:   Optional[SEOFooterIn] = None
+    nav:      Optional[SEONavIn] = None
+
+
+@api.get("/seo")
+async def get_seo_settings():
+    doc = await db.settings.find_one({"key": "seo_settings"}, {"_id": 0})
+    stored = (doc or {}).get("value") or {}
+    return _merge_seo(stored)
+
+
+def _clean_kw_list(items) -> list[str]:
+    if not isinstance(items, list):
+        return []
+    seen = set()
+    out = []
+    for it in items:
+        s = sanitize_short(str(it), max_length=140)
+        if not s or s in seen:
+            continue
+        seen.add(s)
+        out.append(s)
+    return out[:300]
+
+
+@api.put("/admin/seo")
+async def update_seo_settings(body: SEOUpdateIn, _admin=Depends(get_current_admin)):
+    # Load current stored value (merged with defaults) so a partial PUT only
+    # mutates the fields the admin actually edited.
+    current_doc = await db.settings.find_one({"key": "seo_settings"}, {"_id": 0})
+    value = (current_doc or {}).get("value") or {}
+    value = _merge_seo(value)  # normalize shape
+
+    # ---- sections merge ---------------------------------------------------
+    if body.sections:
+        for key, incoming in body.sections.items():
+            if not isinstance(incoming, dict):
+                continue
+            key = sanitize_short(key, max_length=64) or key
+            existing = value["sections"].get(key) or {"title": "", "description": "", "og_image": "", "keywords": []}
+            if "title" in incoming:
+                existing["title"] = sanitize_short(incoming.get("title"), max_length=180)
+            if "description" in incoming:
+                existing["description"] = sanitize_text(incoming.get("description"), max_length=400)
+            if "og_image" in incoming:
+                existing["og_image"] = sanitize_short(incoming.get("og_image"), max_length=600)
+            if "keywords" in incoming:
+                existing["keywords"] = _clean_kw_list(incoming.get("keywords"))
+            value["sections"][key] = existing
+
+    # ---- footer merge -----------------------------------------------------
+    if body.footer:
+        f = body.footer.model_dump(exclude_none=True)
+        for k, v in f.items():
+            if k == "socials" and isinstance(v, list):
+                clean = []
+                for s in v[:12]:
+                    if not isinstance(s, dict):
+                        continue
+                    clean.append({
+                        "key":   sanitize_short(str(s.get("key", "")), max_length=32),
+                        "label": sanitize_short(str(s.get("label", "")), max_length=64),
+                        "href":  sanitize_short(str(s.get("href", "")),  max_length=400),
+                    })
+                value["footer"]["socials"] = [x for x in clean if x["key"] and x["href"]]
+            elif isinstance(v, str):
+                value["footer"][k] = sanitize_short(v, max_length=400)
+
+    # ---- nav merge --------------------------------------------------------
+    if body.nav:
+        n = body.nav.model_dump(exclude_none=True)
+        if isinstance(n.get("labels"), dict):
+            for k, v in n["labels"].items():
+                if isinstance(v, str) and v.strip():
+                    value["nav"]["labels"][sanitize_short(k, max_length=64)] = sanitize_short(v, max_length=80)
+        if isinstance(n.get("interior_items"), list):
+            value["nav"]["interior_items"] = [sanitize_short(s, max_length=80) for s in n["interior_items"] if str(s).strip()][:12]
+        if isinstance(n.get("services_items"), list):
+            value["nav"]["services_items"] = [sanitize_short(s, max_length=80) for s in n["services_items"] if str(s).strip()][:12]
+
+    await db.settings.update_one(
+        {"key": "seo_settings"},
+        {"$set": {"key": "seo_settings", "value": value}},
+        upsert=True,
+    )
+    return value
+
+
 # ------------------------------------------------------------------ uploads
 UPLOAD_DIR = ROOT_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)

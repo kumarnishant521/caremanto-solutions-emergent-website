@@ -9,7 +9,8 @@ import { thumbUrl } from "../lib/thumb";
 import { useGallery, prefetchImageUrls } from "../lib/useGallery";
 import Head from "../components/Head";
 import Pagination from "../components/Pagination";
-import { keywordsFor, pageTitleFor, altFor } from "../lib/seo";
+import { altFor } from "../lib/seo";
+import { useSEOFor } from "../lib/useSiteSettings";
 
 /* -------------------------------------------------------------------------
  * Portfolio landing (`/works`)
@@ -53,6 +54,12 @@ export default function WorksPage() {
 
   const { photos, loading } = useGallery();
   const [lightbox, setLightbox] = useState(null);
+
+  // Resolve dynamic SEO for this category (admin-editable via /admin → SEO).
+  const sectionKey = category === COMMERCIAL ? "commercial"
+                   : category === RESTORATION ? "restoration"
+                   : "residential";
+  const seo = useSEOFor({ sectionKey, category, folder: openedFolder });
 
   /* -- URL helpers -- */
   const setCategory = (c) => {
@@ -117,16 +124,11 @@ export default function WorksPage() {
   return (
     <main data-testid="works-page" className="pt-32 pb-24 md:pt-40 md:pb-32 bg-[var(--bg-0)] min-h-screen">
       <Head
-        title={pageTitleFor({ category, folder: openedFolder })}
-        description={
-          category === RESIDENTIAL
-            ? "Luxury residential interior design portfolio by Caremanto Solutions Mumbai — bedrooms, kitchens, bathrooms, living rooms, balconies and temple spaces. Modular kitchen design, luxury bathroom design, home renovation India."
-            : category === COMMERCIAL
-              ? "Turnkey commercial interior design portfolio — office interior design, modern office layout, retail store design, luxury showroom interior design, and boutique hospitality styling by Caremanto Solutions Mumbai."
-              : "Heritage building restoration, structural renovation contractors, bungalow restoration, terrace waterproofing and repair, commercial building rehabilitation across India — Caremanto Solutions Mumbai."
-        }
+        title={seo.title}
+        description={seo.description}
         canonical={`https://caremanto.in/works${category !== RESIDENTIAL ? `?cat=${encodeURIComponent(category)}` : ""}${openedFolder ? `${category !== RESIDENTIAL ? "&" : "?"}folder=${encodeURIComponent(openedFolder)}` : ""}`}
-        keywords={keywordsFor({ category, folder: openedFolder })}
+        keywords={seo.keywords}
+        image={seo.image}
       />
       <div className="max-w-[1500px] mx-auto px-6 md:px-14">
         {/* Editorial header */}

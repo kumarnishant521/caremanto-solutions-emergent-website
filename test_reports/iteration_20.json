@@ -1,0 +1,45 @@
+{
+  "summary": "Tested new Dynamic SEO/Footer/Nav Manager (backend + frontend). Backend: 12/12 pytest passing (GET /api/seo shape, auth guard on PUT, partial merge for sections/footer/nav, keyword dedup+HTML strip, socials cleanup, regression on gallery/covers/leads). Frontend: admin panel loads, SEO/Footer subtabs save correctly and persist (title/description/keywords/footer.email/phone/address/tagline all reflect on home page after reload with instant publish). Nav settings correctly consumed by public site (verified via direct backend PUT + page reload — nav.labels.portfolio custom text and interior_items custom list render in top nav + dropdown).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "PUT /api/admin/seo", "issue": "sanitize_short encodes '&' → '&amp;' in title/description/labels (bleach behavior). Text rendered as '&amp;' verbatim on public pages instead of '&'. Pre-existing sanitizer behavior but affects SEO output quality."},
+      {"endpoint": "PUT /api/admin/seo (footer.socials)", "issue": "Socials list is not deduped by 'key' — pushing another entry with existing key (e.g. two 'instagram') is accepted and causes React 'duplicate key' warning on public footer render."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AdminSEOManager · SEO subtab · Bulk import", "issue": "'Bulk import (comma or newline separated)' textarea + button live inside a collapsed <details> element. Playwright fill fails with 'element is not visible' unless the <details> is expanded first. UX-wise this is fine, but noting for testability — the collapsed state hides seo-bulk-input-<key> from automation.", "selector": "[data-testid='seo-bulk-input-home']", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Admin Nav subtab · save flow", "issue": "In one manual UI run, edits made on the Nav subtab (nav-label-portfolio + interior item rename+reorder) did not persist to backend even though the save endpoint returned 200. Could not reproduce reliably. Direct PUT with same payload persists correctly, and public home page renders context values correctly. Suspect a React state race between rapid edits→save. Recommend: verify save() reads latest doc state (e.g., use functional setDoc pattern or explicit flush before api.put).", "affected_selectors": ["[data-testid='admin-seo-save']", "[data-testid='nav-label-portfolio']"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_seo_manager.py",
+    "/app/test_reports/pytest/pytest_seo.xml"
+  ],
+  "action_items": [
+    "Consider unescaping HTML entities (or using a whitelist sanitizer) so that titles/descriptions containing '&' render as '&' not '&amp;' on public pages.",
+    "Dedupe footer.socials by 'key' in backend _clean logic (line ~817-827 in server.py) to avoid duplicate React keys on public footer.",
+    "Investigate potential race between rapid setState edits and save() in AdminSEOManager Nav subtab — could not reliably reproduce; direct API path works flawlessly.",
+    "(Optional) Auto-expand or eliminate the <details> wrapper for Bulk Import to improve discoverability."
+  ],
+  "critical_code_review_comments": [
+    "server.py:774 `_clean_kw_list` uses `seen` set based on sanitized string identity — dedup is case-sensitive (e.g. 'Luxury' and 'luxury' kept as separate). May or may not be intentional.",
+    "AdminSEOManager.jsx:99 sends entire `doc` on save. Efficient but means every save also re-writes untouched sections. Not a bug, but could send `changed` diff for lighter payloads.",
+    "AdminSEOManager.jsx `save()` uses stale-closure `doc` — consider `setDoc(current => { api.put('/admin/seo', current); return current; })` to guarantee latest state is sent.",
+    "Footer.jsx renders socials with `key={s.key}` — will collide on duplicates. Either dedup on read or use `key={s.key + i}`."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_seo_manager.py"
+  ],
+  "success_rate": {"backend": "100% (12/12)", "frontend": "90% (admin SEO+Footer flows fully verified; Nav subtab flakiness in admin save; public site consumption of nav confirmed via direct backend seed)"},
+  "test_credentials": "Admin passless-login: POST /api/auth/passless-login (no body). Legacy: admin@caremanto.com / Caremanto@2026.",
+  "seed_data_creation": "No persistent seed. Tests use TEST_ prefix. Cleanup fixture in test_seo_manager.py restores original settings snapshot at end of module. UI test artefacts restored via direct curl PUT at end.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "SEO/Footer/Nav manager backend is solid — reuse /app/backend/tests/test_seo_manager.py. Admin passless-login sets access_token cookie via session; use requests.Session or curl -c/-b. The /api/seo endpoint always returns a shape merged with defaults, even before any seed. To test Nav admin save via Playwright, wait longer between state edits and save click (>=600ms) to avoid React batching races. Bulk-import textarea is wrapped in <details> — expand summary before fill.",
+  "rca of the issue": "Admin Nav-subtab save race (not deterministic): possible React state closure in AdminSEOManager.save() capturing stale doc when edits are dispatched < 100ms before click. Recommend converting save() to read state via functional updater to guarantee fresh payload."
+}

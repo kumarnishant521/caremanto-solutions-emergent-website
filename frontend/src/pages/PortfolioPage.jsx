@@ -5,7 +5,8 @@ import { thumbUrl } from "../lib/thumb";
 import { useGallery, invalidateGalleryCache } from "../lib/useGallery";
 import Head from "../components/Head";
 import ConsultButton from "../components/ConsultButton";
-import { altFor, keywordsFor, ANCHORS } from "../lib/seo";
+import { altFor, ANCHORS } from "../lib/seo";
+import { useSEOFor } from "../lib/useSiteSettings";
 
 /**
  * Dedicated Portfolio page — routed at `/portfolio`.
@@ -33,6 +34,7 @@ export default function PortfolioPage() {
   });
 
   const { photos, loading } = useGallery();
+  const portfolioSEO = useSEOFor({ sectionKey: "portfolio" });
 
   // Also refresh when we return to this page after navigating away
   // (e.g. admin toggles a photo then hits Portfolio in the nav).
@@ -61,10 +63,11 @@ export default function PortfolioPage() {
       className="pt-32 pb-24 md:pt-40 md:pb-32 bg-[var(--bg-0)] min-h-screen"
     >
       <Head
-        title="Curated Interior Design Portfolio · Best Interior Designers in Mumbai | CAREMANTO SOLUTIONS"
-        description="A curated portfolio of luxury interior designs by Caremanto Solutions — best interior designers in Mumbai. Residential interior architecture, turnkey commercial fit-outs, heritage restoration and renovation across India. Free interior consultation."
+        title={portfolioSEO.title}
+        description={portfolioSEO.description}
         canonical="https://caremanto.in/portfolio"
-        keywords={keywordsFor()}
+        keywords={portfolioSEO.keywords}
+        image={portfolioSEO.image}
       />
 
       <div className="max-w-[1500px] mx-auto px-6 md:px-14">
