@@ -47,7 +47,36 @@ Admin (cookie-auth): `POST/PUT/DELETE /admin/projects[/{id}]`, `POST/PUT/DELETE 
 - **Legacy `/api/uploads/…`** static route preserved for pre-existing files.
 - **Compatibility alias** `POST /api/upload` → `/admin/upload` for any client still on a stale bundle.
 
-### Iteration 10 (2026-07-18) — Editorial Asymmetric Bento
+### Iteration 11 (2026-07-18) — Grid Restore + SEO / Security / Performance Foundation
+**A. Grid restore (P0 hotfix):**
+- Reverted the asymmetric bento (user disliked the letterbox padding) → back to the clean CSS multi-column masonry (`columns-1 sm:columns-2 lg:columns-3`) matching the original site look.
+- `object-fit: cover` + `object-position: 50% 100%` — photos fill their cells with no random padding, and if any crop is needed it comes off the TOP so the studio watermark at the bottom stays visible.
+- **Blank-tile race-condition fix** in `SmartImage`: cached images that completed loading before React attached `onLoad` used to stay at opacity 0 forever. Now `useEffect` checks `img.complete && naturalWidth > 0` on mount and syncs state.
+
+**B. Performance (Rules A + B):**
+- **GZipMiddleware** on FastAPI — verified `/api/gallery` compressed 147 KB → 20 KB (86 %).
+- Long-lived `Cache-Control: public, max-age=31536000, immutable` on `/api/files/*` origin (Cloudflare edge policy in production may need a Cache Rule to preserve this).
+- Hover prefetch (iteration 9) + SmartImage race fix (iteration 11) mean folder modals open effectively instantly on second visit.
+- Layout-shift guard already in place: every `SmartImage` locks its container to a CSS `aspect-ratio`.
+
+**C. SEO (Rule C):**
+- **JSON-LD** structured data injected into `/public/index.html` as `@graph` — LocalBusiness + ProfessionalService + Organization + WebSite. Includes name, phone, email, address (Mumbai, 400078), areaServed (Mumbai + India), hasOfferCatalog with all 7 studio services.
+- **Per-route SEO**: new `Head` component (dep-free) sets `<title>`, `<meta description>`, `<link rel=canonical>`, OG title/description/image, and page-specific `keywords`. Applied to Home, Works, Gallery, Studio, Contact, Approach — each with unique keyword-rich copy.
+- **Keyword-rich alt tags** on every portfolio thumbnail (Home / Works / Gallery).
+- **Static `robots.txt` and `sitemap.xml`** at `/public/` root — sitemap enumerates every deep folder (5 residential + 3 commercial + restoration).
+- **Draft services copy** at `/app/memory/SEO_COPY_DRAFT.md` — awaits your review before we swap it into Divisions.jsx.
+
+**D. Security (Rule D):**
+- **Security headers middleware** on every response: X-Frame-Options DENY, X-Content-Type-Options nosniff, Referrer-Policy strict-origin-when-cross-origin, Permissions-Policy (camera/mic/geo/payment all denied), Strict-Transport-Security (2-year HSTS with preload).
+- **CSP in report-only mode** — strict policy shipped as observation-only so we can catch violations from Google Drive / Pexels / Emergent Object Storage before enforcement.
+- **XSS sanitization** via `bleach.clean(strip=True)` on every free-text lead / marquee / nav field. Verified with `<script>alert(1)</script>Bob` → stored as `alert(1)Bob` and `<img onerror=alert(2)>Hi` → stored as `Hi`.
+- **SQL injection**: not applicable — Motor (async MongoDB) uses BSON-parameterized ops everywhere; no raw query string concatenation.
+- **HTTPS/TLS**: enforced by Emergent platform ingress + long HSTS header.
+- **Regression pytest** at `/app/backend/tests/test_iteration11_security.py` — permanent guard on all 13 security + performance assertions.
+
+**Testing**: iteration_11 100% pass (13/13 backend pytest + 100% frontend on validated checks).
+
+### Iteration 10 (2026-07-18) — Editorial Asymmetric Bento *(reverted in iteration 11 — user preferred original 3-col layout)*
 - **Complete rebuild of `HomeGallery`**: rigid uniform-square grid retired. Now a true CSS-Grid masonry with 12 desktop / 8 tablet / 4 mobile columns, `grid-auto-rows: 8px`, `grid-auto-flow: dense`, and per-tile row-span computed on load via ResizeObserver. Verified 5 distinct column-spans (3, 4, 5, 6, 7) render across 12 tiles — genuine editorial rhythm regardless of source photo ratios.
 - **Zero-cropping guarantee**: `.bento-img` uses `object-fit: contain`, `height: auto`, natural aspect-ratio preserved from the source file. No zoom, no chop.
 - **16-px watermark safety padding** on every `.bento-inner` — mathematically ensures the studio hologram/watermark at the bottom edge of each photograph is always fully visible.
