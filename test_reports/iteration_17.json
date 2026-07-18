@@ -1,0 +1,32 @@
+{
+  "summary": "Iteration 17 RETEST — frontend-only, targeted regression retest of the AdminFolderManager.load() empty-payload guard applied after iteration 16. PRIMARY REGRESSION FIXED ✅: Opening the Hall & Dining folder chip (156 photos) then rapid-clicking the same photo's Portfolio button 3× in succession — the drawer body remains populated at 156 tiles throughout (empty_state=False, count=156 after every click). Optimistic caption flipped ☆→★ on click #1 as expected. Pagination regression checks ALL PASS: Works (Hall & Dining 156) shows 'Page 01 of 11', Prev disabled on page 1, Next click transitions to 'Page 02 of 11' with instant scroll-to-top (466→0), Prev then enabled. Same pattern verified on Gallery (gallery-pagination-*): Page 01→02 of 11, scroll 466→0. Restoration & Renovations flat (4 photos) correctly renders NO pagination component. /portfolio page loads with 21 curated (featured_portfolio) images. The iteration-16 drawer-collapse bug is resolved.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Admin FolderDrawer Portfolio toggle · rapid clicks",
+        "issue": "Only 1 of 3 rapid clicks fires a PUT because togglePortfolio sets busy=true and the button uses disabled={busy}. Clicks #2 and #3 arrive while the first PUT+load() is still in-flight and are silently swallowed (no visual feedback that the click was blocked). Not a regression (behavior was the same in iteration 16), and arguably correct as it prevents double-toggle race conditions — but if the studio wants truly 'consecutive' toggles they need to either (a) drop the disabled guard for portfolio-only, or (b) queue clicks. The drawer-collapse guard itself works perfectly.",
+        "affected_selectors": ["[data-testid^=folder-drawer-portfolio-]"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Optional (nice-to-have, NOT a regression): consider removing the `disabled={busy}` guard from the Portfolio toggle button (or scoping busy to per-photo) so the studio can rapid-fire toggles. Currently the drawer stays healthy but subsequent clicks are dropped while the previous PUT is in flight."
+  ],
+  "critical_code_review_comments": [
+    "AdminFolderManager.load() empty-payload guard (lines 45-49) is correct: only replaces `photos` when the response is a non-empty array — otherwise keeps the last-good snapshot. This is the right defensive pattern for a transient cache-invalidation window.",
+    "FolderDrawer.togglePortfolio optimistic patch layer is well-designed — merges over parent's allPhotos via useMemo so the caption never goes stale after load() refresh.",
+    "Pagination component correctly returns null when totalPages<2 — confirmed in Restoration flat (4 photos)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only iteration)", "frontend": "100% on the retest scope (drawer-collapse fix + pagination regression checks + portfolio filter)"},
+  "test_credentials": "Passless admin — session persisted from previous iteration.",
+  "seed_data_creation": "Photo 0ab64f1c-5fa1-42b9-8947-d194ba3349ac (Hall & Dining, first tile) flipped once during retest → featured_portfolio=true. If cleanup desired, admin can toggle it off from the drawer.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "The iteration-16 medium regression (drawer body collapsing to empty on toggle) is fully fixed by the load() empty-payload guard in AdminFolderManager.jsx. All pagination surfaces (works-child, gallery, restoration flat) verified. Note that rapid consecutive clicks on the portfolio button only fire the first PUT because of the busy-state disable guard — not a bug, but worth noting for future tests.",
+  "rca of the issue": "N/A — regression is fixed. Root cause was AdminFolderManager.load() setting photos=[] on any transient empty /gallery response, which caused FolderDrawer's inFolder useMemo to evaluate to [] and render 'No photographs'. Fix: guard load() so an empty payload preserves the previous non-empty snapshot instead of wiping it."
+}

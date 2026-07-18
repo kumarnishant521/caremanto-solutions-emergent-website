@@ -36,7 +36,18 @@ export default function AdminFolderManager() {
 
   const load = async () => {
     setLoading(true);
-    try { const r = await api.get("/gallery"); setPhotos(r.data || []); }
+    try {
+      const r = await api.get("/gallery");
+      // Guard: a transient empty payload (cache-invalidation race after a
+      // toggle) would otherwise wipe `photos`, which unmounts any open
+      // FolderDrawer body mid-interaction. Only replace when we got a
+      // non-empty array — keep the last-good snapshot otherwise.
+      if (Array.isArray(r.data) && r.data.length > 0) {
+        setPhotos(r.data);
+      } else if (Array.isArray(r.data) && r.data.length === 0) {
+        setPhotos((prev) => (prev && prev.length ? prev : []));
+      }
+    }
     finally { setLoading(false); }
   };
   useEffect(() => { load(); }, []);
