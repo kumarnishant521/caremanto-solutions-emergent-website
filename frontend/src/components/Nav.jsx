@@ -7,10 +7,46 @@ import CMLogo from "./CMLogo";
 
 /**
  * Header + primary navigation
+ *
  * Order per spec:
- *   HOME · PORTFOLIO · INTERIOR PROJECTS ▾ · SERVICES – RESTORATION & RENOVATION ▾ · PROCESS · ABOUT US
+ *   HOME · PORTFOLIO · INTERIOR PROJECTS ▾ · SERVICES ▾ · PROCESS · ABOUT US
  * Consult CTA retained on the right (lead capture).
+ *
+ * ROUTING CONTRACT (iteration 14 — fixes user report):
+ *
+ * Portfolio nav → `/works` (Residential default) with query string cleared
+ *   so the click always shows the full curated portfolio, never a stale
+ *   category from a prior visit.
+ *
+ * Interior Projects dropdown items → each ROUTES to the exact category
+ *   the label implies:
+ *     Residential  → /works?cat=RESIDENTIAL
+ *     Commercial   → /works?cat=COMMERCIAL
+ *     Retail Design→ /works?cat=COMMERCIAL&sub=Retail Design
+ *     Hospitality  → /works?cat=COMMERCIAL&sub=Hospitality
+ *
+ * Services dropdown items:
+ *   • Any item whose label contains "Restoration" or "Renovation" routes to
+ *     /works?cat=RESTORATION%20%26%20RENOVATIONS (the gallery).
+ *   • Every other service (Sound Proofing, Water-Proofing, Modernisation,
+ *     …) opens the Consultation modal — no separate page, straight to lead
+ *     capture.
  */
+
+// Map Interior Projects dropdown labels → the exact ({cat, sub}) tuple the
+// /works page filters on. Kept exhaustive so the router never falls back to
+// the "unknown category → residential" behaviour that produced the bug.
+const INTERIOR_ROUTE = {
+  "Residential":   { cat: "RESIDENTIAL",              sub: null },
+  "Commercial":    { cat: "COMMERCIAL",               sub: null },
+  "Retail Design": { cat: "COMMERCIAL",               sub: "Retail Design" },
+  "Hospitality":   { cat: "COMMERCIAL",               sub: "Hospitality" },
+};
+
+// Restoration-related Services labels land in the restoration gallery;
+// every other Services label opens the consultation form.
+const isRestorationService = (label) =>
+  /restoration|renovation/i.test(label || "");
 
 // Brand mark — if user has dropped /public/caremanto-logo.(svg|png) it'll
 // be used; else falls back to CMLogo placeholder.
@@ -68,11 +104,46 @@ export default function Nav() {
   const overHero = isHome && !scrolled;
 
   const goWorks = (cat, sub) => {
-    const params = new URLSearchParams({ category: cat });
-    if (sub) params.set("sub", sub);
+    // WorksPage reads `?cat=` + `?folder=`. Values MUST match the uppercase
+    // constants declared inside WorksPage.jsx.
+    const params = new URLSearchParams({ cat });
+    if (sub) params.set("folder", sub);
     nav(`/works?${params.toString()}`);
+    // Scroll to top so the visitor lands on the fresh page, not wherever
+    // they were before.
+    window.scrollTo({ top: 0, behavior: "instant" });
     setOpen(null);
     setMobileOpen(false);
+  };
+
+  // Portfolio nav — clears any prior category filter and navigates to the
+  // full editorial portfolio (defaults to Residential inside WorksPage).
+  const goPortfolio = () => {
+    nav("/works");
+    window.scrollTo({ top: 0, behavior: "instant" });
+    setOpen(null);
+    setMobileOpen(false);
+  };
+
+  // Interior Projects dropdown click — resolves the label to the exact
+  // ({cat, sub}) tuple the /works page expects; falls back to residential
+  // if the label is unknown (safety net, should never trigger).
+  const goInteriorItem = (label) => {
+    const route = INTERIOR_ROUTE[label];
+    if (route) goWorks(route.cat, route.sub);
+    else       goWorks("RESIDENTIAL");
+  };
+
+  // Services dropdown click — restoration items → gallery, everything
+  // else → consultation modal.
+  const goServiceItem = (label) => {
+    if (isRestorationService(label)) {
+      goWorks("RESTORATION & RENOVATIONS");
+    } else {
+      setOpen(null);
+      setMobileOpen(false);
+      openConsult();
+    }
   };
 
   const active = (path) => loc.pathname === path;
@@ -101,7 +172,14 @@ export default function Nav() {
         {/* Desktop nav */}
         <nav className="hidden xl:flex items-center gap-7 2xl:gap-9">
           <Link to="/" data-testid="nav-home" className={`nav-link nav-label ${active("/") ? "text-[var(--gold)]" : ""}`}>Home</Link>
-          <Link to="/works" data-testid="nav-portfolio" className={`nav-link nav-label ${active("/works") ? "text-[var(--gold)]" : ""}`}>Portfolio</Link>
+          <button
+            type="button"
+            onClick={goPortfolio}
+            data-testid="nav-portfolio"
+            className={`nav-link nav-label ${active("/works") ? "text-[var(--gold)]" : ""}`}
+          >
+            Portfolio
+          </button>
 
           {/* Interior Projects */}
           <div
@@ -112,7 +190,7 @@ export default function Nav() {
             <button
               data-testid="nav-dropdown-interiors"
               data-open={open === "interiors"}
-              onClick={() => goWorks("interiors")}
+              onClick={() => goWorks("RESIDENTIAL")}
               className="nav-link nav-label flex items-center gap-2"
             >
               Interior Projects
@@ -124,7 +202,7 @@ export default function Nav() {
                 <PanelItem
                   key={item}
                   data-testid={`dropdown-item-interiors-${i}`}
-                  onClick={() => goWorks("interiors", item)}
+                  onClick={() => goInteriorItem(item)}
                 >
                   {item}
                 </PanelItem>
@@ -141,7 +219,7 @@ export default function Nav() {
             <button
               data-testid="nav-dropdown-restoration"
               data-open={open === "restoration"}
-              onClick={() => goWorks("restoration")}
+              onClick={() => goWorks("RESTORATION & RENOVATIONS")}
               className="nav-link nav-label flex items-center gap-2 whitespace-nowrap"
             >
               {RESTORATION_SHORT}
@@ -153,7 +231,7 @@ export default function Nav() {
                 <PanelItem
                   key={item}
                   data-testid={`dropdown-item-restoration-${i}`}
-                  onClick={() => goWorks("restoration", item)}
+                  onClick={() => goServiceItem(item)}
                 >
                   {item}
                 </PanelItem>
@@ -198,11 +276,18 @@ export default function Nav() {
           >
             <div className="px-6 py-8 space-y-6">
               <Link to="/" data-testid="mobile-home" className="nav-label block text-[13px]">HOME</Link>
-              <Link to="/works" data-testid="mobile-portfolio" className="nav-label block text-[13px]">PORTFOLIO</Link>
+              <button
+                type="button"
+                onClick={goPortfolio}
+                data-testid="mobile-portfolio"
+                className="nav-label block text-[13px] text-left"
+              >
+                PORTFOLIO
+              </button>
 
               <div>
                 <button
-                  onClick={() => goWorks("interiors")}
+                  onClick={() => goWorks("RESIDENTIAL")}
                   data-testid="mobile-cat-interiors"
                   className="nav-label text-[var(--gold)] text-[11px] mb-3 block"
                 >
@@ -213,7 +298,7 @@ export default function Nav() {
                     <button
                       key={it}
                       data-testid={`mobile-item-interiors-${i}`}
-                      onClick={() => goWorks("interiors", it)}
+                      onClick={() => goInteriorItem(it)}
                       className="text-left uppercase text-[var(--ink)]/85 hover:text-[var(--gold)] transition py-1
                                  text-[12px] tracking-[0.18em]"
                       style={{ fontFamily: "'Manrope', 'Outfit', sans-serif", fontWeight: 400 }}
@@ -226,7 +311,7 @@ export default function Nav() {
 
               <div>
                 <button
-                  onClick={() => goWorks("restoration")}
+                  onClick={() => goWorks("RESTORATION & RENOVATIONS")}
                   data-testid="mobile-cat-restoration"
                   className="nav-label text-[var(--gold)] text-[11px] mb-3 block"
                 >
@@ -237,7 +322,7 @@ export default function Nav() {
                     <button
                       key={it}
                       data-testid={`mobile-item-restoration-${i}`}
-                      onClick={() => goWorks("restoration", it)}
+                      onClick={() => goServiceItem(it)}
                       className="text-left uppercase text-[var(--ink)]/85 hover:text-[var(--gold)] transition py-1
                                  text-[12px] tracking-[0.18em]"
                       style={{ fontFamily: "'Manrope', 'Outfit', sans-serif", fontWeight: 400 }}

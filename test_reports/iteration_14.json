@@ -1,0 +1,22 @@
+{
+  "summary": "Iteration 14 Nav routing fix VERIFIED — all 15 requested flows work correctly. Portfolio, Interior dropdown items (Residential/Commercial/Retail Design/Hospitality), Services dropdown restoration items, non-restoration Services items opening Consultation modal, parent button clicks, and regression pages all pass.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Minor: WorksPage.setCategory drops the ?cat= param when category is RESIDENTIAL, so URL becomes /works instead of /works?cat=RESIDENTIAL when switching to Residential from within the page. Nav still writes ?cat=RESIDENTIAL explicitly which works fine; noting this as harmless URL asymmetry only.",
+    "Query string uses `+` for spaces (URLSearchParams default) rather than `%20`. Both are RFC-compliant and WorksPage parses both correctly, but the review_request examples used `%20`. No fix required."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (not requested)", "frontend": "100% (15/15 flows)"},
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Nav routing verified via Playwright against public preview URL. Portfolio → /works, Interior items → /works?cat=RESIDENTIAL|COMMERCIAL(+folder=Retail Design|Hospitality), Services restoration/renovation items → /works?cat=RESTORATION+%26+RENOVATIONS (URL-encoded), Services non-restoration items (Sound Proofing, Water-Proofing, Modernisation) correctly open [data-testid=consultation-modal] without URL change. Parent button clicks on Interior/Services dropdowns route to their default category. Regression pages / /contact /studio /approach all load. No issues to report.",
+  "rca of the issue": "Fix from iteration 14 works as designed — Nav now writes ?cat=<UPPERCASE> (matching WorksPage read on line 49) and ?folder=<Sub> (line 50). INTERIOR_ROUTE lookup guarantees Commercial/Retail Design/Hospitality no longer fall through to Residential. isRestorationService regex correctly gates Services items into gallery vs modal."
+}
