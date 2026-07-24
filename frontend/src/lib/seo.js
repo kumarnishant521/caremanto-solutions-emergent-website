@@ -219,6 +219,12 @@ const ALT_BY_CATEGORY = {
 
 export function altFor(photo, index = 0) {
   if (!photo) return `Caremanto Solutions luxury interior photography — Mumbai`;
+  // 1) Prefer the admin-editable / auto-generated `alt_text` stored on the
+  //    photo record (see backend server.py :: generate_alt_text). This lets
+  //    the studio override any auto-derived string per-photo.
+  if (photo.alt_text && typeof photo.alt_text === "string" && photo.alt_text.trim()) {
+    return photo.alt_text.trim();
+  }
   const folder = photo.subcategory && ALT_BY_FOLDER[photo.subcategory];
   const category = ALT_BY_CATEGORY[photo.category] || "Luxury interior design";
   const title = photo.title || "";

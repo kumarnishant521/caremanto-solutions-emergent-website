@@ -5,6 +5,7 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 import os
+import re
 import uuid
 import logging
 import bcrypt
@@ -139,6 +140,10 @@ class GalleryPhotoIn(BaseModel):
     featured_home: bool = False             # scrolling home bento
     featured_portfolio: bool = False        # /works portfolio page
     is_cover: bool = False                  # cover card for its (category, subcategory)
+    # Admin-editable SEO alt text. Empty/None → auto-generated on create/update
+    # by generate_alt_text() below. NEVER overwritten if the admin has
+    # populated it explicitly (see create_photo / update_photo).
+    alt_text: Optional[str] = ""
 
 class GalleryPhoto(GalleryPhotoIn):
     id: str
@@ -450,14 +455,40 @@ async def set_folder_order(body: FolderOrderIn, _admin=Depends(get_current_admin
 async def create_photo(body: GalleryPhotoIn, _admin=Depends(get_current_admin)):
     now = datetime.now(timezone.utc).isoformat()
     doc = {**body.model_dump(), "id": str(uuid.uuid4()), "created_at": now}
+    # Auto-generate SEO ALT text if the admin didn't supply one. Manual
+    # override is always honoured — we NEVER overwrite a non-empty value.
+    if not (doc.get("alt_text") or "").strip():
+        doc["alt_text"] = generate_alt_text(
+            filename=_photo_filename_from_url(doc.get("image", "")),
+            category=doc.get("category", ""),
+            subcategory=doc.get("subcategory", ""),
+            title=doc.get("title", ""),
+        )
     await db.gallery.insert_one(doc)
     doc.pop("_id", None)
     return doc
 
 @api.put("/admin/gallery/{pid}", response_model=GalleryPhoto)
 async def update_photo(pid: str, body: GalleryPhotoIn, _admin=Depends(get_current_admin)):
+    payload = body.model_dump()
+    # Regenerate ALT text only when: (a) the admin sent an empty string
+    # (which we read as "reset / regenerate"), AND (b) the current stored
+    # record also has an empty value — this avoids clobbering a manual
+    # override on a routine edit that didn't touch the alt field.
+    if not (payload.get("alt_text") or "").strip():
+        existing = await db.gallery.find_one({"id": pid}, {"alt_text": 1, "_id": 0}) or {}
+        if not (existing.get("alt_text") or "").strip():
+            payload["alt_text"] = generate_alt_text(
+                filename=_photo_filename_from_url(payload.get("image", "")),
+                category=payload.get("category", ""),
+                subcategory=payload.get("subcategory", ""),
+                title=payload.get("title", ""),
+            )
+        else:
+            # Preserve the existing manual override rather than erasing it.
+            payload["alt_text"] = existing["alt_text"]
     res = await db.gallery.find_one_and_update(
-        {"id": pid}, {"$set": body.model_dump()},
+        {"id": pid}, {"$set": payload},
         return_document=True, projection={"_id": 0},
     )
     if not res:
@@ -867,7 +898,134 @@ async def update_seo_settings(body: SEOUpdateIn, _admin=Depends(get_current_admi
     return value
 
 
-# ------------------------------------------------------------------ uploads
+# ------------------------------------------------------------------ ALT-text
+# Auto-generate SEO-optimized ALT text for admin-uploaded media.
+# Format:  "CAREMANTO SOLUTIONS — <Category descriptor> <Folder descriptor>
+#          <Title from filename or manual title> Interior Design"
+#
+# Called from POST /admin/gallery and PUT /admin/gallery/{id}, but ONLY
+# when the incoming record has no explicit `alt_text` — the admin's manual
+# override is always honoured.
+
+_ALT_BRAND = "CAREMANTO SOLUTIONS"
+
+_ALT_CATEGORY_MAP = {
+    "RESIDENTIAL":               "Luxury Residential",
+    "COMMERCIAL":                "Turnkey Commercial",
+    "RESTORATION & RENOVATIONS": "Heritage Restoration & Renovation",
+    # Legacy short-code forms — same taxonomy, capitalized differently.
+    "interiors":                 "Luxury Interior",
+    "restoration":               "Heritage Restoration & Renovation",
+}
+
+_ALT_FOLDER_HINTS = {
+    "hall & dining":                "Hall & Dining",
+    "bedrooms":                    "Bedroom",
+    "bathrooms":                   "Bathroom",
+    "kitchens":                    "Modular Kitchen",
+    "balcony / dry area / temple": "Balcony & Utility",
+    "office spaces":               "Office",
+    "retail design":               "Retail Store",
+    "hospitality":                 "Boutique Hospitality",
+}
+
+_ALT_STOP_WORDS = {
+    "img", "image", "photo", "picture", "dsc", "final", "edit", "edited",
+    "copy", "web", "hi", "res", "full", "raw", "jpeg", "jpg", "png", "webp",
+    "avif", "heic", "mov", "mp4", "the", "a", "an", "of", "and", "or",
+}
+
+
+def _tokens_from_filename(filename: str) -> list[str]:
+    """Extract meaningful, human-readable tokens from an uploaded filename.
+    Splits on separators, drops stop-words, strips digits, title-cases."""
+    if not filename:
+        return []
+    stem = re.sub(r"\.[a-zA-Z0-9]+$", "", filename)         # drop extension
+    parts = re.split(r"[\s_\-\.]+", stem)                    # split separators
+    out = []
+    seen = set()
+    for p in parts:
+        # Split camel-case boundaries too (bedroomHall → bedroom Hall).
+        for sub in re.findall(r"[A-Z]?[a-z]+|[A-Z]+(?=[A-Z]|$)|\d+", p):
+            s = sub.strip().lower()
+            if not s or s in _ALT_STOP_WORDS:
+                continue
+            if s.isdigit():
+                continue
+            if s in seen:
+                continue
+            seen.add(s)
+            out.append(s.title())
+    return out[:4]                                            # cap noise
+
+
+def generate_alt_text(
+    *,
+    filename: str = "",
+    category: str = "",
+    subcategory: str = "",
+    title: str = "",
+) -> str:
+    """Compose an SEO-ready ALT string. Never returns empty — falls back to
+    the studio brand + category if nothing else is knowable."""
+    cat_hint    = _ALT_CATEGORY_MAP.get((category or "").upper(), None) \
+                  or _ALT_CATEGORY_MAP.get(category or "", "Luxury Interior")
+    folder_hint = _ALT_FOLDER_HINTS.get((subcategory or "").lower().strip(), "") \
+                  or (subcategory.title() if subcategory else "")
+
+    body = " ".join(t for t in [cat_hint, folder_hint] if t).strip()
+
+    # Prefer a manual title if provided; else extract tokens from filename.
+    detail = (title or "").strip()
+    if not detail:
+        toks = _tokens_from_filename(filename)
+        # Deduplicate against the folder/cat hints we already have.
+        already = set(w.lower() for w in re.split(r"\s+", body) if w)
+        detail = " ".join(t for t in toks if t.lower() not in already)
+
+    parts = [_ALT_BRAND, body]
+    if detail:
+        parts.append(detail)
+    parts.append("Interior Design")
+    # Compact whitespace and cap length (Google truncates ~125 chars).
+    alt = re.sub(r"\s+", " ", " — ".join(parts[:2]) + " " + " ".join(parts[2:])).strip()
+    return alt[:200]
+
+
+def _photo_filename_from_url(url: str) -> str:
+    """Derive a filename from a stored photo URL (best-effort)."""
+    if not url:
+        return ""
+    tail = url.rsplit("/", 1)[-1]
+    tail = tail.split("?", 1)[0]
+    # For UUID-only filenames coming out of /admin/upload we still get a
+    # descriptor from the extension; that's fine — the generator gracefully
+    # degrades to category-only ALT text in that case.
+    return tail
+
+
+# ------------------------------------------------------------------ /admin/gallery/alt-preview
+class AltPreviewIn(BaseModel):
+    filename: Optional[str] = ""
+    category: Optional[str] = ""
+    subcategory: Optional[str] = ""
+    title: Optional[str] = ""
+
+
+@api.post("/admin/gallery/alt-preview")
+async def preview_alt_text(body: AltPreviewIn, _admin=Depends(get_current_admin)):
+    """Utility endpoint for the admin UI — computes the alt string that
+    WOULD be generated for a given upload without persisting anything."""
+    return {"alt_text": generate_alt_text(
+        filename=body.filename or "",
+        category=body.category or "",
+        subcategory=body.subcategory or "",
+        title=body.title or "",
+    )}
+
+
+
 UPLOAD_DIR = ROOT_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
 ALLOWED_MIME = {
@@ -991,6 +1149,19 @@ async def upload_image(
             "url": url, "filename": fname, "size": total,
             "content_type": file.content_type, "backend": backend,
         }
+        # Include a suggested SEO ALT string derived from the original
+        # filename — the admin UI can prefill this in the metadata form.
+        # No category/subcategory is available here yet; those are added
+        # when the admin binds the upload to a gallery record via
+        # POST /admin/gallery, at which point the alt is regenerated
+        # with the full context. Empty original name → empty suggestion.
+        if not (file.content_type or "").startswith("video/"):
+            response["alt_suggestion"] = generate_alt_text(
+                filename=(file.filename or ""),
+                category="",
+                subcategory="",
+                title="",
+            )
         if (file.content_type or "").startswith("video/"):
             # The H.265 sibling lives at a predictable path; the frontend can
             # try it as a <source> and fall back to the primary URL if the

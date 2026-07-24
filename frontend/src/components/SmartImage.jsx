@@ -54,6 +54,16 @@ export default function SmartImage({
       className={`relative overflow-hidden bg-[var(--bg-1)] ${className}`}
       style={{ aspectRatio: aspect }}
     >
+      {/* Blur-up skeleton — a soft pulsing neutral tone that stays visible
+          until the image reports `onLoad`. Prevents the "broken card"
+          glitch that happens when a cover URL 404s or takes a moment to
+          resolve from cold-start object storage. */}
+      {!loaded && !failed && finalSrc && (
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 smartimg-skeleton"
+        />
+      )}
       {!failed && finalSrc ? (
         <img
           ref={imgRef}

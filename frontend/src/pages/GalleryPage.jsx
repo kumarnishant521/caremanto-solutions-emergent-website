@@ -1,14 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { toast } from "sonner";
 import { Rise } from "../components/Rise";
-import { sharePhoto } from "../lib/share";
 import SmartImage from "../components/SmartImage";
 import { thumbUrl } from "../lib/thumb";
 import { useGallery, prefetchImageUrls } from "../lib/useGallery";
 import Head from "../components/Head";
 import Pagination from "../components/Pagination";
+import Lightbox from "../components/Lightbox";
 import { altFor } from "../lib/seo";
 import { useSEOFor } from "../lib/useSiteSettings";
 
@@ -38,7 +37,11 @@ export default function GalleryPage() {
   const openedFolder = params.get("folder") || "";
 
   const { photos, loading } = useGallery();
+  // Lightbox carousel state — { photos, index } so the viewer can swipe.
   const [lightbox, setLightbox] = useState(null);
+  const openLightbox = (_ph, idx, list) => setLightbox({ photos: list, index: idx });
+  const closeLightbox = () => setLightbox(null);
+  const setLightboxIndex = (i) => setLightbox((lb) => (lb ? { ...lb, index: i } : lb));
 
   const sectionKey = category === COMMERCIAL ? "commercial"
                    : category === RESTORATION ? "restoration"
@@ -169,7 +172,7 @@ export default function GalleryPage() {
               </div>
             </div>
           ) : (
-            <PhotoGrid photos={photosByCategory} onOpen={setLightbox} />
+            <PhotoGrid photos={photosByCategory} onOpen={openLightbox} />
           )
         ) : folders.length > 0 ? (
           <FolderCards
@@ -219,7 +222,7 @@ export default function GalleryPage() {
                     No photographs in this folder yet.
                   </div>
                 ) : (
-                  <PhotoGrid photos={folderPhotos} onOpen={setLightbox} />
+                  <PhotoGrid photos={folderPhotos} onOpen={openLightbox} />
                 )}
               </div>
             </div>
@@ -337,12 +340,32 @@ function PhotoGrid({ photos, onOpen }) {
   const PAGE_SIZE = 15;
   const [page, setPage] = useState(1);
   const totalPages = Math.max(1, Math.ceil(photos.length / PAGE_SIZE));
+  const gridRef = useRef(null);
   useEffect(() => { setPage(1); }, [photos]);
   const start = (page - 1) * PAGE_SIZE;
   const paged = photos.slice(start, start + PAGE_SIZE);
+
+  // Asset-preloading engine — warm Page N-1 and Page N+1 in the background
+  // so paginating feels instant.
+  useEffect(() => {
+    if (photos.length <= PAGE_SIZE) return;
+    const neighbourUrls = [];
+    if (page > 1) {
+      const prevStart = (page - 2) * PAGE_SIZE;
+      neighbourUrls.push(...photos.slice(prevStart, prevStart + PAGE_SIZE).map((p) => thumbUrl(p.image, 900)));
+    }
+    if (page < totalPages) {
+      const nextStart = page * PAGE_SIZE;
+      neighbourUrls.push(...photos.slice(nextStart, nextStart + PAGE_SIZE).map((p) => thumbUrl(p.image, 900)));
+    }
+    prefetchImageUrls(neighbourUrls, 24);
+  }, [page, photos, totalPages]);
+
   const changePage = (n) => {
     setPage(n);
-    window.scrollTo({ top: 0, behavior: "instant" });
+    requestAnimationFrame(() => {
+      gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   };
 
   if (!photos.length) {
@@ -355,6 +378,7 @@ function PhotoGrid({ photos, onOpen }) {
   return (
     <>
       <motion.div
+        ref={gridRef}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.4 }}
@@ -365,7 +389,7 @@ function PhotoGrid({ photos, onOpen }) {
           <div key={ph.id} className="portfolio-item-card">
             <button
               data-testid={`gallery-item-${i}`}
-              onClick={() => onOpen(ph)}
+              onClick={() => onOpen(ph, i, paged)}
               className="w-full text-left proj-card block group relative"
             >
               <img
@@ -388,7 +412,6 @@ function PhotoGrid({ photos, onOpen }) {
                     </div>
                   )}
                 </div>
-                <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
               </div>
             </button>
           </div>

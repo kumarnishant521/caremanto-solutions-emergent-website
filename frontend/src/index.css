@@ -363,6 +363,26 @@ a, button, [role="button"] { cursor: pointer; }
     background: var(--bg-2);         /* subtle canvas while decoding */
 }
 
+/* Blur-up skeleton for `<SmartImage>` — used on gallery folder cover cards
+   so cold-start URL resolution never shows a broken/blank card. Matches
+   the palette + shimmer of the existing `.portfolio-card-skeleton`. */
+.smartimg-skeleton {
+    background:
+      linear-gradient(90deg,
+        rgba(255,255,255,0.02) 0%,
+        rgba(255,255,255,0.08) 40%,
+        rgba(255,255,255,0.02) 80%
+      ),
+      var(--bg-2);
+    background-size: 220% 100%;
+    animation: cm-shimmer 1.6s ease-in-out infinite;
+    filter: blur(6px);
+    transform: scale(1.02);   /* hides shimmer feather at the crop edge */
+}
+@media (prefers-reduced-motion: reduce) {
+    .smartimg-skeleton { animation: none; }
+}
+
 /* Skeleton shimmer — reserved before image decode so cold-starts never
    collapse the masonry into blank columns. Matches the site palette so
    the transition to the real image is invisible. */

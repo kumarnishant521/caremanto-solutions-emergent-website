@@ -1,0 +1,46 @@
+{
+  "summary": "Iteration 22 (Lightbox overhaul + pagination + auto ALT). Backend ALT generator + all endpoints PASS (9/9 pytest). WorksPage lightbox PASS. CRITICAL BUG on GalleryPage: the new shared Lightbox component is imported but never rendered — an old inline lightbox with the 'SHARE AS PIN ↗' pill and the wrong testids is still active, and it displays no image because it reads lightbox.image while state now holds {photos, index}.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "GalleryPage.jsx (lightbox block, lines ~234-272)",
+        "issue": "Old inline lightbox is still rendered instead of the new shared <Lightbox testIdPrefix='gallery'> component. Consequences: (a) 'SHARE AS PIN ↗' gold pill is still visible in the DOM — must be removed per spec; (b) missing testids gallery-lightbox-prev / gallery-lightbox-next / gallery-lightbox-counter / gallery-lightbox-img / gallery-lightbox-share / gallery-lightbox-close; existing testids are the legacy 'lightbox-close' / 'lightbox-share' (no 'gallery-' prefix); (c) no prev/next arrows, no ArrowLeft/ArrowRight/Escape keyboard support, no swipe navigation; (d) image never renders because openLightbox now sets state={photos,index} but the inline JSX reads lightbox.image / lightbox.title which are undefined → the modal opens as a dark backdrop with only the SHARE AS PIN pill visible (see screenshot).",
+        "selector": "[data-testid='gallery-lightbox']",
+        "priority": "CRITICAL"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration22_alt.py",
+    "/app/test_reports/pytest/iter22.xml"
+  ],
+  "action_items": [
+    "In /app/frontend/src/pages/GalleryPage.jsx, DELETE the entire inline lightbox block (roughly lines 233-272 — from `{/* Lightbox */}` through the closing `</div>` before `</main>`), and REPLACE it with a render of the shared component: `<Lightbox photos={lightbox?.photos || []} index={lightbox?.index} onIndex={setLightboxIndex} onClose={closeLightbox} testIdPrefix='gallery' />`. The state helpers openLightbox/closeLightbox/setLightboxIndex are already defined correctly at lines 42-44 and the import already exists at line 10.",
+    "After fix, re-run the frontend test to confirm testids gallery-lightbox-prev/next/counter/img/share/close all render and the SHARE AS PIN pill is gone from /gallery.",
+    "(Optional) In /app/frontend/src/components/Lightbox.jsx the Escape handler occasionally leaves the modal in the DOM for ~500ms while AnimatePresence runs its exit — not a bug, just noting the exit animation takes longer than a typical Playwright wait; not blocking."
+  ],
+  "critical_code_review_comments": [
+    "GalleryPage.jsx keeps a duplicate inline lightbox implementation despite importing the new shared Lightbox component — classic half-migration. Remove the legacy JSX to avoid drift.",
+    "generate_alt_text() correctly de-duplicates tokens already present in cat_hint / folder_hint (verified: 'luxury_bathroom_final_01.jpg' + RESIDENTIAL/Bathrooms yields exactly the expected 'CAREMANTO SOLUTIONS — Luxury Residential Bathroom Interior Design').",
+    "Lightbox.jsx keyboard handler binds to window and correctly detaches on close — good; ArrowLeft/ArrowRight/Escape all verified live on WorksPage."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration22_alt.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (9/9)",
+    "frontend": "~70% — WorksPage lightbox + numeric pagination + no ↗ badges + stored alt_text usage all PASS; GalleryPage lightbox FAILS (see critical bug)"
+  },
+  "test_credentials": "Admin passless: POST /api/auth/passless-login (no body). Legacy: admin@caremanto.com / Caremanto@2026.",
+  "seed_data_creation": "Backend tests create 5-6 gallery records prefixed via /admin/gallery and clean them up in teardown via DELETE.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend verified. On frontend, WorksPage uses testIdPrefix='portfolio' — lightbox testids are portfolio-lightbox-*. GalleryPage uses testIdPrefix='gallery' AFTER the fix — testids will be gallery-lightbox-*. To reach a folder with 15+ photos on /works, deep-link to /works?folder=Hall+%26+Dining (RESIDENTIAL is default cat). Pagination testid pattern on /works is 'works-child-pagination-pages' with per-page buttons 'works-child-pagination-page-<n>'; on /gallery it is 'gallery-pagination-pages' / 'gallery-pagination-page-<n>' — both verified rendering 3 buttons for a 15-photo folder. Seeded photos have no alt_text yet, so <img alt> currently comes from altFor() fallback (still SEO-friendly); admin-created photos will use stored alt_text as verified by backend tests. Live preview URL: https://design-restore-pro.preview.emergentagent.com.",
+  "rca of the issue": "GalleryPage.jsx was partially migrated: (1) state was refactored to `{photos, index}` with an openLightbox(_ph, idx, list) helper, (2) `import Lightbox from '../components/Lightbox'` was added at line 10, BUT (3) the actual JSX rendering block was never swapped from the legacy inline `<div data-testid='gallery-lightbox'>...<img src={lightbox.image} .../>...<button data-testid='lightbox-share'>Share as Pin ↗</button>...` implementation to `<Lightbox testIdPrefix='gallery' ... />`. Repro: visit /gallery → click any folder card (e.g. Hall & Dining) → click any photo — a dark backdrop appears with only the 'SHARE AS PIN ↗' gold pill visible and no image (because lightbox.image is undefined against the new state shape). Fix: swap the inline block for the shared component as described in action_items."
+}

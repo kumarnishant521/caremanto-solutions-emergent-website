@@ -1,14 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { toast } from "sonner";
+import { motion } from "framer-motion";
 import { Rise } from "../components/Rise";
-import { sharePhoto } from "../lib/share";
 import SmartImage from "../components/SmartImage";
 import { thumbUrl } from "../lib/thumb";
 import { useGallery, prefetchImageUrls } from "../lib/useGallery";
 import Head from "../components/Head";
 import Pagination from "../components/Pagination";
+import Lightbox from "../components/Lightbox";
 import { altFor } from "../lib/seo";
 import { useSEOFor } from "../lib/useSiteSettings";
 
@@ -53,7 +52,10 @@ export default function WorksPage() {
   const openedFolder = params.get("folder") || "";
 
   const { photos, loading } = useGallery();
+  // Lightbox carousel state — { photos, index } so the viewer can swipe.
   const [lightbox, setLightbox] = useState(null);
+  const closeLightbox = () => setLightbox(null);
+  const setLightboxIndex = (i) => setLightbox((lb) => (lb ? { ...lb, index: i } : lb));
 
   // Resolve dynamic SEO for this category (admin-editable via /admin → SEO).
   const sectionKey = category === COMMERCIAL ? "commercial"
@@ -193,7 +195,7 @@ export default function WorksPage() {
             folderName={openedFolder}
             photos={folderPhotos}
             onBack={backToFolders}
-            onOpenPhoto={setLightbox}
+            onOpenPhoto={(_ph, idx, list) => setLightbox({ photos: list, index: idx })}
           />
         ) : category === RESTORATION ? (
           /* -------- Restoration: direct photo grid -------- */
@@ -203,7 +205,11 @@ export default function WorksPage() {
               subtitle="Our restoration & renovation portfolio is being curated. Please check back shortly."
             />
           ) : (
-            <PhotoGrid photos={photosInCategory} onOpen={setLightbox} testIdPrefix="works-restoration" />
+            <PhotoGrid
+              photos={photosInCategory}
+              onOpen={(_ph, idx, list) => setLightbox({ photos: list, index: idx })}
+              testIdPrefix="works-restoration"
+            />
           )
         ) : (
           /* -------- Residential / Commercial: folder grid (exactly N unique cards) -------- */
@@ -218,50 +224,14 @@ export default function WorksPage() {
         )}
       </div>
 
-      {/* Lightbox — only used inside the folder child view */}
-      <AnimatePresence>
-        {lightbox && (
-          <motion.div
-            key="works-lightbox"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            role="dialog"
-            data-testid="portfolio-lightbox"
-            onClick={() => setLightbox(null)}
-            className="fixed inset-0 z-[80] bg-black/95 backdrop-blur-md flex items-center justify-center p-4 md:p-10"
-          >
-            <button
-              onClick={(e) => { e.stopPropagation(); setLightbox(null); }}
-              className="absolute top-6 right-6 w-11 h-11 border border-white/40 text-white hover:border-[var(--gold-hi)] hover:text-[var(--gold-hi)] transition-colors"
-              data-testid="portfolio-lightbox-close"
-            >×</button>
-            <div className="max-w-[1200px] w-full" onClick={(e) => e.stopPropagation()}>
-              <img src={lightbox.image} alt={lightbox.title || ""} className="w-full max-h-[80vh] object-contain" />
-              <div className="mt-5 flex flex-col md:flex-row md:items-end md:justify-between gap-3">
-                <div>
-                  <div className="overline text-[var(--gold-hi)] mb-1">
-                    {lightbox.category}{lightbox.subcategory ? ` · ${lightbox.subcategory}` : ""}
-                  </div>
-                  {lightbox.title && <div className="font-serif text-[24px] md:text-[32px] text-white">{lightbox.title}</div>}
-                  {lightbox.description && <div className="text-[14px] text-white/70 mt-1 max-w-xl">{lightbox.description}</div>}
-                </div>
-                <button
-                  data-testid="portfolio-lightbox-share"
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    const result = await sharePhoto(lightbox);
-                    if (result === "shared")   toast.success("Shared.");
-                    else if (result === "copied") toast.success("Pin link copied — paste anywhere to share.");
-                    else if (result === "unsupported") toast.error("Sharing not supported on this device.");
-                  }}
-                  className="btn-gold self-start md:self-end"
-                >
-                  Share as Pin ↗
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Lightbox — carousel-enabled, arrows + keyboard + swipe */}
+      <Lightbox
+        photos={lightbox?.photos || []}
+        index={lightbox?.index}
+        onIndex={setLightboxIndex}
+        onClose={closeLightbox}
+        testIdPrefix="portfolio"
+      />
     </main>
   );
 }
@@ -381,6 +351,7 @@ function PhotoGrid({ photos, onOpen, testIdPrefix = "works-child" }) {
   const PAGE_SIZE = 15;
   const [page, setPage] = useState(1);
   const totalPages = Math.max(1, Math.ceil(photos.length / PAGE_SIZE));
+  const gridRef = useRef(null);
 
   // Reset to page 1 whenever the source photos change (folder switch).
   useEffect(() => { setPage(1); }, [photos]);
@@ -388,17 +359,37 @@ function PhotoGrid({ photos, onOpen, testIdPrefix = "works-child" }) {
   const start = (page - 1) * PAGE_SIZE;
   const paged = photos.slice(start, start + PAGE_SIZE);
 
+  // Preload adjacent pages so next/prev clicks render instantly.
+  // Iteration 22 asset-preloader engine — see also useGallery.prefetchImageUrls
+  // which reuses the Image() cache under the hood.
+  useEffect(() => {
+    if (photos.length <= PAGE_SIZE) return;
+    const neighbourUrls = [];
+    if (page > 1) {
+      const prevStart = (page - 2) * PAGE_SIZE;
+      neighbourUrls.push(...photos.slice(prevStart, prevStart + PAGE_SIZE).map((p) => thumbUrl(p.image, 900)));
+    }
+    if (page < totalPages) {
+      const nextStart = page * PAGE_SIZE;
+      neighbourUrls.push(...photos.slice(nextStart, nextStart + PAGE_SIZE).map((p) => thumbUrl(p.image, 900)));
+    }
+    prefetchImageUrls(neighbourUrls, 24);
+  }, [page, photos, totalPages]);
+
   const changePage = (n) => {
     setPage(n);
-    // Instant top-scroll so the visitor never lands mid-frame after a
-    // page shift. Use "instant" (not smooth) — smooth on a 6-row bento
-    // feels janky.
-    window.scrollTo({ top: 0, behavior: "instant" });
+    // Instant top-scroll to the grid so the visitor never lands mid-frame
+    // after a page shift. Scoped to the grid element (not the whole page)
+    // so the editorial header stays put — feels far less janky.
+    requestAnimationFrame(() => {
+      gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   };
 
   return (
     <>
       <motion.div
+        ref={gridRef}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.4 }}
@@ -409,7 +400,7 @@ function PhotoGrid({ photos, onOpen, testIdPrefix = "works-child" }) {
           <div key={ph.id} className="portfolio-item-card">
             <button
               data-testid={`${testIdPrefix}-item-${i}`}
-              onClick={() => onOpen(ph)}
+              onClick={() => onOpen(ph, i, paged)}
               className="w-full text-left proj-card block group relative"
             >
               <img
@@ -431,7 +422,6 @@ function PhotoGrid({ photos, onOpen, testIdPrefix = "works-child" }) {
                     </div>
                   )}
                 </div>
-                <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
               </div>
             </button>
           </div>
