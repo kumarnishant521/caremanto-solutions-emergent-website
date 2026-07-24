@@ -22,6 +22,30 @@ Public: `GET /`, `GET /projects[?category=…]`, `GET /projects/{id}`, `GET /gal
 Auth: `POST /auth/login`, `GET /auth/me`, `POST /auth/logout`
 Admin (cookie-auth): `POST/PUT/DELETE /admin/projects[/{id}]`, `POST/PUT/DELETE /admin/gallery[/{id}]`, `PUT /admin/gallery/taxonomy`, `GET /admin/leads`, `PATCH/DELETE /admin/leads/{id}`
 
+## What's Implemented (2026-07-24 · v8 — Admin thumb sweep, Divisions CMS, Smart Grid Assistant)
+
+### Admin thumbnail-compression + lightbox sweep
+- **AdminPortfolio**: thumbnails now use `thumbUrl(image, 300)` + `loading='lazy'` + `decoding='async'`. Preview cards are `<button data-testid='portfolio-preview-<id>'>` that open the shared `<Lightbox testIdPrefix='admin-portfolio'>` — same prev/next/keyboard/swipe as public viewer.
+- **AdminVideos**: poster `<img>` uses `thumbUrl(poster, 400)` + lazy/async attrs. `<video>` fallback adds `preload='metadata'` so cold-start no longer streams the full clip.
+- **AdminCovers**: already on `SmartImage` (iter 24 blur-up skeleton) — untouched.
+
+### Divisions band → Home Copy CMS
+- Rewrote `components/Divisions.jsx` to bind every user-facing string via `useHomeCopy('divisions', …)`.
+- New public testids: `divisions-eyebrow`, `divisions-headline`, `divisions-lede`, `division-title-0/1`, `division-body-0/1`, `division-cta-0/1`.
+- Backend `DEFAULT_HOME_COPY.divisions` aligned with the studio's live copy so clearing an admin field falls back to exactly what the site renders today (single source of truth is now the backend).
+
+### Smart Grid Assistant (NEW)
+- New `AdminGridAssistant.jsx` mounted under `GRID LAYOUTS → Smart Grid` sub-toggle.
+- 8 curated Bento presets, each rendered as a mini 3-column masonry preview using the studio's actual featured photos: `Asymmetric Hero Lead`, `Balanced Dual-Column`, `Editorial Showcase`, `Feature Mosaic`, `Portrait Rhythm`, `Landscape Focus`, `Gallery Wall`, `Featured First`.
+- One-click **Apply Layout** → rewrites `home_order` via `PUT /api/admin/gallery/home-sequence` on the top 12 `featured_home` photos. Slots remain fully editable in `HERO & COVERS → Home Sequence` (no read-only lock).
+- Preview thumbnails use `thumbUrl(src, 200)` so the preset grid never hammers the network with full-res images.
+
+### Polish
+- `Lightbox` exit animation set to 0.22s snappy transition — no more 2s DOM ghost on close.
+
+### Testing (iteration 26)
+- Backend 100%, Frontend 95% → surfaced a spec-vs-impl mismatch on Divisions blank-fallback (backend defaults vs frontend caller defaults) which was resolved by aligning backend `DEFAULT_HOME_COPY.divisions` to match the compiled studio copy. Backend is now the single source of truth for Home Copy defaults.
+
 ## What's Implemented (2026-07-24 · v7 — Admin nav restructure + Home Copy CMS + real-time sync + Apple skeletons)
 
 ### Admin console — streamlined 4-tab navigation

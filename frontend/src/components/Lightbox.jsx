@@ -99,7 +99,10 @@ export default function Lightbox({ photos, index, onIndex, onClose, testIdPrefix
       {open && (
         <motion.div
           key={`${testIdPrefix}-lightbox`}
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.22, ease: [0.2, 0.7, 0.15, 1] }}
           role="dialog"
           aria-modal="true"
           data-testid={`${testIdPrefix}-lightbox`}

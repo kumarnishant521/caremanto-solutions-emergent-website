@@ -733,15 +733,16 @@ DEFAULT_HOME_COPY = {
         "chip_4_label": "Heritage",
     },
     "divisions": {
-        "eyebrow":     "The Practice",
-        "title":       "Two disciplines. One studio.",
-        "lede":        "We compose enduring interiors and restore architectures with equal care.",
-        # Per-division cards
-        "d1_title":    "Interior Practice",
-        "d1_body":     "Residential, commercial and hospitality interiors that read as architecture — spatial narratives told through material, proportion and light.",
+        "eyebrow":     "Two wings, one studio",
+        "title":       "A studio composed of two complementary practices.",
+        "lede":        "",
+        # Per-division cards — match the compiled Divisions.jsx defaults so
+        # blank admin fields fall back to the exact same visible strings.
+        "d1_title":    "Interiors",
+        "d1_body":     "From private residences to boutique hospitality, our interior practice is a study in restraint — considered material palettes, quiet lighting, and an editorial approach to composition.",
         "d1_cta":      "Interior Portfolio",
-        "d2_title":    "Restoration Practice",
-        "d2_body":     "Heritage restoration, structural renewal and adaptive reuse — protecting the past while building for another century.",
+        "d2_title":    "Renovations / Restorations",
+        "d2_body":     "A dedicated wing for the preservation and adaptation of older architecture — facade renewal, structural restoration, and the sensitive reuse of built heritage.",
         "d2_cta":      "Restoration Portfolio",
     },
     "sections": {
