@@ -230,46 +230,14 @@ export default function GalleryPage() {
         )}
       </AnimatePresence>
 
-      {/* Lightbox */}
-      {lightbox && (
-        <div
-          role="dialog"
-          data-testid="gallery-lightbox"
-          onClick={() => setLightbox(null)}
-          className="fixed inset-0 z-[80] bg-black/95 backdrop-blur-md flex items-center justify-center p-4 md:p-10"
-        >
-          <button
-            onClick={(e) => { e.stopPropagation(); setLightbox(null); }}
-            className="absolute top-6 right-6 w-11 h-11 border border-white/40 text-white hover:border-[var(--gold-hi)] hover:text-[var(--gold-hi)] transition-colors"
-            data-testid="lightbox-close"
-          >×</button>
-          <div className="max-w-[1200px] w-full" onClick={(e) => e.stopPropagation()}>
-            <img src={lightbox.image} alt={lightbox.title || ""} className="w-full max-h-[80vh] object-contain" />
-            <div className="mt-5 flex flex-col md:flex-row md:items-end md:justify-between gap-3">
-              <div>
-                <div className="overline text-[var(--gold-hi)] mb-1">
-                  {lightbox.category}{lightbox.subcategory ? ` · ${lightbox.subcategory}` : ""}
-                </div>
-                {lightbox.title && <div className="font-serif text-[24px] md:text-[32px] text-white">{lightbox.title}</div>}
-                {lightbox.description && <div className="text-[14px] text-white/70 mt-1 max-w-xl">{lightbox.description}</div>}
-              </div>
-              <button
-                data-testid="lightbox-share"
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  const result = await sharePhoto(lightbox);
-                  if (result === "shared")   toast.success("Shared.");
-                  else if (result === "copied") toast.success("Pin link copied — paste anywhere to share.");
-                  else if (result === "unsupported") toast.error("Sharing not supported on this device.");
-                }}
-                className="btn-gold self-start md:self-end"
-              >
-                Share as Pin ↗
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Lightbox — carousel-enabled, arrows + keyboard + swipe */}
+      <Lightbox
+        photos={lightbox?.photos || []}
+        index={lightbox?.index}
+        onIndex={setLightboxIndex}
+        onClose={closeLightbox}
+        testIdPrefix="gallery"
+      />
     </main>
   );
 }
