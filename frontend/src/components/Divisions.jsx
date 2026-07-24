@@ -64,16 +64,13 @@ export default function Divisions() {
           {PRACTICE.map((p, i) => (
             <Rise key={p.tag} delay={i * 120}>
               <article className={`${i === 1 ? "md:mt-24" : ""}`}>
-                <div className="aspect-[4/5] overflow-hidden mb-8 relative">
+                <div className="aspect-[4/5] overflow-hidden mb-8 relative bg-[var(--bg-2)]">
                   <img
                     src={p.image}
                     alt=""
                     className="w-full h-full object-cover"
                     loading="lazy"
                   />
-                  <span className="absolute top-4 left-4 overline text-[10px] bg-[var(--bg-0)]/85 backdrop-blur px-3 py-1.5 border border-[var(--line)]">
-                    {p.tag}
-                  </span>
                 </div>
                 <h3
                   className="text-[var(--ink)] uppercase font-medium mb-5 max-w-md

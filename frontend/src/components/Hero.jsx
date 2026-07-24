@@ -164,7 +164,7 @@ export default function Hero() {
 
         <h1
           data-testid="hero-headline"
-          className="font-serif tracking-[-0.02em] text-[clamp(2.4rem,6.5vw,5.5rem)] leading-[0.9] max-w-[900px] text-[var(--on-dark)]"
+          className="font-serif tracking-[-0.02em] text-[clamp(1.8rem,4.9vw,4.15rem)] leading-[0.95] max-w-[720px] text-[var(--on-dark)]"
         >
           <span className={`reveal-mask d1 ${ready ? "in" : ""}`}><span>Redefining</span></span>{" "}
           <span className={`reveal-mask d2 ${ready ? "in" : ""}`}><span className="italic text-[var(--gold-hi)]">spaces</span></span><br />
@@ -179,7 +179,12 @@ export default function Hero() {
             as instruments of the everyday.
           </p>
           <div className="flex flex-wrap items-center gap-4">
-            <Link to="/works" data-testid="hero-cta-primary" className="btn-solid-light">
+            <Link
+              to="/works"
+              data-testid="hero-cta-primary"
+              className="btn-solid-light"
+              style={{ padding: "10px 20px", fontSize: "11px", letterSpacing: "0.28em" }}
+            >
               Explore Portfolio
             </Link>
             <button
@@ -187,6 +192,7 @@ export default function Hero() {
               onClick={openConsult}
               data-testid="hero-cta-secondary"
               className="btn-outline-light"
+              style={{ padding: "10px 20px", fontSize: "11px", letterSpacing: "0.28em" }}
             >
               Begin a Conversation
             </button>
@@ -197,8 +203,8 @@ export default function Hero() {
         <div className="mt-14 md:mt-16 grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10 border-t border-[var(--on-dark)]/15 pt-6">
           {[
             ["01", "Residential"],
-            ["02", "Hospitality"],
-            ["03", "Commercial"],
+            ["02", "Commercial"],
+            ["03", "Hospitality"],
             ["04", "Heritage"],
           ].map(([n, l]) => (
             <div key={n} className="flex items-baseline gap-3">

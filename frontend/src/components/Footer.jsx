@@ -48,7 +48,7 @@ export default function Footer() {
     >
       <div className="max-w-[1440px] mx-auto px-6 md:px-14">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-10 md:gap-6">
-          <div className="md:col-span-5">
+          <div className="md:col-span-4">
             <div className="font-serif text-[clamp(2.5rem,5vw,4.5rem)] tracking-[-0.02em] leading-[0.95]">
               {tagline1} <br />
               <span className="italic text-[var(--gold)]">{tagline2}</span>
@@ -76,23 +76,60 @@ export default function Footer() {
             </div>
           </div>
 
-          <div className="md:col-span-3">
+          {/* Studio + Practices */}
+          <div className="md:col-span-2">
             <div className="overline mb-4">Studio</div>
             <ul className="space-y-2 text-[14px]">
-              <li><Link to="/studio"   className="hover:text-[var(--gold)] transition-colors">About Us</Link></li>
-              <li><Link to="/approach" className="hover:text-[var(--gold)] transition-colors">Approach</Link></li>
-              <li><Link to="/works"    className="hover:text-[var(--gold)] transition-colors">Our Works</Link></li>
-              <li><Link to="/gallery"  className="hover:text-[var(--gold)] transition-colors">Gallery</Link></li>
-              <li><Link to="/films"    className="hover:text-[var(--gold)] transition-colors">Films</Link></li>
-              <li><Link to="/contact"  className="hover:text-[var(--gold)] transition-colors">Contact</Link></li>
+              <li><Link to="/approach" data-testid="footer-approach" className="hover:text-[var(--gold)] transition-colors">Approach</Link></li>
+              <li><Link to="/works"    data-testid="footer-works"    className="hover:text-[var(--gold)] transition-colors">Our Works</Link></li>
+              <li><Link to="/gallery"  data-testid="footer-gallery"  className="hover:text-[var(--gold)] transition-colors">Gallery</Link></li>
+              <li><Link to="/films"    data-testid="footer-films"    className="hover:text-[var(--gold)] transition-colors">Films</Link></li>
+              <li><Link to="/contact"  data-testid="footer-contact"  className="hover:text-[var(--gold)] transition-colors">Contact</Link></li>
+              <li><Link to="/faq"      data-testid="footer-faq"      className="hover:text-[var(--gold)] transition-colors">FAQ</Link></li>
+            </ul>
+
+            <div className="overline mb-4 mt-8">Practices</div>
+            <ul className="space-y-2 text-[14px]">
+              <li>
+                <Link
+                  to="/works?cat=RESIDENTIAL"
+                  data-testid="footer-interiors"
+                  className="hover:text-[var(--gold)] transition-colors"
+                >
+                  Interiors
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to={`/works?cat=${encodeURIComponent("RESTORATION & RENOVATIONS")}`}
+                  data-testid="footer-restoration"
+                  className="hover:text-[var(--gold)] transition-colors"
+                >
+                  Restoration
+                </Link>
+              </li>
             </ul>
           </div>
 
           <div className="md:col-span-2">
-            <div className="overline mb-4">Practices</div>
+            <div className="overline mb-4">About Us</div>
             <ul className="space-y-2 text-[14px]">
-              <li><Link to="/works?category=interiors"   className="hover:text-[var(--gold)] transition-colors">Interiors</Link></li>
-              <li><Link to="/works?category=restoration" className="hover:text-[var(--gold)] transition-colors">Restoration</Link></li>
+              <li><Link to="/studio"                data-testid="footer-about"          className="hover:text-[var(--gold)] transition-colors">Overview</Link></li>
+              <li><Link to="/about/team"            data-testid="footer-about-team"     className="hover:text-[var(--gold)] transition-colors">Team</Link></li>
+              <li><Link to="/about/accreditation"   data-testid="footer-about-accreditation" className="hover:text-[var(--gold)] transition-colors">Accreditation</Link></li>
+              <li><Link to="/about/recognitions"    data-testid="footer-about-recognitions"  className="hover:text-[var(--gold)] transition-colors">Recognitions</Link></li>
+              <li><Link to="/about/awards"          data-testid="footer-about-awards"   className="hover:text-[var(--gold)] transition-colors">Awards</Link></li>
+              <li><Link to="/about/locations"       data-testid="footer-about-locations" className="hover:text-[var(--gold)] transition-colors">Locations</Link></li>
+            </ul>
+          </div>
+
+          <div className="md:col-span-2">
+            <div className="overline mb-4">Insights</div>
+            <ul className="space-y-2 text-[14px]">
+              <li><Link to="/insights/articles"  data-testid="footer-insights-articles"  className="hover:text-[var(--gold)] transition-colors">Articles</Link></li>
+              <li><Link to="/insights/blogs"     data-testid="footer-insights-blogs"     className="hover:text-[var(--gold)] transition-colors">Blogs</Link></li>
+              <li><Link to="/insights/news"      data-testid="footer-insights-news"      className="hover:text-[var(--gold)] transition-colors">News</Link></li>
+              <li><Link to="/insights/guidance"  data-testid="footer-insights-guidance"  className="hover:text-[var(--gold)] transition-colors">Guidance</Link></li>
             </ul>
           </div>
 

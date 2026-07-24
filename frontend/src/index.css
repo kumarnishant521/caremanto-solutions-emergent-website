@@ -363,6 +363,29 @@ a, button, [role="button"] { cursor: pointer; }
     background: var(--bg-2);         /* subtle canvas while decoding */
 }
 
+/* Skeleton shimmer — reserved before image decode so cold-starts never
+   collapse the masonry into blank columns. Matches the site palette so
+   the transition to the real image is invisible. */
+.portfolio-card-skeleton {
+    background:
+      linear-gradient(90deg,
+        rgba(255,255,255,0.02) 0%,
+        rgba(255,255,255,0.08) 40%,
+        rgba(255,255,255,0.02) 80%
+      ),
+      var(--bg-2);
+    background-size: 220% 100%;
+    animation: cm-shimmer 1.6s ease-in-out infinite;
+    border: 1px solid rgba(255,255,255,0.03);
+}
+@keyframes cm-shimmer {
+    0%   { background-position: 220% 0; }
+    100% { background-position: -20% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .portfolio-card-skeleton { animation: none; }
+}
+
 /* ------------------------------------------------------------------ */
 /* Editorial Home Bento — asymmetric masonry                          */
 /*                                                                    */

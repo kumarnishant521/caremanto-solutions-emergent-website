@@ -22,6 +22,11 @@ import ContactPage from "@/pages/ContactPage";
 import AdminLoginPage from "@/pages/AdminLoginPage";
 import AdminDashboardPage from "@/pages/AdminDashboardPage";
 import VideosPage from "@/pages/VideosPage";
+import {
+  FAQPage,
+  InsightsIndexRedirect,
+  AboutIndexRedirect,
+} from "@/pages/EditorialPage";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -66,6 +71,14 @@ function SiteRoot() {
                 <Route path="/studio" element={<StudioPage />} />
                 <Route path="/approach" element={<ApproachPage />} />
                 <Route path="/contact" element={<ContactPage />} />
+
+                {/* Footer IA — Insights, FAQ, About sub-pages (iteration 21) */}
+                <Route path="/insights/:section" element={<InsightsIndexRedirect />} />
+                <Route path="/insights" element={<InsightsIndexRedirect />} />
+                <Route path="/faq" element={<FAQPage />} />
+                <Route path="/about/:section" element={<AboutIndexRedirect />} />
+                <Route path="/about" element={<AboutIndexRedirect />} />
+
                 <Route path="*" element={<HomePage />} />
               </Routes>
             </PublicShell>

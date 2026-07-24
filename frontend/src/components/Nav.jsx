@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
+import { Home as HomeIcon } from "lucide-react";
 import { NAV_CATEGORIES } from "../lib/api";
 import { useConsultation } from "../lib/useConsultation";
 import { useSiteSettings } from "../lib/useSiteSettings";
@@ -44,10 +45,14 @@ const INTERIOR_ROUTE = {
   "Hospitality":   { cat: "COMMERCIAL",               sub: "Hospitality" },
 };
 
-// Restoration-related Services labels land in the restoration gallery;
-// every other Services label opens the consultation form.
-const isRestorationService = (label) =>
-  /restoration|renovation/i.test(label || "");
+// Only the EXACT "Restoration & Renovations" service routes to the
+// portfolio gallery. Everything else in the Services dropdown — including
+// Heritage Restoration, Modernisation, Water-Proofing, Sound Proofing,
+// Structural Renovations & Facade Renewal — opens the Consultation modal
+// pre-filled with the service label the user clicked. (Iteration 21 —
+// aligns with the studio's lead-capture priority.)
+const isRestorationPortfolioService = (label) =>
+  /^\s*restoration\s*(?:&|and)\s*renovations?\s*$/i.test(label || "");
 
 // Brand mark — if user has dropped /public/caremanto-logo.(svg|png) it'll
 // be used; else falls back to CMLogo placeholder.
@@ -154,10 +159,13 @@ export default function Nav() {
     else       goWorks("RESIDENTIAL");
   };
 
-  // Services dropdown click — restoration items → gallery, everything
-  // else → consultation modal pre-filled with the exact service clicked.
+  // Services dropdown click — ONLY "Restoration & Renovations" routes to
+  // the portfolio gallery. Every other service label (Heritage Restoration,
+  // Modernisation, Water-Proofing, Sound Proofing, Structural Renovations
+  // & Facade Renewal, etc.) opens the Consultation modal pre-filled with
+  // the exact service clicked.
   const goServiceItem = (label) => {
-    if (isRestorationService(label)) {
+    if (isRestorationPortfolioService(label)) {
       goWorks("RESTORATION & RENOVATIONS");
     } else {
       setOpen(null);
@@ -191,6 +199,19 @@ export default function Nav() {
 
         {/* Desktop nav */}
         <nav className="hidden xl:flex items-center gap-7 2xl:gap-9">
+          {/* Explicit home-icon button — always visible on the header row so
+              the visitor can jump back to `/` from any deep-nested page. */}
+          <Link
+            to="/"
+            data-testid="nav-home-icon"
+            aria-label="Home"
+            title="Home"
+            className={`inline-flex items-center justify-center w-9 h-9 border border-[var(--line-strong)] transition-colors hover:border-[var(--gold)] hover:text-[var(--gold)] ${
+              active("/") ? "text-[var(--gold)] border-[var(--gold)]" : "text-[var(--ink)]/85"
+            }`}
+          >
+            <HomeIcon size={15} strokeWidth={1.6} />
+          </Link>
           <Link to="/" data-testid="nav-home" className={`nav-link nav-label ${active("/") ? "text-[var(--gold)]" : ""}`}>{L.home}</Link>
           <button
             type="button"
@@ -272,16 +293,27 @@ export default function Nav() {
           </button>
         </nav>
 
-        {/* Mobile toggle */}
-        <button
-          data-testid="mobile-menu-toggle"
-          onClick={() => setMobileOpen((v) => !v)}
-          className="xl:hidden w-11 h-11 flex flex-col items-center justify-center gap-[5px] border border-[var(--line-strong)] hover:border-[var(--gold)] transition-colors"
-          aria-label="Menu"
-        >
+        {/* Mobile controls: home shortcut + drawer toggle, grouped so they
+            share the right edge instead of being distributed by flex. */}
+        <div className="xl:hidden flex items-center gap-2">
+          <Link
+            to="/"
+            data-testid="mobile-nav-home-icon"
+            aria-label="Home"
+            className="inline-flex items-center justify-center w-11 h-11 border border-[var(--line-strong)] hover:border-[var(--gold)] hover:text-[var(--gold)] text-[var(--ink)]/85 transition-colors"
+          >
+            <HomeIcon size={16} strokeWidth={1.6} />
+          </Link>
+          <button
+            data-testid="mobile-menu-toggle"
+            onClick={() => setMobileOpen((v) => !v)}
+            className="w-11 h-11 flex flex-col items-center justify-center gap-[5px] border border-[var(--line-strong)] hover:border-[var(--gold)] transition-colors"
+            aria-label="Menu"
+          >
           <span className={`w-4 h-[1.5px] bg-current transition-transform ${mobileOpen ? "translate-y-[3px] rotate-45" : ""}`}/>
           <span className={`w-4 h-[1.5px] bg-current transition-transform ${mobileOpen ? "-translate-y-[3px] -rotate-45" : ""}`}/>
         </button>
+        </div>
       </div>
 
       {/* Mobile drawer */}

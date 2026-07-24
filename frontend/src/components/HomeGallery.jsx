@@ -36,25 +36,39 @@ const PLACEHOLDERS = [
 
 /* --- individual card: plain <img>, natural aspect, watermark-safe ---- */
 
-function PortfolioCard({ src, alt, priority }) {
+function PortfolioCard({ src, alt, priority, aspectHint = "3 / 4" }) {
   const [failed, setFailed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   if (failed) return null;
   return (
     <figure className="portfolio-item-card" data-testid="home-portfolio-item">
-      <img
-        src={thumbUrl(src, 900)}
-        alt={alt}
-        loading={priority ? "eager" : "lazy"}
-        decoding="async"
-        fetchPriority={priority ? "high" : "auto"}
-        onError={() => setFailed(true)}
-      />
+      {/* Reserve height BEFORE the image decodes so cold-start visitors see a
+          skeleton block instead of a collapsed layout / flash-of-blank column.
+          Once the image reports `onLoad`, we release the aspect-ratio lock
+          and let the natural intrinsic height take over — the strict
+          `object-fit: contain` rule in index.css keeps watermarks visible. */}
+      <div
+        className={`relative w-full ${loaded ? "" : "portfolio-card-skeleton"}`}
+        style={loaded ? undefined : { aspectRatio: aspectHint }}
+      >
+        <img
+          src={thumbUrl(src, 900)}
+          alt={alt}
+          loading={priority ? "eager" : "lazy"}
+          decoding="async"
+          fetchPriority={priority ? "high" : "auto"}
+          onLoad={() => setLoaded(true)}
+          onError={() => setFailed(true)}
+          className={loaded ? "" : "opacity-0"}
+          style={loaded ? undefined : { position: "absolute", inset: 0, width: "100%", height: "100%" }}
+        />
+      </div>
     </figure>
   );
 }
 
 export default function HomeGallery() {
-  const { photos } = useGallery();
+  const { photos, loading } = useGallery();
 
   const tiles = useMemo(() => {
     // Admin sequence — home_order ASC (nulls last), created_at tiebreak.
@@ -77,6 +91,14 @@ export default function HomeGallery() {
     return combined;
   }, [photos]);
 
+  // Editorial rhythm — three column heights that keep the 3-column masonry
+  // balanced during the skeleton phase (tall / mid / short / tall / …).
+  const SKELETON_ASPECTS = ["3 / 4", "1 / 1", "4 / 5", "2 / 3", "1 / 1", "3 / 4", "4 / 5", "2 / 3", "1 / 1"];
+
+  // When we have NEITHER real photos yet NOR a cached local list, render a
+  // set of skeleton tiles that preserve the 3-column masonry structure.
+  const showSkeletons = loading && tiles.length === 0;
+
   return (
     <section
       id="home-gallery"
@@ -98,14 +120,29 @@ export default function HomeGallery() {
         </div>
 
         <div className="portfolio-gallery-container" data-testid="home-gallery-grid">
-          {tiles.map((src, i) => (
-            <PortfolioCard
-              key={src}
-              src={src}
-              alt={altFor({ category: i % 3 === 0 ? "RESIDENTIAL" : i % 3 === 1 ? "COMMERCIAL" : "RESTORATION & RENOVATIONS" }, i)}
-              priority={i < 3}
-            />
-          ))}
+          {showSkeletons
+            ? SKELETON_ASPECTS.map((ar, i) => (
+                <figure
+                  key={`skeleton-${i}`}
+                  className="portfolio-item-card"
+                  data-testid="home-portfolio-skeleton"
+                >
+                  <div
+                    className="portfolio-card-skeleton w-full"
+                    style={{ aspectRatio: ar }}
+                    aria-hidden="true"
+                  />
+                </figure>
+              ))
+            : tiles.map((src, i) => (
+                <PortfolioCard
+                  key={src}
+                  src={src}
+                  alt={altFor({ category: i % 3 === 0 ? "RESIDENTIAL" : i % 3 === 1 ? "COMMERCIAL" : "RESTORATION & RENOVATIONS" }, i)}
+                  priority={i < 3}
+                  aspectHint={SKELETON_ASPECTS[i % SKELETON_ASPECTS.length]}
+                />
+              ))}
         </div>
       </div>
     </section>

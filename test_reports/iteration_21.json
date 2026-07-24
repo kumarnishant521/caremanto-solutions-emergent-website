@@ -1,0 +1,22 @@
+{
+  "summary": "Frontend-only verification of 4 UX enhancements + 10 new editorial routes (iteration 21). All acceptance criteria pass.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Nav.jsx: `isRestorationPortfolioService` regex requires EXACT match of 'Restoration & Renovations'. Admin-editable services_items list could break this if admin renames the label — consider case-insensitive substring or an explicit `route: portfolio` flag per item.",
+    "HomeGallery.jsx: `showSkeletons` is only true while `loading && tiles.length===0`; but `tiles` is built from featured + realProjects + PLACEHOLDERS which is never empty, so the skeleton branch effectively never renders in production. Consider using `loading && !photos` instead if the intent was to show a skeleton on cold-start."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All iteration-21 features validated live on preview URL. Hero headline computed font-size 66.4px, CTA buttons padding=10px 20px, font=11px, letter-spacing=3.08px (~0.28em). Category order confirmed 01 Residential / 02 Commercial / 03 Hospitality / 04 Heritage. Desktop [data-testid=nav-home-icon] + mobile [data-testid=mobile-nav-home-icon] both present & visible. Services dropdown labels order: R&R (idx0), Structural Renovations & Facade Renewal (1), Sound Proofing (2), Water-Proofing (3), Heritage Restoration (4), Modernisation (5). Only idx0 navigates to /works?cat=RESTORATION%20%26%20RENOVATIONS; indices 1-5 keep URL at '/' and open the ConsultationModal (data-testid='consultation-modal'). Interior Projects still routes correctly. Portfolio still routes to /portfolio. Divisions section has no '01/02 / DIVISION' badges. Footer links all resolve with correct hrefs including /faq, /insights/{articles,blogs,news,guidance}, /about/{team,accreditation,recognitions,awards,locations}. Editorial page component renders with editorial-page-{presetKey}, editorial-title-{presetKey}, editorial-consult-{presetKey} testids on every sub-route.",
+  "rca of the issue": "N/A"
+}
