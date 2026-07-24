@@ -22,6 +22,30 @@ Public: `GET /`, `GET /projects[?category=…]`, `GET /projects/{id}`, `GET /gal
 Auth: `POST /auth/login`, `GET /auth/me`, `POST /auth/logout`
 Admin (cookie-auth): `POST/PUT/DELETE /admin/projects[/{id}]`, `POST/PUT/DELETE /admin/gallery[/{id}]`, `PUT /admin/gallery/taxonomy`, `GET /admin/leads`, `PATCH/DELETE /admin/leads/{id}`
 
+## What's Implemented (2026-07-24 · v5 — Hero polish, strict service routing, editorial IA expansion)
+
+### Hero
+- Headline scaled ~25% down (`clamp(1.8rem,4.9vw,4.15rem)`) so it no longer overpowers the background asset.
+- CTAs `Explore Portfolio` / `Begin a Conversation` compact (padding 10x20, 11px, 0.28em letter-spacing).
+- Category strip reordered → 01 Residential · 02 Commercial · 03 Hospitality · 04 Heritage.
+
+### Nav
+- Explicit **Home icon button** (`data-testid=nav-home-icon` + mobile equivalent) on both desktop and mobile headers.
+- Services dropdown now routes ONLY the exact "Restoration & Renovations" item to `/works?cat=RESTORATION%20%26%20RENOVATIONS`. Every other service (Heritage Restoration, Modernisation, Water-Proofing, Sound Proofing, Structural Renovations & Facade Renewal) opens the Consultation modal pre-filled with the clicked service label.
+
+### Divisions / Hydration
+- Removed `01/02 / DIVISION` badge overlays from the two Divisions cover cards.
+- Home gallery cards now reserve an aspect-locked skeleton (`.portfolio-card-skeleton` shimmer, respects `prefers-reduced-motion`) until each image decodes — no FOUC on cold-start, column-count/watermark protection unchanged.
+- Divisions cover images sit on a `bg-[var(--bg-2)]` canvas until they decode.
+
+### Footer + Editorial IA
+- Restructured footer to 4-2-2-2-2 grid: tagline, Studio+Practices, About Us, Insights, Contact+Follow.
+- Interiors/Restoration links now use the correct `?cat=RESIDENTIAL` / `?cat=RESTORATION & RENOVATIONS` param.
+- **Insights** section → `/insights/articles`, `/insights/blogs`, `/insights/news`, `/insights/guidance`.
+- **FAQ** section → `/faq`.
+- **About Us** expanded → `/about/team`, `/about/accreditation`, `/about/recognitions`, `/about/awards`, `/about/locations`.
+- All 10 new pages powered by a single `EditorialPage.jsx` (per-preset title/lede/hint + sibling nav + `Begin a Conversation` CTA). Verified 100% via iteration_21.json.
+
 ## What's Implemented (2026-07-18 · v4 — Dynamic SEO/Footer/Nav CMS)
 
 ### Dynamic SEO Manager (NEW)

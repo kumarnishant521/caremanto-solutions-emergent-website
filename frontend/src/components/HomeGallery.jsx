@@ -68,7 +68,7 @@ function PortfolioCard({ src, alt, priority, aspectHint = "3 / 4" }) {
 }
 
 export default function HomeGallery() {
-  const { photos, loading } = useGallery();
+  const { photos } = useGallery();
 
   const tiles = useMemo(() => {
     // Admin sequence — home_order ASC (nulls last), created_at tiebreak.
@@ -92,12 +92,12 @@ export default function HomeGallery() {
   }, [photos]);
 
   // Editorial rhythm — three column heights that keep the 3-column masonry
-  // balanced during the skeleton phase (tall / mid / short / tall / …).
+  // balanced during per-card skeleton reservations (tall / mid / short / …).
+  // We never render container-level skeletons because `tiles` is seeded with
+  // local placeholders — cold-start visitors always see SOMETHING. Instead,
+  // each PortfolioCard reserves its own aspect-locked skeleton until the
+  // remote image decodes, which is what protects against FOUC.
   const SKELETON_ASPECTS = ["3 / 4", "1 / 1", "4 / 5", "2 / 3", "1 / 1", "3 / 4", "4 / 5", "2 / 3", "1 / 1"];
-
-  // When we have NEITHER real photos yet NOR a cached local list, render a
-  // set of skeleton tiles that preserve the 3-column masonry structure.
-  const showSkeletons = loading && tiles.length === 0;
 
   return (
     <section
@@ -120,29 +120,15 @@ export default function HomeGallery() {
         </div>
 
         <div className="portfolio-gallery-container" data-testid="home-gallery-grid">
-          {showSkeletons
-            ? SKELETON_ASPECTS.map((ar, i) => (
-                <figure
-                  key={`skeleton-${i}`}
-                  className="portfolio-item-card"
-                  data-testid="home-portfolio-skeleton"
-                >
-                  <div
-                    className="portfolio-card-skeleton w-full"
-                    style={{ aspectRatio: ar }}
-                    aria-hidden="true"
-                  />
-                </figure>
-              ))
-            : tiles.map((src, i) => (
-                <PortfolioCard
-                  key={src}
-                  src={src}
-                  alt={altFor({ category: i % 3 === 0 ? "RESIDENTIAL" : i % 3 === 1 ? "COMMERCIAL" : "RESTORATION & RENOVATIONS" }, i)}
-                  priority={i < 3}
-                  aspectHint={SKELETON_ASPECTS[i % SKELETON_ASPECTS.length]}
-                />
-              ))}
+          {tiles.map((src, i) => (
+            <PortfolioCard
+              key={src}
+              src={src}
+              alt={altFor({ category: i % 3 === 0 ? "RESIDENTIAL" : i % 3 === 1 ? "COMMERCIAL" : "RESTORATION & RENOVATIONS" }, i)}
+              priority={i < 3}
+              aspectHint={SKELETON_ASPECTS[i % SKELETON_ASPECTS.length]}
+            />
+          ))}
         </div>
       </div>
     </section>
