@@ -22,6 +22,28 @@ Public: `GET /`, `GET /projects[?category=…]`, `GET /projects/{id}`, `GET /gal
 Auth: `POST /auth/login`, `GET /auth/me`, `POST /auth/logout`
 Admin (cookie-auth): `POST/PUT/DELETE /admin/projects[/{id}]`, `POST/PUT/DELETE /admin/gallery[/{id}]`, `PUT /admin/gallery/taxonomy`, `GET /admin/leads`, `PATCH/DELETE /admin/leads/{id}`
 
+## What's Implemented (2026-07-24 · v10 — Persistent pagination + Lightbox v2 + PhotoTile resilience)
+
+### Persistent pagination state
+- **Root cause fix**: `PhotoGrid` no longer resets `page` to 1 on every polling refresh. Now keys on a stable `photoIdKey` hash (`photos.map(p => p.id).join('|')`) so only a legitimate folder switch resets — array-reference churn from the 20s `useGallery` poll or window `focus` refetch is ignored.
+- Added a clamp effect: if the photo count shrinks below the current page (upstream delete), page clamps to `max(1, totalPages)`.
+
+### Per-card error placeholder
+- New `<PhotoTile>` component wraps every gallery `<img>`. On `onError` it swaps to a muted Apple-neutral `bg-[#EAE8E3] animate-pulse` block with `aspect-ratio: 3 / 4` + `role='img'` + `aria-label='Image unavailable'`. Neighbours in the same masonry column stay visible and un-shrunken. Testid: `photo-tile-error`.
+
+### Shared preloader hook
+- Extracted `lib/useGalleryPreloader.js` — one named hook for both `/works` and `/gallery`. Warms Page N-1 and Page N+1 via `new Image()` (no resolution downgrade — asks 900px). Iter-28 refinement keys effect on `photoIdKey` so 20s polls don't re-run the preloader on identical content.
+
+### Lightbox v2 — blackout & aspect fix
+- Backdrop reset to spec: `bg-black/95` + `backdrop-blur-md` (was `bg-black/90` + `backdrop-blur-xl` in iter 27).
+- Image sized `max-h-[85vh] w-auto max-w-full object-contain` inside a centered flex container — never crops, clips, or shows black missing frames on cold arrow-clicks.
+- **Body scroll lock** via `useEffect` on `document.body.style.overflow = 'hidden'` while the modal is mounted; restored on close.
+- **Directional slide animations** via `<AnimatePresence mode='popLayout' custom={direction}>` + `slideVariants` (enter: x:60/-60, center: x:0, exit: x:-60/60) with spring transition (stiffness 340, damping 34, mass 0.9). Next / Prev / Keyboard / Swipe all set the direction before advancing.
+- Per-image `portfolio-card-skeleton` shimmer (iter 27) still guards against black flash during decode.
+
+### Testing
+- iter28 → Frontend **100%**. Persistent pagination verified via focus-refetch and natural 22s poll cycle. PhotoTile error placeholder verified via `imgs[0].dispatchEvent(new Event('error'))` — 14 neighbours intact + 1 placeholder. Lightbox scroll lock, directional slide transforms, and sizing all confirmed.
+
 ## What's Implemented (2026-07-24 · v9 — Luxury editorial polish + Lightbox re-engineering)
 
 ### Lightbox re-engineering

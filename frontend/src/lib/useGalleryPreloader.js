@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { thumbUrl } from "./thumb";
 import { prefetchImageUrls } from "./useGallery";
 
@@ -14,8 +14,19 @@ import { prefetchImageUrls } from "./useGallery";
  * exact same preload semantics (was previously duplicated as inline
  * useEffects across two pages, iter 22/24). Does NOT downgrade source
  * resolution — asks for the same width the visible page uses (900px).
+ *
+ * Iter 28 refinement — the effect keys on a stable `photoIdKey` derived
+ * from the ordered ids, so the 20s useGallery polling that returns a
+ * NEW array reference for the same content doesn't re-run the preload
+ * every cycle (prefetchImageUrls has an internal dedupe Set anyway, but
+ * this saves the map/allocation churn).
  */
 export function useGalleryPreloader(photos, page, pageSize) {
+  const photoIdKey = useMemo(
+    () => (Array.isArray(photos) ? photos.map((p) => p.id).join("|") : ""),
+    [photos],
+  );
+
   useEffect(() => {
     if (!Array.isArray(photos) || photos.length <= pageSize) return;
     const totalPages = Math.max(1, Math.ceil(photos.length / pageSize));
@@ -29,5 +40,6 @@ export function useGalleryPreloader(photos, page, pageSize) {
       urls.push(...photos.slice(nextStart, nextStart + pageSize).map((p) => thumbUrl(p.image, 900)));
     }
     if (urls.length) prefetchImageUrls(urls, 24);
-  }, [photos, page, pageSize]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [photoIdKey, page, pageSize]);
 }
