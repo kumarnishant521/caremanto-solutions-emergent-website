@@ -89,7 +89,7 @@ export default function ConsultationModal({ isOpen, onClose, prefill }) {
           role="dialog"
           aria-modal="true"
           data-testid="consultation-modal"
-          className="fixed inset-0 z-[90] bg-black/70 backdrop-blur-md flex items-center justify-center p-4 md:p-8"
+          className="fixed inset-0 z-[90] bg-black/70 backdrop-blur-xl flex items-center justify-center p-4 md:p-8 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]"
         >
           <motion.div
             initial={{ y: 40, opacity: 0 }}

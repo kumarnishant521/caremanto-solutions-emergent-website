@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Share2, X as CloseIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -109,55 +109,60 @@ export default function Lightbox({ photos, index, onIndex, onClose, testIdPrefix
           onClick={onClose}
           onPointerDown={onPointerDown}
           onPointerUp={onPointerUp}
-          className="fixed inset-0 z-[80] bg-black/95 backdrop-blur-md flex items-center justify-center p-4 md:p-10"
+          className="fixed inset-0 z-[80] bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 md:p-10 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]"
         >
-          {/* --- Top toolbar (share + close) --------------------------- */}
+          {/* --- Top toolbar (share + close) — round pills, backdrop-blur --- */}
           <div
-            className="absolute top-6 right-6 flex items-center gap-2 z-[2]"
+            className="absolute top-4 md:top-6 right-4 md:right-6 flex items-center gap-2 z-[2]"
+            style={{ top: "max(1rem, env(safe-area-inset-top))" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <button
+            <motion.button
               type="button"
               onClick={share}
+              whileTap={{ scale: 0.92 }}
               aria-label="Share"
               title="Share"
               data-testid={`${testIdPrefix}-lightbox-share`}
-              className="w-11 h-11 flex items-center justify-center border border-white/40 text-white hover:border-[var(--gold-hi)] hover:text-[var(--gold-hi)] transition-colors"
+              className="w-11 h-11 rounded-full flex items-center justify-center border border-white/25 bg-white/5 backdrop-blur-md text-white hover:border-[var(--gold-hi)] hover:text-[var(--gold-hi)] hover:bg-white/10 transition-colors"
             >
               <Share2 size={16} strokeWidth={1.6} />
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               type="button"
               onClick={onClose}
+              whileTap={{ scale: 0.92 }}
               aria-label="Close"
               data-testid={`${testIdPrefix}-lightbox-close`}
-              className="w-11 h-11 flex items-center justify-center border border-white/40 text-white hover:border-[var(--gold-hi)] hover:text-[var(--gold-hi)] transition-colors"
+              className="w-11 h-11 rounded-full flex items-center justify-center border border-white/25 bg-white/5 backdrop-blur-md text-white hover:border-[var(--gold-hi)] hover:text-[var(--gold-hi)] hover:bg-white/10 transition-colors"
             >
               <CloseIcon size={16} strokeWidth={1.6} />
-            </button>
+            </motion.button>
           </div>
 
-          {/* --- Prev / Next floating arrows --------------------------- */}
+          {/* --- Prev / Next floating arrows — round pills, backdrop-blur --- */}
           {total > 1 && (
             <>
-              <button
+              <motion.button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); goPrev(); }}
+                whileTap={{ scale: 0.92 }}
                 aria-label="Previous photo"
                 data-testid={`${testIdPrefix}-lightbox-prev`}
-                className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 z-[2] w-12 h-12 md:w-14 md:h-14 flex items-center justify-center border border-white/30 text-white/90 hover:border-[var(--gold-hi)] hover:text-[var(--gold-hi)] bg-black/20 backdrop-blur-sm transition-colors"
+                className="absolute left-3 md:left-8 top-1/2 -translate-y-1/2 z-[2] w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center border border-white/25 text-white/95 hover:border-[var(--gold-hi)] hover:text-[var(--gold-hi)] bg-white/5 backdrop-blur-md hover:bg-white/10 transition-colors"
               >
                 <ChevronLeft size={22} strokeWidth={1.4} />
-              </button>
-              <button
+              </motion.button>
+              <motion.button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); goNext(); }}
+                whileTap={{ scale: 0.92 }}
                 aria-label="Next photo"
                 data-testid={`${testIdPrefix}-lightbox-next`}
-                className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 z-[2] w-12 h-12 md:w-14 md:h-14 flex items-center justify-center border border-white/30 text-white/90 hover:border-[var(--gold-hi)] hover:text-[var(--gold-hi)] bg-black/20 backdrop-blur-sm transition-colors"
+                className="absolute right-3 md:right-8 top-1/2 -translate-y-1/2 z-[2] w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center border border-white/25 text-white/95 hover:border-[var(--gold-hi)] hover:text-[var(--gold-hi)] bg-white/5 backdrop-blur-md hover:bg-white/10 transition-colors"
               >
                 <ChevronRight size={22} strokeWidth={1.4} />
-              </button>
+              </motion.button>
             </>
           )}
 
@@ -167,16 +172,10 @@ export default function Lightbox({ photos, index, onIndex, onClose, testIdPrefix
               className="max-w-[1200px] w-full"
               onClick={(e) => e.stopPropagation()}
             >
-              <motion.img
-                key={photo.id || photo.image}
-                initial={{ opacity: 0.3, scale: 0.995 }}
-                animate={{ opacity: 1,   scale: 1     }}
-                transition={{ duration: 0.35, ease: [0.2, 0.7, 0.15, 1] }}
-                src={photo.image}
-                alt={photo.alt_text || altFor(photo, index)}
-                data-testid={`${testIdPrefix}-lightbox-img`}
-                draggable={false}
-                className="w-full max-h-[80vh] object-contain select-none"
+              <LightboxImage
+                photo={photo}
+                index={index}
+                testIdPrefix={testIdPrefix}
               />
               <div className="mt-5 flex flex-col md:flex-row md:items-end md:justify-between gap-3">
                 <div>
@@ -184,12 +183,12 @@ export default function Lightbox({ photos, index, onIndex, onClose, testIdPrefix
                     {photo.category}{photo.subcategory ? ` · ${photo.subcategory}` : ""}
                   </div>
                   {photo.title && (
-                    <div className="font-serif text-[24px] md:text-[32px] text-white">
+                    <div className="font-serif text-[22px] md:text-[32px] text-white leading-tight">
                       {photo.title}
                     </div>
                   )}
                   {photo.description && (
-                    <div className="text-[14px] text-white/70 mt-1 max-w-xl">
+                    <div className="text-[13px] md:text-[14px] text-white/70 mt-1 max-w-xl">
                       {photo.description}
                     </div>
                   )}
@@ -197,7 +196,7 @@ export default function Lightbox({ photos, index, onIndex, onClose, testIdPrefix
                 {total > 1 && (
                   <div
                     data-testid={`${testIdPrefix}-lightbox-counter`}
-                    className="font-mono-alt text-[11px] tracking-[0.28em] uppercase text-white/60 self-start md:self-end"
+                    className="font-mono-alt text-[11px] tracking-[0.28em] uppercase text-white/70 self-start md:self-end"
                   >
                     {String(index + 1).padStart(2, "0")} / {String(total).padStart(2, "0")}
                   </div>
@@ -208,5 +207,43 @@ export default function Lightbox({ photos, index, onIndex, onClose, testIdPrefix
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+/**
+ * LightboxImage — dedicated inner component so we can track per-image
+ * load state (skeleton-blur until decode). Prevents the "black flash"
+ * users saw between arrow-click and network decode on cold-start.
+ *
+ * Container reserves a min-height via `min-h-[60vh]` so navigating to a
+ * larger image never collapses the caption row upward mid-decode.
+ */
+function LightboxImage({ photo, index, testIdPrefix }) {
+  const [loaded, setLoaded] = useState(false);
+  // Reset load state whenever the underlying photo changes.
+  useEffect(() => { setLoaded(false); }, [photo.id, photo.image]);
+
+  return (
+    <div className="relative w-full min-h-[50vh] md:min-h-[60vh] flex items-center justify-center">
+      {!loaded && (
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 top-0 h-[50vh] md:h-[60vh] max-h-[80vh] portfolio-card-skeleton"
+          style={{ maxWidth: "100%" }}
+        />
+      )}
+      <motion.img
+        key={photo.id || photo.image}
+        initial={{ opacity: 0, scale: 0.995 }}
+        animate={{ opacity: loaded ? 1 : 0, scale: loaded ? 1 : 0.995 }}
+        transition={{ duration: 0.35, ease: [0.2, 0.7, 0.15, 1] }}
+        src={photo.image}
+        alt={photo.alt_text || altFor(photo, index)}
+        data-testid={`${testIdPrefix}-lightbox-img`}
+        draggable={false}
+        onLoad={() => setLoaded(true)}
+        className="relative z-[1] w-full max-h-[80vh] object-contain select-none"
+      />
+    </div>
   );
 }

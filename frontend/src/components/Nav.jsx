@@ -324,7 +324,7 @@ export default function Nav() {
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.4, ease: [0.2, 0.7, 0.15, 1] }}
-            className="xl:hidden overflow-hidden border-t border-[var(--line)] bg-[var(--bg-0)]/97 backdrop-blur-xl"
+            className="xl:hidden overflow-hidden border-t border-[var(--line)] bg-[var(--bg-0)]/97 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]"
           >
             <div className="px-6 py-8 space-y-6">
               <Link to="/" data-testid="mobile-home" className="nav-label block text-[13px]">HOME</Link>

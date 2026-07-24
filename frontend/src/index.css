@@ -355,6 +355,21 @@ a, button, [role="button"] { cursor: pointer; }
     .portfolio-item-card { margin-bottom: 20px; }
 }
 
+/* Portfolio grid — hover scale for a subtle Apple-editorial lift.
+   Applied via CSS so every card inherits without JSX churn. Respects
+   reduced-motion. */
+.portfolio-item-card {
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform;
+}
+.portfolio-item-card:hover {
+    transform: scale(1.012);
+}
+@media (prefers-reduced-motion: reduce) {
+    .portfolio-item-card { transition: none; }
+    .portfolio-item-card:hover { transform: none; }
+}
+
 .portfolio-item-card img {
     width: 100%;
     height: auto !important;
