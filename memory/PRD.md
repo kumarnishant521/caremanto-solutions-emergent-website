@@ -22,6 +22,43 @@ Public: `GET /`, `GET /projects[?category=…]`, `GET /projects/{id}`, `GET /gal
 Auth: `POST /auth/login`, `GET /auth/me`, `POST /auth/logout`
 Admin (cookie-auth): `POST/PUT/DELETE /admin/projects[/{id}]`, `POST/PUT/DELETE /admin/gallery[/{id}]`, `PUT /admin/gallery/taxonomy`, `GET /admin/leads`, `PATCH/DELETE /admin/leads/{id}`
 
+## What's Implemented (2026-07-24 · v7 — Admin nav restructure + Home Copy CMS + real-time sync + Apple skeletons)
+
+### Admin console — streamlined 4-tab navigation
+- **GALLERY** (Photos / Videos sub-toggle)
+- **HERO & COVERS** (Home Sequence / Portfolio Features / Hero Covers sub-toggles)
+- **GRID LAYOUTS** (Projects — Smart Grid Assistant visual preset redesign deferred to next round)
+- **TEXT CUSTOMIZATION** (SEO Keywords · Home Page Copy · Footer · Nav)
+- Leads accessible via a header pill + slide-over (kept out of primary nav per spec).
+
+### Home Page Copy CMS
+- New `Home Page Copy` sub-tab inside Text Customization edits every static string on the Home Page: hero headline (line1/accent/line2/line3), sub-headline, CTA labels, category chips, Divisions band eyebrow/title/lede + per-card copy/CTAs, section labels and CTA-band copy.
+- Backend `DEFAULT_HOME_COPY` + `_merge_seo` overlay + PUT sanitizer: empty strings never overwrite defaults, so blanking a field restores the compiled string.
+- Frontend `useHomeCopy(block, defaults)` hook wired into `Hero.jsx`; Divisions.jsx / marquee / section labels ready to bind in the follow-up round.
+
+### Real-time synchronization
+- `SiteSettingsProvider` and `useGallery` both poll every 20s + refetch on window `focus` — admin edits publish across every open tab within one poll cycle. No manual refresh required.
+- Save clears the `caremanto:site-settings` localStorage so subsequent visits hydrate fresh.
+
+### Apple-style skeleton loaders
+- New `SkeletonGrid.jsx` — shimmer-blur placeholder tiles that preserve the 3-column masonry.
+- Replaces "Loading portfolio…" / "Loading references…" text in `/works` and `/gallery` — no more unstyled flashes on cold start.
+
+### Public Lightbox — ±3 neighbour preload
+- Preloads 3 previous + 3 next images on every navigation event so arrow clicks are zero-lag.
+
+### Admin gallery UX
+- Photo grid renders 24-per-page pagination with **[Prev]/Next selectors at TOP AND BOTTOM** (`admin-pager-top`, `admin-pager-bottom`).
+- Admin lightbox now reuses the shared `<Lightbox>` (testIdPrefix='admin') so admins get prev/next arrows + keyboard + swipe + neighbour preload.
+
+### AdminSEOManager save fix (iteration 25 hotfix)
+- Removed unreliable functional-updater "steal latest" trick — now uses `doc` state directly.
+- Error toast payload always coerced to a string (was crashing ErrorBoundary when FastAPI returned a Pydantic error array).
+
+### Testing
+- iter24 → 100% backend (15/15), frontend 65% (surfaced the SEO save crash).
+- iter25 hotfix → 100% frontend & backend across save flow, real-time sync, blank-fallback and regression.
+
 ## What's Implemented (2026-07-24 · v6 — Lightbox overhaul + pagination engine + auto ALT tags)
 
 ### Lightbox

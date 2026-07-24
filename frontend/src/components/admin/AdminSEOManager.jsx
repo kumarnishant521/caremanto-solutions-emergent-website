@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api";
 import { toast } from "sonner";
 
@@ -68,16 +68,10 @@ const emptyDoc = {
 
 export default function AdminSEOManager() {
   const [doc, setDoc]         = useState(emptyDoc);
-  const docRef                = useRef(emptyDoc);      // always mirrors latest doc
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
   const [tab, setTab]         = useState("seo");            // "seo" | "footer" | "nav"
   const [activeSection, setActiveSection] = useState("home");
-
-  // Keep the ref in lock-step with the doc — reads inside save() are guaranteed
-  // to see the most recent state even if the user clicks Publish immediately
-  // after typing.
-  useEffect(() => { docRef.current = doc; }, [doc]);
 
   const load = async () => {
     setLoading(true);
