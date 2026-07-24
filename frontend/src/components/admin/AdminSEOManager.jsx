@@ -107,18 +107,28 @@ export default function AdminSEOManager() {
 
   const save = async () => {
     setSaving(true);
-    // Read the latest doc synchronously via functional setState so rapid
-    // edits made just before the click are guaranteed to be persisted.
-    let latest;
-    setDoc((cur) => { latest = cur; return cur; });
     try {
-      await api.put("/admin/seo", latest);
+      // `doc` is the current committed React state at the time this
+      // handler was invoked — safe to serialize directly. The prior
+      // "functional-updater to steal latest" trick was unreliable under
+      // React 18 auto-batching (see iter24 RCA).
+      await api.put("/admin/seo", doc);
       toast.success("Settings published — visible instantly across the site.");
       // Invalidate the site-settings cache so the next page load reads fresh.
       try { localStorage.removeItem("caremanto:site-settings"); } catch {}
       await load();
     } catch (e) {
-      toast.error(e?.response?.data?.detail || "Save failed.");
+      // FastAPI validation errors come back as an array of dicts — we
+      // MUST coerce to a string before handing to sonner, otherwise React
+      // will throw "Objects are not valid as a React child" and the
+      // outer ErrorBoundary will crash the whole admin app.
+      const raw = e?.response?.data?.detail;
+      let msg;
+      if (typeof raw === "string") msg = raw;
+      else if (Array.isArray(raw))  msg = raw.map((x) => x?.msg || JSON.stringify(x)).join(" · ");
+      else if (raw && typeof raw === "object") msg = raw.msg || JSON.stringify(raw);
+      else msg = e?.message || "Save failed.";
+      toast.error(msg);
     } finally { setSaving(false); }
   };
 

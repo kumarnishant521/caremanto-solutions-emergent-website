@@ -1,0 +1,27 @@
+{
+  "summary": "Iter25 retest of AdminSEOManager save() closure/toast fix. ALL 4 core scenarios PASS: (1) Admin Home Copy save of home-copy-hero-line1='Reimagining' completes with NO ErrorBoundary crash, success toast 'Settings published — visible instantly across the site.' appears, and the input retains the new value after auto-reload. (2) GET /api/seo confirms home_copy.hero.line1='Reimagining'. (3) Real-time sync verified — public `/` hero-headline shows 'Reimagining spaces / with quiet authority.' on load (polling+focus refresh works). (4) Blank fallback: clearing line1 + save falls back to compiled default 'Redefining' on public site. Regression sanity green (admin app fully navigable, sub-tabs, save button responsive). Cleanup: deleted seo_settings doc from Mongo — defaults restored, verified GET /api/seo returns hero.line1='Redefining'.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration24_home_copy.py"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Fix applied in AdminSEOManager.save() (lines 108-133) is correct: uses `doc` directly (React closes state over handler at click time) and coerces error payload (string / array of Pydantic msgs / object) before passing to sonner. The prior functional-updater trick is removed. The docRef ref is still defined+synced but no longer used in save() — leaving as-is is fine (no dead-code risk), or E1 could remove it for clarity."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "100% (all 4 primary scenarios passed)"
+  },
+  "test_credentials": "Admin passless: POST /api/auth/passless-login (no body). Legacy: admin@caremanto.com / Caremanto@2026.",
+  "seed_data_creation": "None. Test wrote+reverted a single seo_settings doc; cleanup deleted the doc so defaults come back.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "AdminSEOManager save flow is fully green. If future work touches this file, retest with: /admin/login → auto passless → admin-tab-text → admin-seo-subtab-home → edit home-copy-hero-line1='Reimagining' → admin-seo-save → expect success toast + no ErrorBoundary. GET /api/seo should show updated line1. Public / hero-headline data-testid should reflect on next poll (20s interval) or focus event. Clearing the field falls back to compiled default 'Redefining'.",
+  "rca of the issue": "Previously in iter24: functional-updater `setDoc(cur=>{latest=cur; return cur;})` race under React 18 batching meant `latest` was undefined when api.put fired, producing 422 with a Pydantic error array which the sonner toast tried to render as a React child, crashing the ErrorBoundary. Fix in iter25 (verified): use `doc` directly (safe — handler captured latest render state) and coerce toast payload to string. Fix confirmed by (a) no crash under repeated saves, (b) 200 response persisting to DB, (c) blank-body save still produces 200 (backend permissive) and defaults reappear."
+}
