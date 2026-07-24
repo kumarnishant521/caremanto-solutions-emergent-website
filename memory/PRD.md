@@ -22,6 +22,33 @@ Public: `GET /`, `GET /projects[?category=…]`, `GET /projects/{id}`, `GET /gal
 Auth: `POST /auth/login`, `GET /auth/me`, `POST /auth/logout`
 Admin (cookie-auth): `POST/PUT/DELETE /admin/projects[/{id}]`, `POST/PUT/DELETE /admin/gallery[/{id}]`, `PUT /admin/gallery/taxonomy`, `GET /admin/leads`, `PATCH/DELETE /admin/leads/{id}`
 
+## What's Implemented (2026-07-24 · v6 — Lightbox overhaul + pagination engine + auto ALT tags)
+
+### Lightbox
+- New shared `components/Lightbox.jsx` (used by both /works and /gallery via `testIdPrefix`).
+- Floating prev/next chevrons with hairline borders; icon-only Share button in the top toolbar.
+- Keyboard: ArrowLeft / ArrowRight / Escape. Pointer-drag swipe (>60px horizontal threshold).
+- Neighbouring photos preloaded via `new Image()` so navigation feels instant.
+- Removed all "Share as Pin ↗" pills and the `↗` overlays from gallery grid thumbnails. Share functionality preserved (Web Share API → clipboard fallback).
+
+### Pagination + preload engine
+- `Pagination.jsx` rewritten with numeric page selectors `[01] [02] [03] … [Next →]` (ellipsis for long ranges, active-page highlighted).
+- WorksPage + GalleryPage preload Page N-1 and Page N+1 thumbnails via `prefetchImageUrls` when the page index changes.
+- Page-change scroll target is now the grid element (`.scrollIntoView({block:'start'})`) — editorial header stays put.
+
+### Cover-card blur-up skeleton
+- `SmartImage` now renders `.smartimg-skeleton` (shimmer + blur) until the image fires `onLoad`, eliminating broken-card glitches on cold-start folder covers.
+
+### Backend — automated ALT-tag generator
+- New `generate_alt_text()` in `server.py` composes SEO-ready ALT strings from filename tokens + category descriptor + folder hint (e.g. `CAREMANTO SOLUTIONS — Luxury Residential Bathroom Interior Design`).
+- Applied to `POST /admin/gallery` and `PUT /admin/gallery/{id}` — NEVER overwrites a manual `alt_text` override; regenerates only when both the incoming payload AND the existing record are empty.
+- New `POST /api/admin/gallery/alt-preview` endpoint for the admin UI.
+- `/admin/upload` now includes `alt_suggestion` in its JSON response.
+- Frontend `altFor()` (`lib/seo.js`) reads `photo.alt_text` when present so all `<img>` renderings across grid / lightbox / cover cards inherit the stored alt.
+
+### Testing
+- iteration_22.json → 100% backend (9/9 pytest); GalleryPage lightbox migration bug caught + fixed in iteration_23.json → 100% frontend & backend.
+
 ## What's Implemented (2026-07-24 · v5 — Hero polish, strict service routing, editorial IA expansion)
 
 ### Hero
