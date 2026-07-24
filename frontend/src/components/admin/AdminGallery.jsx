@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api";
 import { toast } from "sonner";
 import { thumbUrl } from "../../lib/thumb";
+import Lightbox from "../Lightbox";
 import AdminFolderManager from "./AdminFolderManager";
 
 const EMPTY = { title: "", description: "", category: "", subcategory: "", image: "", is_sample: false, featured_home: false, featured_portfolio: false, is_cover: false };
@@ -17,6 +18,7 @@ export default function AdminGallery() {
   const [loading, setLoading] = useState(true);
   const [bulkText, setBulkText] = useState("");
   const [page, setPage] = useState(1);
+  const [lightbox, setLightbox] = useState(null);   // { photos, index }
   const PAGE_SIZE = 24;
 
   const loadAll = () => {
@@ -349,34 +351,33 @@ export default function AdminGallery() {
           const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
           return (
             <>
-              <div className="flex items-center justify-between mb-4">
-                <div className="text-[11px] text-[#F5EEE0]/60">
-                  {filtered.length === 0 ? "0 results" : `Showing ${(currentPage - 1) * PAGE_SIZE + 1}–${Math.min(currentPage * PAGE_SIZE, filtered.length)} of ${filtered.length}`}
-                  {filterFlag !== "all" && <span className="text-[var(--gold-hi)] ml-2">· {filterFlag.toUpperCase()} only</span>}
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className="admin-btn ghost text-[11px] disabled:opacity-40"
-                    data-testid="admin-page-prev"
-                  >← Prev</button>
-                  <span className="text-[11px] text-[#F5EEE0]/60">
-                    {currentPage} / {totalPages}
-                  </span>
-                  <button
-                    onClick={() => setPage((p) => p + 1)}
-                    disabled={currentPage >= totalPages}
-                    className="admin-btn ghost text-[11px] disabled:opacity-40"
-                    data-testid="admin-page-next"
-                  >Next →</button>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                {paged.map((p) => (
+              <PagerBar
+                total={filtered.length}
+                pageSize={PAGE_SIZE}
+                page={currentPage}
+                totalPages={totalPages}
+                filterFlag={filterFlag}
+                onPrev={() => setPage((p) => Math.max(1, p - 1))}
+                onNext={() => setPage((p) => p + 1)}
+                position="top"
+              />
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
+                {paged.map((p, i) => (
                   <div key={p.id} className="admin-card p-3" data-testid={`admin-photo-${p.id}`}>
-                    <div className="aspect-square overflow-hidden bg-[#241D16] mb-3 relative">
-                      <img src={thumbUrl(p.image, 400)} alt={p.title || ""} loading="lazy" className="w-full h-full object-cover"/>
+                    <button
+                      type="button"
+                      onClick={() => setLightbox({ photos: paged, index: i })}
+                      data-testid={`admin-photo-open-${p.id}`}
+                      className="block w-full aspect-square overflow-hidden bg-[#241D16] mb-3 relative group focus:outline focus:outline-1 focus:outline-[var(--gold-hi)]"
+                      title="Click to preview at full size"
+                    >
+                      <img
+                        src={thumbUrl(p.image, 300)}
+                        alt={p.alt_text || p.title || ""}
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full h-full object-cover"
+                      />
                 {p.featured_home && (
                   <span className="absolute top-2 right-2 bg-[var(--gold)] text-white text-[9px] tracking-widest uppercase px-2 py-1">★ Home</span>
                 )}
@@ -386,7 +387,7 @@ export default function AdminGallery() {
                 {p.featured_portfolio && (
                   <span className="absolute bottom-2 left-2 bg-black/70 text-[var(--gold-hi)] text-[9px] tracking-widest uppercase px-2 py-1 border border-[var(--gold-hi)]/60">Portfolio</span>
                 )}
-              </div>
+              </button>
               <div className="overline text-[9px] mb-1">
                 {p.category}{p.subcategory ? ` · ${p.subcategory}` : ""}
               </div>
@@ -441,11 +442,65 @@ export default function AdminGallery() {
             </div>
                 ))}
               </div>
+              <PagerBar
+                total={filtered.length}
+                pageSize={PAGE_SIZE}
+                page={currentPage}
+                totalPages={totalPages}
+                filterFlag={filterFlag}
+                onPrev={() => setPage((p) => Math.max(1, p - 1))}
+                onNext={() => setPage((p) => p + 1)}
+                position="bottom"
+              />
             </>
           );
         })()}
         </>
       )}
+
+      {/* Admin Lightbox — reuses the shared Lightbox component so admins get
+          the same arrow / keyboard / swipe navigation as public viewers. */}
+      <Lightbox
+        photos={lightbox?.photos || []}
+        index={lightbox?.index}
+        onIndex={(i) => setLightbox((lb) => (lb ? { ...lb, index: i } : lb))}
+        onClose={() => setLightbox(null)}
+        testIdPrefix="admin"
+      />
     </section>
+  );
+}
+
+/* -------------------------------------------------------------------- */
+/* PagerBar — top & bottom pager row used above/below the admin grid.   */
+/* Kept small so both instances render with identical layout + testids. */
+/* -------------------------------------------------------------------- */
+function PagerBar({ total, pageSize, page, totalPages, filterFlag, onPrev, onNext, position }) {
+  const startRow = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const endRow   = Math.min(page * pageSize, total);
+  return (
+    <div className="flex items-center justify-between mb-4" data-testid={`admin-pager-${position}`}>
+      <div className="text-[11px] text-[#F5EEE0]/60">
+        {total === 0 ? "0 results" : `Showing ${startRow}–${endRow} of ${total}`}
+        {filterFlag !== "all" && <span className="text-[var(--gold-hi)] ml-2">· {filterFlag.toUpperCase()} only</span>}
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onPrev}
+          disabled={page === 1}
+          className="admin-btn ghost text-[11px] disabled:opacity-40"
+          data-testid={`admin-page-prev-${position}`}
+        >← Prev</button>
+        <span className="text-[11px] text-[#F5EEE0]/60" data-testid={`admin-page-status-${position}`}>
+          Page {page} of {totalPages}
+        </span>
+        <button
+          onClick={onNext}
+          disabled={page >= totalPages}
+          className="admin-btn ghost text-[11px] disabled:opacity-40"
+          data-testid={`admin-page-next-${position}`}
+        >Next →</button>
+      </div>
+    </div>
   );
 }

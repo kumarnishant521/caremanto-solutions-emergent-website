@@ -68,7 +68,8 @@ export default function Lightbox({ photos, index, onIndex, onClose, testIdPrefix
     }
   };
 
-  // Preload neighbouring images so left / right swipes render instantly.
+  // Preload the ±3 neighbouring images so arrow-navigation lands zero-lag
+  // even with the black backdrop. Uses the browser's native decode cache.
   useEffect(() => {
     if (!open) return;
     const preload = (i) => {
@@ -77,8 +78,10 @@ export default function Lightbox({ photos, index, onIndex, onClose, testIdPrefix
       const img = new Image();
       img.src = p.image;
     };
-    preload(index - 1);
-    preload(index + 1);
+    for (let k = 1; k <= 3; k++) {
+      preload(index - k);
+      preload(index + k);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, index, photos]);
 

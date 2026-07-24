@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { heroImages as realHeroImages } from "../lib/realProjects";
 import { api } from "../lib/api";
 import { useConsultation } from "../lib/useConsultation";
+import { useHomeCopy } from "../lib/useSiteSettings";
 
 /* ---------------------------------------------------------------------
  * HERO SLIDESHOW
@@ -41,6 +42,20 @@ export default function Hero() {
   const { scrollY } = useScroll();
   const y = useTransform(scrollY, [0, 800], [0, 140]);
   const { open: openConsult } = useConsultation();
+  // Admin-editable copy — falls back to compiled defaults if any field blank.
+  const c = useHomeCopy("hero", {
+    line1: "Redefining",
+    accent: "spaces",
+    line2: "with quiet",
+    line3: "authority.",
+    subhead: "An interior and restoration atelier composing residences, hospitality and heritage architecture — where light, material and proportion are treated as instruments of the everyday.",
+    cta_primary: "Explore Portfolio",
+    cta_secondary: "Begin a Conversation",
+    chip_1_label: "Residential",
+    chip_2_label: "Commercial",
+    chip_3_label: "Hospitality",
+    chip_4_label: "Heritage",
+  });
 
   // Live-config from /admin (Hero · Covers tab).
   useEffect(() => {
@@ -166,17 +181,15 @@ export default function Hero() {
           data-testid="hero-headline"
           className="font-serif tracking-[-0.02em] text-[clamp(1.8rem,4.9vw,4.15rem)] leading-[0.95] max-w-[720px] text-[var(--on-dark)]"
         >
-          <span className={`reveal-mask d1 ${ready ? "in" : ""}`}><span>Redefining</span></span>{" "}
-          <span className={`reveal-mask d2 ${ready ? "in" : ""}`}><span className="italic text-[var(--gold-hi)]">spaces</span></span><br />
-          <span className={`reveal-mask d3 ${ready ? "in" : ""}`}><span>with quiet</span></span>{" "}
-          <span className={`reveal-mask d4 ${ready ? "in" : ""}`}><span>authority.</span></span>
+          <span className={`reveal-mask d1 ${ready ? "in" : ""}`}><span>{c.line1}</span></span>{" "}
+          <span className={`reveal-mask d2 ${ready ? "in" : ""}`}><span className="italic text-[var(--gold-hi)]">{c.accent}</span></span><br />
+          <span className={`reveal-mask d3 ${ready ? "in" : ""}`}><span>{c.line2}</span></span>{" "}
+          <span className={`reveal-mask d4 ${ready ? "in" : ""}`}><span>{c.line3}</span></span>
         </h1>
 
         <div className="mt-8 md:mt-10 grid grid-cols-1 md:grid-cols-[1fr_auto] items-end gap-8">
           <p className="max-w-xl text-[15px] md:text-[17px] leading-relaxed font-light text-[var(--on-dark-soft)]">
-            An interior and restoration atelier composing residences, hospitality and
-            heritage architecture — where light, material and proportion are treated
-            as instruments of the everyday.
+            {c.subhead}
           </p>
           <div className="flex flex-wrap items-center gap-4">
             <Link
@@ -185,7 +198,7 @@ export default function Hero() {
               className="btn-solid-light"
               style={{ padding: "10px 20px", fontSize: "11px", letterSpacing: "0.28em" }}
             >
-              Explore Portfolio
+              {c.cta_primary}
             </Link>
             <button
               type="button"
@@ -194,7 +207,7 @@ export default function Hero() {
               className="btn-outline-light"
               style={{ padding: "10px 20px", fontSize: "11px", letterSpacing: "0.28em" }}
             >
-              Begin a Conversation
+              {c.cta_secondary}
             </button>
           </div>
         </div>
@@ -202,10 +215,10 @@ export default function Hero() {
         {/* Meta strip (static — unaffected by the slideshow) */}
         <div className="mt-14 md:mt-16 grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10 border-t border-[var(--on-dark)]/15 pt-6">
           {[
-            ["01", "Residential"],
-            ["02", "Commercial"],
-            ["03", "Hospitality"],
-            ["04", "Heritage"],
+            ["01", c.chip_1_label],
+            ["02", c.chip_2_label],
+            ["03", c.chip_3_label],
+            ["04", c.chip_4_label],
           ].map(([n, l]) => (
             <div key={n} className="flex items-baseline gap-3">
               <span className="font-mono-alt text-[11px] text-[var(--gold-hi)]">{n}</span>

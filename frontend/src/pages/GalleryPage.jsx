@@ -6,6 +6,7 @@ import SmartImage from "../components/SmartImage";
 import { thumbUrl } from "../lib/thumb";
 import { useGallery, prefetchImageUrls } from "../lib/useGallery";
 import Head from "../components/Head";
+import SkeletonGrid from "../components/SkeletonGrid";
 import Pagination from "../components/Pagination";
 import Lightbox from "../components/Lightbox";
 import { altFor } from "../lib/seo";
@@ -162,7 +163,7 @@ export default function GalleryPage() {
       {/* BODY */}
       <section className="max-w-[1500px] mx-auto px-6 md:px-14 py-16 md:py-24">
         {loading ? (
-          <div className="py-32 text-center overline text-[var(--muted)]">Loading references…</div>
+          <SkeletonGrid />
         ) : category === RESTORATION ? (
           photosByCategory.length === 0 ? (
             <div className="py-24 text-center">

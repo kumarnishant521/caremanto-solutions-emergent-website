@@ -60,9 +60,10 @@ const FOOTER_FIELDS = [
 ];
 
 const emptyDoc = {
-  sections: {},
-  footer:   {},
-  nav:      { labels: {}, interior_items: [], services_items: [] },
+  sections:  {},
+  footer:    {},
+  nav:       { labels: {}, interior_items: [], services_items: [] },
+  home_copy: { hero: {}, divisions: {}, sections: {} },
 };
 
 export default function AdminSEOManager() {
@@ -91,6 +92,11 @@ export default function AdminSEOManager() {
           labels:         (val.nav && val.nav.labels) || {},
           interior_items: (val.nav && val.nav.interior_items) || [],
           services_items: (val.nav && val.nav.services_items) || [],
+        },
+        home_copy: {
+          hero:      (val.home_copy && val.home_copy.hero)      || {},
+          divisions: (val.home_copy && val.home_copy.divisions) || {},
+          sections:  (val.home_copy && val.home_copy.sections)  || {},
         },
       });
     } catch (e) {
@@ -158,6 +164,7 @@ export default function AdminSEOManager() {
       <div className="border-b border-[#F5EEE0]/10 flex items-center gap-8">
         {[
           { k: "seo",    l: "SEO Keywords & Meta" },
+          { k: "home",   l: "Home Page Copy"      },
           { k: "footer", l: "Footer Content"      },
           { k: "nav",    l: "Navigation Text"     },
         ].map((t) => (
@@ -181,6 +188,12 @@ export default function AdminSEOManager() {
           activeSection={activeSection}
           setActiveSection={setActiveSection}
           patchSection={patchSection}
+        />
+      )}
+      {tab === "home" && (
+        <HomeCopyTab
+          homeCopy={doc.home_copy}
+          setDoc={setDoc}
         />
       )}
       {tab === "footer" && (
@@ -553,3 +566,138 @@ function NavItemsList({ title, subtitle, items, setItems, testidBase }) {
     </div>
   );
 }
+
+/* =====================================================================
+ * Home Page Copy tab (iteration 24)
+ *
+ * Edits every static string rendered on the public Home / landing views —
+ * hero (headline + accent + subhead + CTAs + category chips), the
+ * Divisions band (eyebrow + title + lede + per-card copy + CTAs), and
+ * generic section labels used elsewhere on Home. Leaving a field blank
+ * restores the compiled-in default (backend falls back automatically).
+ * ===================================================================== */
+const HOME_BLOCKS = [
+  {
+    key:   "hero",
+    label: "Hero Section",
+    lede:  "Editable copy for the fluid hero at the top of the home page.",
+    fields: [
+      { key: "line1",         label: "Headline · Line 1",           placeholder: "Redefining" },
+      { key: "accent",        label: "Headline · Italic Accent",    placeholder: "spaces" },
+      { key: "line2",         label: "Headline · Line 2",           placeholder: "with quiet" },
+      { key: "line3",         label: "Headline · Line 3",           placeholder: "authority." },
+      { key: "subhead",       label: "Sub-headline",                placeholder: "An interior and restoration atelier…", multiline: true },
+      { key: "cta_primary",   label: "Primary CTA Label",           placeholder: "Explore Portfolio" },
+      { key: "cta_secondary", label: "Secondary CTA Label",         placeholder: "Begin a Conversation" },
+      { key: "chip_1_label",  label: "Category Chip · 01",          placeholder: "Residential" },
+      { key: "chip_2_label",  label: "Category Chip · 02",          placeholder: "Commercial" },
+      { key: "chip_3_label",  label: "Category Chip · 03",          placeholder: "Hospitality" },
+      { key: "chip_4_label",  label: "Category Chip · 04",          placeholder: "Heritage" },
+    ],
+  },
+  {
+    key:   "divisions",
+    label: "Divisions Band",
+    lede:  "Copy for the two-practice section that follows the hero.",
+    fields: [
+      { key: "eyebrow",  label: "Section Eyebrow",       placeholder: "The Practice" },
+      { key: "title",    label: "Section Title",         placeholder: "Two disciplines. One studio." },
+      { key: "lede",     label: "Section Lede",          placeholder: "We compose enduring interiors…", multiline: true },
+      { key: "d1_title", label: "Card 01 · Title",       placeholder: "Interior Practice" },
+      { key: "d1_body",  label: "Card 01 · Body",        placeholder: "Residential, commercial…", multiline: true },
+      { key: "d1_cta",   label: "Card 01 · CTA",         placeholder: "Interior Portfolio" },
+      { key: "d2_title", label: "Card 02 · Title",       placeholder: "Restoration Practice" },
+      { key: "d2_body",  label: "Card 02 · Body",        placeholder: "Heritage restoration…", multiline: true },
+      { key: "d2_cta",   label: "Card 02 · CTA",         placeholder: "Restoration Portfolio" },
+    ],
+  },
+  {
+    key:   "sections",
+    label: "Home Section Labels",
+    lede:  "Eyebrows, titles and CTA bands used across other Home sections.",
+    fields: [
+      { key: "gallery_eyebrow", label: "Gallery · Eyebrow",   placeholder: "The Portfolio" },
+      { key: "gallery_title",   label: "Gallery · Title",     placeholder: "Selected commissions." },
+      { key: "gallery_lede",    label: "Gallery · Lede",      placeholder: "A living archive of interiors…", multiline: true },
+      { key: "cta_band_title",  label: "CTA Band · Title",    placeholder: "Begin a conversation." },
+      { key: "cta_band_body",   label: "CTA Band · Body",     placeholder: "Every commission starts with…", multiline: true },
+      { key: "cta_band_button", label: "CTA Band · Button",   placeholder: "Request Consultation" },
+    ],
+  },
+];
+
+function HomeCopyTab({ homeCopy, setDoc }) {
+  const [openBlock, setOpenBlock] = useState("hero");
+
+  const patch = (blockKey, fieldKey, value) => {
+    setDoc((d) => ({
+      ...d,
+      home_copy: {
+        ...d.home_copy,
+        [blockKey]: { ...(d.home_copy?.[blockKey] || {}), [fieldKey]: value },
+      },
+    }));
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Block picker */}
+      <div className="flex items-center flex-wrap gap-2">
+        {HOME_BLOCKS.map((b) => (
+          <button
+            key={b.key}
+            onClick={() => setOpenBlock(b.key)}
+            data-testid={`home-copy-block-${b.key}`}
+            className={`admin-btn ghost text-[11px] ${
+              openBlock === b.key ? "text-[var(--gold-hi)] border-[var(--gold-hi)]" : ""
+            }`}
+          >
+            {b.label}
+          </button>
+        ))}
+      </div>
+
+      {HOME_BLOCKS.filter((b) => b.key === openBlock).map((b) => (
+        <div key={b.key} className="admin-card p-6 md:p-8">
+          <div className="mb-6">
+            <div className="overline">{b.label}</div>
+            <p className="text-[11px] text-[#F5EEE0]/60 mt-1 max-w-2xl">{b.lede}</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {b.fields.map((f) => {
+              const val = (homeCopy?.[b.key] || {})[f.key] ?? "";
+              const testid = `home-copy-${b.key}-${f.key}`;
+              return (
+                <label key={f.key} className={`block ${f.multiline ? "md:col-span-2" : ""}`}>
+                  <span className="overline text-[10px] block mb-2">{f.label}</span>
+                  {f.multiline ? (
+                    <textarea
+                      rows={3}
+                      className="admin-input"
+                      value={val}
+                      onChange={(e) => patch(b.key, f.key, e.target.value)}
+                      placeholder={f.placeholder}
+                      data-testid={testid}
+                    />
+                  ) : (
+                    <input
+                      className="admin-input"
+                      value={val}
+                      onChange={(e) => patch(b.key, f.key, e.target.value)}
+                      placeholder={f.placeholder}
+                      data-testid={testid}
+                    />
+                  )}
+                </label>
+              );
+            })}
+          </div>
+          <p className="text-[10px] text-[#F5EEE0]/50 mt-4">
+            Leave a field blank to restore the studio's compiled default for that string.
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+

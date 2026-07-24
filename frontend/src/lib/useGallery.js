@@ -27,6 +27,10 @@ async function fetchGallery(force = false) {
 /**
  * Public hook — returns { photos, loading, refresh }.
  * Reads from the shared cache so cross-tab switches are instant.
+ *
+ * Real-time sync (iter 24) — every 20s the hook silently re-fetches the
+ * gallery in the background. Admin edits published from another tab or
+ * device are picked up within one poll cycle without a manual refresh.
  */
 export function useGallery() {
   const [photos, setPhotos] = useState(() => (_cache ? _cache.data : []));
@@ -34,17 +38,28 @@ export function useGallery() {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    const load = async (force = false) => {
       try {
-        const data = await fetchGallery();
+        const data = await fetchGallery(force);
         if (!cancelled) setPhotos(data);
       } catch {
         if (!cancelled) setPhotos([]);
       } finally {
         if (!cancelled) setLoading(false);
       }
-    })();
-    return () => { cancelled = true; };
+    };
+    load();
+    // Periodic silent refresh so instant real-time propagation works
+    // even for anonymous visitors already sitting on a page.
+    const t = setInterval(() => load(true), 20_000);
+    // When the tab regains focus, force a fresh fetch immediately.
+    const onFocus = () => load(true);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+      window.removeEventListener("focus", onFocus);
+    };
   }, []);
 
   const refresh = async () => {

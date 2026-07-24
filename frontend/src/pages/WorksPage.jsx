@@ -6,6 +6,7 @@ import SmartImage from "../components/SmartImage";
 import { thumbUrl } from "../lib/thumb";
 import { useGallery, prefetchImageUrls } from "../lib/useGallery";
 import Head from "../components/Head";
+import SkeletonGrid from "../components/SkeletonGrid";
 import Pagination from "../components/Pagination";
 import Lightbox from "../components/Lightbox";
 import { altFor } from "../lib/seo";
@@ -187,7 +188,7 @@ export default function WorksPage() {
         </div>
 
         {loading ? (
-          <div className="py-24 text-center overline text-[var(--muted)]">Loading portfolio…</div>
+          <SkeletonGrid />
         ) : openedFolder ? (
           /* -------- Child view: folder drill-down -------- */
           <FolderChildView

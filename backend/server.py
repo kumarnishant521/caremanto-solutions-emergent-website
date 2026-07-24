@@ -713,19 +713,65 @@ DEFAULT_NAV_SETTINGS = {
     ],
 }
 
+# ---- Home-page copy blocks (admin-editable) ------------------------------
+# Every string here is bound to the public site via useHomeCopy(). Empty
+# entries fall back to the compiled-in defaults inside the React component,
+# so leaving a field blank restores the original studio copy.
+DEFAULT_HOME_COPY = {
+    "hero": {
+        "line1":       "Redefining",
+        "accent":      "spaces",       # rendered italic + gold
+        "line2":       "with quiet",
+        "line3":       "authority.",
+        "subhead":     "An interior and restoration atelier composing residences, hospitality and heritage architecture — where light, material and proportion are treated as instruments of the everyday.",
+        "cta_primary": "Explore Portfolio",
+        "cta_secondary":"Begin a Conversation",
+        # 4 category chips shown under the hero
+        "chip_1_label": "Residential",
+        "chip_2_label": "Commercial",
+        "chip_3_label": "Hospitality",
+        "chip_4_label": "Heritage",
+    },
+    "divisions": {
+        "eyebrow":     "The Practice",
+        "title":       "Two disciplines. One studio.",
+        "lede":        "We compose enduring interiors and restore architectures with equal care.",
+        # Per-division cards
+        "d1_title":    "Interior Practice",
+        "d1_body":     "Residential, commercial and hospitality interiors that read as architecture — spatial narratives told through material, proportion and light.",
+        "d1_cta":      "Interior Portfolio",
+        "d2_title":    "Restoration Practice",
+        "d2_body":     "Heritage restoration, structural renewal and adaptive reuse — protecting the past while building for another century.",
+        "d2_cta":      "Restoration Portfolio",
+    },
+    "sections": {
+        # Section labels rendered on Home / landing views
+        "gallery_eyebrow":  "The Portfolio",
+        "gallery_title":    "Selected commissions.",
+        "gallery_lede":     "A living archive of interiors, restorations and studio experiments.",
+        "cta_band_title":   "Begin a conversation.",
+        "cta_band_body":    "Every commission starts with a considered dialogue about site, budget and ambition.",
+        "cta_band_button":  "Request Consultation",
+    },
+}
+
 DEFAULT_SEO_SETTINGS = {
-    "sections": DEFAULT_SEO_SECTIONS,
-    "footer":   DEFAULT_FOOTER_SETTINGS,
-    "nav":      DEFAULT_NAV_SETTINGS,
+    "sections":  DEFAULT_SEO_SECTIONS,
+    "footer":    DEFAULT_FOOTER_SETTINGS,
+    "nav":       DEFAULT_NAV_SETTINGS,
+    "home_copy": DEFAULT_HOME_COPY,
 }
 
 def _merge_seo(stored: dict) -> dict:
     """Deep-merge a stored partial doc over the default settings so newly-added
     keys always exist in the response even if the admin's edit was partial."""
+    # Deep-copy home_copy default so we don't mutate the module constant.
+    home_copy_defaults = {k: {**v} for k, v in DEFAULT_HOME_COPY.items()}
     out = {
-        "sections": {},
-        "footer":   {**DEFAULT_FOOTER_SETTINGS},
-        "nav":      {**DEFAULT_NAV_SETTINGS, "labels": {**DEFAULT_NAV_SETTINGS["labels"]}},
+        "sections":  {},
+        "footer":    {**DEFAULT_FOOTER_SETTINGS},
+        "nav":       {**DEFAULT_NAV_SETTINGS, "labels": {**DEFAULT_NAV_SETTINGS["labels"]}},
+        "home_copy": home_copy_defaults,
     }
     # Sections merge (per-section overlay)
     for key, default in DEFAULT_SEO_SECTIONS.items():
@@ -760,6 +806,16 @@ def _merge_seo(stored: dict) -> dict:
         out["nav"]["interior_items"] = stored_nav["interior_items"]
     if isinstance(stored_nav.get("services_items"), list):
         out["nav"]["services_items"] = stored_nav["services_items"]
+    # Home-copy merge — per-block overlay (hero / divisions / sections)
+    stored_hc = stored.get("home_copy") or {}
+    for block_key, defaults in home_copy_defaults.items():
+        overlay = stored_hc.get(block_key) or {}
+        merged = {**defaults}
+        if isinstance(overlay, dict):
+            for k, v in overlay.items():
+                if isinstance(v, str) and v.strip():
+                    merged[k] = v
+        out["home_copy"][block_key] = merged
     return out
 
 
@@ -790,9 +846,10 @@ class SEONavIn(BaseModel):
 
 
 class SEOUpdateIn(BaseModel):
-    sections: Optional[dict] = None   # {home: SEOSectionIn dict, residential: ..., ...}
-    footer:   Optional[SEOFooterIn] = None
-    nav:      Optional[SEONavIn] = None
+    sections:  Optional[dict] = None   # {home: SEOSectionIn dict, residential: ..., ...}
+    footer:    Optional[SEOFooterIn] = None
+    nav:       Optional[SEONavIn] = None
+    home_copy: Optional[dict] = None   # {hero: {...}, divisions: {...}, sections: {...}}
 
 
 import html as _html
@@ -889,6 +946,19 @@ async def update_seo_settings(body: SEOUpdateIn, _admin=Depends(get_current_admi
             value["nav"]["interior_items"] = [_sane_visible(s, max_length=80) for s in n["interior_items"] if str(s).strip()][:12]
         if isinstance(n.get("services_items"), list):
             value["nav"]["services_items"] = [_sane_visible(s, max_length=80) for s in n["services_items"] if str(s).strip()][:12]
+
+    # ---- home-copy merge --------------------------------------------------
+    if body.home_copy and isinstance(body.home_copy, dict):
+        for block_key, overlay in body.home_copy.items():
+            if not isinstance(overlay, dict):
+                continue
+            block_key = sanitize_short(block_key, max_length=64) or block_key
+            existing = value["home_copy"].get(block_key, {})
+            for k, v in overlay.items():
+                if isinstance(v, str):
+                    k = sanitize_short(k, max_length=64)
+                    existing[k] = _sane_visible(v, max_length=600)
+            value["home_copy"][block_key] = existing
 
     await db.settings.update_one(
         {"key": "seo_settings"},

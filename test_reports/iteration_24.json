@@ -1,0 +1,57 @@
+{
+  "summary": "Iteration 24 testing — Backend home_copy behavior PASS (15/15 tests including regression). Frontend admin nav restructure PASS (4 primary tabs, sub-toggles, Leads slide-over all render correctly). SkeletonGrid on /works and /gallery PASS. Admin gallery pagers (top+bottom) + admin Lightbox with prev/next/close/counter/img testids PASS. CRITICAL frontend bug: AdminSEOManager save() sends an empty PUT body → 422 → toast tries to render error object array → app-wide React crash (ErrorBoundary 'Something needed a quiet reset'). Home Copy save, Footer save, Nav save — all SEO edits appear broken via the UI. Real-time sync tests could not be verified because save fails.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "AdminSEOManager (/app/frontend/src/components/admin/AdminSEOManager.jsx lines 108-123)",
+        "issue": "save() uses `let latest; setDoc((cur)=>{latest=cur; return cur;}); await api.put('/admin/seo', latest);` — in React 18 the functional-updater may not run before the subsequent api.put call, so `latest` is undefined at send time, resulting in PUT /api/admin/seo body=null. Backend returns 422 with FastAPI detail array. The catch block then calls `toast.error(e?.response?.data?.detail || 'Save failed.')` — passing an ARRAY of error objects to sonner Toast → React throws 'Objects are not valid as a React child (found: object with keys {type, loc, msg, input, url})' → ErrorBoundary crashes the entire admin app to the 'Something needed a quiet reset' screen. Reproduced 100% on every SEO Save click (Home Copy line1 change, etc.).",
+        "selector": "[data-testid='admin-seo-save']",
+        "priority": "CRITICAL"
+      },
+      {
+        "component": "AdminSEOManager.save() error toast",
+        "issue": "toast.error() must receive a string. Coerce array/object errors: `typeof detail === 'string' ? detail : JSON.stringify(detail)`. Without this fix, ANY backend 422 anywhere in this flow will crash the admin app.",
+        "selector": "toast.error(e?.response?.data?.detail)",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Admin Home Copy save → publish to public site",
+        "issue": "Cannot verify polling-based real-time sync because the underlying save is broken (see AdminSEOManager bug). Backend PUT /api/admin/seo works correctly when called directly (verified via pytest — line1='Reimagining' persisted, defaults preserved). Frontend save flow is the blocker.",
+        "affected_selectors": ["[data-testid='admin-seo-save']", "[data-testid='home-copy-hero-line1']", "[data-testid='hero-headline']"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration24_home_copy.py",
+    "/app/backend/tests/test_iteration22_alt.py",
+    "/app/test_reports/pytest/iter24.xml"
+  ],
+  "action_items": [
+    "URGENT: Fix AdminSEOManager.save() — replace the `let latest; setDoc((cur)=>{latest=cur;...})` pattern with a plain `latest = doc` (state is stable at click time) or use a ref. Also coerce toast.error payload to string: `const msg = typeof (e?.response?.data?.detail) === 'string' ? e.response.data.detail : (e?.message || 'Save failed.'); toast.error(msg);`",
+    "After fix, re-verify: (a) Home Copy save publishes to `/api/seo` (b) Public / hero updates within 20-25s poll cycle without hard reload (c) Clearing home-copy-hero-line1 + save falls back to compiled 'Redefining' default (d) Existing SEO/Footer/Nav saves still work.",
+    "Note: sub-tab testid convention includes the primary key prefix — `admin-subtab-hero-covers-home-seq`, `admin-subtab-hero-covers-portfolio`, `admin-subtab-hero-covers-covers` (consistent with `admin-subtab-gallery-photos`). Spec listed them without the prefix — treat as spec typo, code is consistent."
+  ],
+  "critical_code_review_comments": [
+    "AdminSEOManager.jsx save(): the 'sync via functional setState' pattern is unreliable — the updater is scheduled but not guaranteed to run before the following async call. Use `doc` directly (setState value at handler invocation time is what the current render captured) or a `useRef` mirror. This is the root cause of the admin app crash.",
+    "AdminSEOManager error handling must never pass raw response.data.detail (which FastAPI returns as an ARRAY of error objects) to a React-rendered toast/text node. Always stringify or extract the .msg field.",
+    "AdminDashboardPage.jsx: sub-tab testid naming is consistent (`admin-subtab-{primary}-{sub}`). The review request lists shorter selectors for hero-covers; recommend either updating the spec or aliasing testids for backward compat.",
+    "Backend home_copy sanitizer (_sane_visible + only-truthy-string mutation) works exactly as designed — empty/whitespace inputs never overwrite defaults, verified by pytest."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration24_home_copy.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (15/15 including iter22 regression)",
+    "frontend": "~65% — Nav restructure, Leads pill, sub-toggles, SkeletonGrid, admin gallery pagers + Lightbox all PASS. Home Copy save flow BROKEN — crashes admin app."
+  },
+  "test_credentials": "Admin passless: POST /api/auth/passless-login (no body). Legacy: admin@caremanto.com / Caremanto@2026.",
+  "seed_data_creation": "backend/tests/test_iteration24_home_copy.py creates one TEST_iter24 gallery record + deletes it; PUT home_copy tests are self-restoring (write→restore original value).",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "The critical AdminSEOManager save bug blocks: (1) home_copy edit publish (2) real-time sync verification (3) Home Copy blank-fallback verification. Once fixed, retest by: navigate /admin (auto-passless) → admin-tab-text → admin-seo-subtab-home → edit home-copy-hero-line1 → admin-seo-save → wait ~2s → GET /api/seo (expect updated line1) → open new tab on / → wait 25s → verify [data-testid='hero-headline'] updated without reload → clear line1 → save → reload / → hero falls back to 'Redefining'. Backend behavior is fully validated; the only blocker is the frontend save/toast pair.",
+  "rca of the issue": "Root cause: AdminSEOManager.jsx save() line 108-123. Pattern `let latest; setDoc((cur)=>{latest=cur; return cur;}); await api.put('/admin/seo', latest);` — the updater callback runs during React's state reconciliation, which under React 18 auto-batching may occur AFTER the synchronous continuation of the async function (the api.put invocation). Result: `latest` is `undefined` at PUT time → axios sends empty/null body → FastAPI Pydantic validation returns 422 with `[{type:'missing', loc:['body'], input: null, ...}]` → error handler does `toast.error(e.response.data.detail)` where detail is an ARRAY of error objects → sonner renders it as a React child → React throws 'Objects are not valid as a React child' → the app-level ErrorBoundary catches → shows 'Something needed a quiet reset' page. Fix: use `doc` directly (React state closes over the value; there's no rapid-edit-before-click race worth this hack) OR mirror doc into a ref. Additionally, sanitize the toast payload to always be a string."
+}

@@ -59,7 +59,17 @@ export function SiteSettingsProvider({ children }) {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    // Real-time sync (iter 24) — silent poll every 20s so admin edits
+    // (SEO, footer, nav, home copy) publish across every open tab
+    // without a manual refresh. focus event forces an immediate re-fetch
+    // when the visitor returns to the tab.
+    const t = setInterval(() => { load(); }, 20_000);
+    const onFocus = () => { load(); };
+    window.addEventListener("focus", onFocus);
+    return () => { clearInterval(t); window.removeEventListener("focus", onFocus); };
+  }, []);
 
   const value = useMemo(() => ({ settings, reload: load }), [settings]);
   return (
@@ -74,7 +84,23 @@ export function useSiteSettings() {
 }
 
 /**
- * Resolve the SEO meta bundle for a given surface.
+ * useHomeCopy — resolve editable home-page text blocks from context.
+ *   block: "hero" | "divisions" | "sections"
+ * Returns an object of strings; missing values fall back to the caller's
+ * `defaults` map so a blank admin field never blanks the site.
+ */
+export function useHomeCopy(block, defaults = {}) {
+  const { settings } = useSiteSettings();
+  const stored = (settings.home_copy && settings.home_copy[block]) || {};
+  const out = { ...defaults };
+  for (const [k, v] of Object.entries(stored)) {
+    if (typeof v === "string" && v.trim()) out[k] = v;
+  }
+  return out;
+}
+
+/**
+ * useSEOFor — resolve the SEO meta bundle for a given surface.
  *   sectionKey — "home" | "residential" | "commercial" | "restoration" |
  *                "portfolio" | "studio"
  *   folder     — optional sub-folder name (only used for the browser <title>)
