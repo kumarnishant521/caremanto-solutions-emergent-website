@@ -30,12 +30,24 @@ export default function Lightbox({ photos, index, onIndex, onClose, testIdPrefix
   const open  = Number.isInteger(index) && photos && photos.length > 0;
   const total = photos ? photos.length : 0;
   const photo = open ? photos[index] : null;
+  // Track the direction of the last navigation so AnimatePresence can slide
+  // the image out to the opposite side. 1 = next, -1 = prev.
+  const [direction, setDirection] = useState(0);
 
   const clamp = (i) => (i + total) % total;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const goPrev = useCallback(() => { if (total > 1) onIndex(clamp(index - 1)); }, [index, total, onIndex]);
+  const goPrev = useCallback(() => { if (total > 1) { setDirection(-1); onIndex(clamp(index - 1)); } }, [index, total, onIndex]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const goNext = useCallback(() => { if (total > 1) onIndex(clamp(index + 1)); }, [index, total, onIndex]);
+  const goNext = useCallback(() => { if (total > 1) { setDirection( 1); onIndex(clamp(index + 1)); } }, [index, total, onIndex]);
+
+  // Body scroll lock while the lightbox is mounted — the visitor's scroll
+  // position never drifts and mobile browsers stop bouncing the page.
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [open]);
 
   // Keyboard navigation — attach/detach with the lightbox open state.
   useEffect(() => {
@@ -109,7 +121,7 @@ export default function Lightbox({ photos, index, onIndex, onClose, testIdPrefix
           onClick={onClose}
           onPointerDown={onPointerDown}
           onPointerUp={onPointerUp}
-          className="fixed inset-0 z-[80] bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 md:p-10 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]"
+          className="fixed inset-0 z-[80] bg-black/95 backdrop-blur-md flex items-center justify-center p-4 md:p-10 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]"
         >
           {/* --- Top toolbar (share + close) — round pills, backdrop-blur --- */}
           <div
@@ -169,12 +181,13 @@ export default function Lightbox({ photos, index, onIndex, onClose, testIdPrefix
           {/* --- Body (image + editorial caption) ---------------------- */}
           {photo && (
             <div
-              className="max-w-[1200px] w-full"
+              className="max-w-[1200px] w-full flex flex-col items-center justify-center"
               onClick={(e) => e.stopPropagation()}
             >
               <LightboxImage
                 photo={photo}
                 index={index}
+                direction={direction}
                 testIdPrefix={testIdPrefix}
               />
               <div className="mt-5 flex flex-col md:flex-row md:items-end md:justify-between gap-3">
@@ -211,39 +224,53 @@ export default function Lightbox({ photos, index, onIndex, onClose, testIdPrefix
 }
 
 /**
- * LightboxImage — dedicated inner component so we can track per-image
- * load state (skeleton-blur until decode). Prevents the "black flash"
- * users saw between arrow-click and network decode on cold-start.
+ * LightboxImage — directional slide + per-image blur-up skeleton.
  *
- * Container reserves a min-height via `min-h-[60vh]` so navigating to a
- * larger image never collapses the caption row upward mid-decode.
+ * AnimatePresence with a directional `x` variant creates a continuous
+ * left/right slide when arrows/swipe/keys fire. Custom slide distance is
+ * bounded so tall portraits don't fly off-screen on huge monitors.
+ * Zero-crop rule preserved via `object-contain` + `max-h-[85vh]`.
  */
-function LightboxImage({ photo, index, testIdPrefix }) {
+const slideVariants = {
+  enter: (dir) => ({ opacity: 0, x: dir === 0 ? 0 : dir > 0 ? 60 : -60 }),
+  center:        { opacity: 1, x: 0 },
+  exit:  (dir) => ({ opacity: 0, x: dir > 0 ? -60 : 60 }),
+};
+
+function LightboxImage({ photo, index, direction, testIdPrefix }) {
   const [loaded, setLoaded] = useState(false);
-  // Reset load state whenever the underlying photo changes.
   useEffect(() => { setLoaded(false); }, [photo.id, photo.image]);
 
   return (
-    <div className="relative w-full min-h-[50vh] md:min-h-[60vh] flex items-center justify-center">
+    <div className="relative w-full min-h-[50vh] md:min-h-[60vh] flex items-center justify-center overflow-hidden">
       {!loaded && (
         <div
           aria-hidden="true"
-          className="absolute inset-x-0 top-0 h-[50vh] md:h-[60vh] max-h-[80vh] portfolio-card-skeleton"
+          className="absolute inset-x-0 top-0 h-[50vh] md:h-[60vh] max-h-[85vh] portfolio-card-skeleton"
           style={{ maxWidth: "100%" }}
         />
       )}
-      <motion.img
-        key={photo.id || photo.image}
-        initial={{ opacity: 0, scale: 0.995 }}
-        animate={{ opacity: loaded ? 1 : 0, scale: loaded ? 1 : 0.995 }}
-        transition={{ duration: 0.35, ease: [0.2, 0.7, 0.15, 1] }}
-        src={photo.image}
-        alt={photo.alt_text || altFor(photo, index)}
-        data-testid={`${testIdPrefix}-lightbox-img`}
-        draggable={false}
-        onLoad={() => setLoaded(true)}
-        className="relative z-[1] w-full max-h-[80vh] object-contain select-none"
-      />
+      <AnimatePresence initial={false} mode="popLayout" custom={direction}>
+        <motion.img
+          key={photo.id || photo.image}
+          custom={direction}
+          variants={slideVariants}
+          initial="enter"
+          animate="center"
+          exit="exit"
+          transition={{
+            x:       { type: "spring", stiffness: 340, damping: 34, mass: 0.9 },
+            opacity: { duration: 0.22, ease: [0.2, 0.7, 0.15, 1] },
+          }}
+          src={photo.image}
+          alt={photo.alt_text || altFor(photo, index)}
+          data-testid={`${testIdPrefix}-lightbox-img`}
+          draggable={false}
+          onLoad={() => setLoaded(true)}
+          style={{ opacity: loaded ? 1 : 0 }}
+          className="relative z-[1] w-auto max-w-full max-h-[85vh] object-contain select-none"
+        />
+      </AnimatePresence>
     </div>
   );
 }

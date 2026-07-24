@@ -22,6 +22,32 @@ Public: `GET /`, `GET /projects[?category=…]`, `GET /projects/{id}`, `GET /gal
 Auth: `POST /auth/login`, `GET /auth/me`, `POST /auth/logout`
 Admin (cookie-auth): `POST/PUT/DELETE /admin/projects[/{id}]`, `POST/PUT/DELETE /admin/gallery[/{id}]`, `PUT /admin/gallery/taxonomy`, `GET /admin/leads`, `PATCH/DELETE /admin/leads/{id}`
 
+## What's Implemented (2026-07-24 · v9 — Luxury editorial polish + Lightbox re-engineering)
+
+### Lightbox re-engineering
+- Full-screen container: `bg-black/90` + `backdrop-blur-xl` + safe-area padding for modern mobile devices (`env(safe-area-inset-top/bottom)`).
+- All 4 toolbar/arrow buttons are now **round pills** (`rounded-full` + `border-white/25` + `backdrop-blur-md`) with subtle `hover:bg-white/10`.
+- Every button wrapped in `<motion.button>` with `whileTap={{ scale: 0.92 }}` for springy tactile feedback.
+- New inner `<LightboxImage>` component tracks per-image load state and renders a `portfolio-card-skeleton` shimmer inside a `min-h-[50vh] md:min-h-[60vh]` container — no more "black flash" when advancing to an un-decoded image.
+- Image kept at `object-contain` + `max-h-[80vh]` — never crops.
+- Counter uses `font-mono-alt` + wide tracking for the "06 / 15" editorial feel.
+- Exit animation snapped to 0.22s.
+
+### Framer Motion micro-interactions
+- Category tabs on `/works` and `/gallery` share a `layoutId` sliding underline (Framer Motion spring 380/32) — Vercel-style glide between Residential / Commercial / Restoration.
+- `.portfolio-item-card` global CSS hover: `transform: scale(1.012)` over `cubic-bezier(0.16, 1, 0.3, 1)` for a subtle Apple lift. Respects `prefers-reduced-motion`.
+
+### Mobile-first polish
+- `ConsultationModal` overlay bumped to `backdrop-blur-xl` + safe-area padding.
+- Mobile nav drawer adds `pb-[env(safe-area-inset-bottom)]`.
+- Home icon + hamburger toggle grouped in one flex container so they always sit adjacent on the right edge.
+
+### Naming polish
+- Renamed `data-testid` on `/gallery` tabs from `category-tab-<slug>` to `gallery-category-tab-<slug>` for parity with `/works`.
+
+### Testing
+- iter27 → Frontend **100%**. All layoutId animation, round-pill styling, skeleton-in-lightbox, mobile safe-area, ConsultationModal blur-xl, portfolio-item-card hover scale — all verified.
+
 ## What's Implemented (2026-07-24 · v8 — Admin thumb sweep, Divisions CMS, Smart Grid Assistant)
 
 ### Admin thumbnail-compression + lightbox sweep

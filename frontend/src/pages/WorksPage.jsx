@@ -5,10 +5,12 @@ import { Rise } from "../components/Rise";
 import SmartImage from "../components/SmartImage";
 import { thumbUrl } from "../lib/thumb";
 import { useGallery, prefetchImageUrls } from "../lib/useGallery";
+import { useGalleryPreloader } from "../lib/useGalleryPreloader";
 import Head from "../components/Head";
 import SkeletonGrid from "../components/SkeletonGrid";
 import Pagination from "../components/Pagination";
 import Lightbox from "../components/Lightbox";
+import PhotoTile from "../components/PhotoTile";
 import { altFor } from "../lib/seo";
 import { useSEOFor } from "../lib/useSiteSettings";
 
@@ -354,28 +356,24 @@ function PhotoGrid({ photos, onOpen, testIdPrefix = "works-child" }) {
   const totalPages = Math.max(1, Math.ceil(photos.length / PAGE_SIZE));
   const gridRef = useRef(null);
 
-  // Reset to page 1 whenever the source photos change (folder switch).
-  useEffect(() => { setPage(1); }, [photos]);
+  // Reset to page 1 ONLY when the underlying photo set changes identity —
+  // e.g. the visitor drilled into a different folder. Prevents the polling
+  // refresh (iter 24) from resetting a user's current page every 20s.
+  // Hash the ids so array-reference churn from useGallery re-fetches
+  // doesn't trigger a false positive.
+  const photoIdKey = useMemo(() => (photos || []).map((p) => p.id).join("|"), [photos]);
+  useEffect(() => { setPage(1); }, [photoIdKey]);
+
+  // Clamp page if photos shrink underneath us (photo deleted upstream).
+  useEffect(() => {
+    if (page > totalPages) setPage(Math.max(1, totalPages));
+  }, [page, totalPages]);
 
   const start = (page - 1) * PAGE_SIZE;
   const paged = photos.slice(start, start + PAGE_SIZE);
 
-  // Preload adjacent pages so next/prev clicks render instantly.
-  // Iteration 22 asset-preloader engine — see also useGallery.prefetchImageUrls
-  // which reuses the Image() cache under the hood.
-  useEffect(() => {
-    if (photos.length <= PAGE_SIZE) return;
-    const neighbourUrls = [];
-    if (page > 1) {
-      const prevStart = (page - 2) * PAGE_SIZE;
-      neighbourUrls.push(...photos.slice(prevStart, prevStart + PAGE_SIZE).map((p) => thumbUrl(p.image, 900)));
-    }
-    if (page < totalPages) {
-      const nextStart = page * PAGE_SIZE;
-      neighbourUrls.push(...photos.slice(nextStart, nextStart + PAGE_SIZE).map((p) => thumbUrl(p.image, 900)));
-    }
-    prefetchImageUrls(neighbourUrls, 24);
-  }, [page, photos, totalPages]);
+  // Background preloader — Page N-1 and Page N+1 warmed via new Image().
+  useGalleryPreloader(photos, page, PAGE_SIZE);
 
   const changePage = (n) => {
     setPage(n);
@@ -404,13 +402,10 @@ function PhotoGrid({ photos, onOpen, testIdPrefix = "works-child" }) {
               onClick={() => onOpen(ph, i, paged)}
               className="w-full text-left proj-card block group relative"
             >
-              <img
+              <PhotoTile
                 src={thumbUrl(ph.image, 900)}
                 alt={altFor(ph, i)}
-                loading={i < 3 ? "eager" : "lazy"}
-                decoding="async"
-                fetchPriority={i < 3 ? "high" : "auto"}
-                style={{ width: "100%", height: "auto", objectFit: "contain", display: "block", background: "var(--bg-2)" }}
+                priority={i < 3}
               />
               <div className="absolute inset-x-0 bottom-0 z-10 p-4 md:p-5 flex items-end justify-between gap-3 bg-gradient-to-t from-black/60 to-transparent">
                 <div>

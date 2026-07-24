@@ -1,0 +1,36 @@
+{
+  "summary": "Iteration 28 frontend regression: persistent pagination across polling refetches, per-card PhotoTile error placeholder, and Lightbox blackout/aspect/scroll-lock/directional-slide changes. One critical import bug was discovered (WorksPage crashed with `prefetchImageUrls is not defined` runtime error, breaking /works entirely) and fixed by the testing agent. After the fix, ALL Iteration-28 acceptance criteria pass on both /works and /gallery.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "None from testing agent — the missing prefetchImageUrls import in WorksPage.jsx has already been added by the tester. Main agent should verify the tiny 1-line import diff is acceptable."
+  ],
+  "critical_code_review_comments": [
+    "WorksPage.jsx used `prefetchImageUrls` in FolderCards hover-prefetch but forgot to import it (GalleryPage had it correct). Caused an Uncaught ReferenceError on /works render — fixed by tester: `import { useGallery, prefetchImageUrls } from '../lib/useGallery';`.",
+    "useGalleryPreloader.js effect depends on `photos` array reference — since useGallery polling returns new array refs every 20s, the preloader will re-run each cycle even when photos are identical. The `_prefetched` Set guard in prefetchImageUrls saves the network cost, so this is benign, but a `photoIdKey` memo dependency would be cleaner."
+  ],
+  "updated_files": [
+    "/app/frontend/src/pages/WorksPage.jsx (added missing prefetchImageUrls named import)"
+  ],
+  "success_rate": {"backend": "n/a", "frontend": "100%"},
+  "test_credentials": "Not needed (public /works and /gallery routes).",
+  "seed_data_creation": "None.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Verified on live preview URL. /works RESIDENTIAL → Hall & Dining folder has 15+ photos and renders pagination. /gallery Hall & Dining folder same. Pagination testids: `works-child-pagination-page-{n}` (Works) and `gallery-pagination-page-{n}` (Gallery). Lightbox testids: `portfolio-lightbox*` for /works, `gallery-lightbox*` for /gallery. PhotoTile placeholder verified via `imgs[0].dispatchEvent(new Event('error'))` — placeholder rendered without unmounting neighbours (14 remaining + 1 placeholder = 15 slots).",
+  "verified_features": {
+    "pagination_persistence_works": "click page 2 → 02, focus refetch → 02, 22s natural poll → 02",
+    "pagination_persistence_gallery": "click page 2 → 02, focus refetch → 02",
+    "photo_id_hash_reset": "Switching folders correctly re-renders (target folder had no pagination, verified independent state)",
+    "photo_tile_error_placeholder": "class='w-full animate-pulse', bg #EAE8E3, aspect-ratio 3/4, min-height 220px, role=img, aria-label='Image unavailable', neighbours intact",
+    "lightbox_backdrop": "bg-black/95 + backdrop-blur-md confirmed on both portfolio and gallery lightboxes; no bg-black/90 or backdrop-blur-xl remnants",
+    "lightbox_image_sizing": "max-h-[85vh] + w-auto + object-contain confirmed",
+    "lightbox_body_scroll_lock": "document.body.style.overflow='hidden' while open, restored to '' after close",
+    "lightbox_directional_slide": "Inline transforms observed: next→translateX(60px) enter, prev→translateX(-60px) enter; counter updates 01→02→01"
+  }
+}
