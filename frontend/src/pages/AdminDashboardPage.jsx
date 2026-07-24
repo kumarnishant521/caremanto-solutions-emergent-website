@@ -9,6 +9,7 @@ import AdminCovers from "../components/admin/AdminCovers";
 import AdminVideos from "../components/admin/AdminVideos";
 import AdminPortfolio from "../components/admin/AdminPortfolio";
 import AdminHomeSequence from "../components/admin/AdminHomeSequence";
+import AdminGridAssistant from "../components/admin/AdminGridAssistant";
 import AdminSEOManager from "../components/admin/AdminSEOManager";
 
 /**
@@ -45,7 +46,8 @@ const PRIMARY_TABS = [
     key:   "grid-layouts",
     label: "Grid Layouts",
     subs:  [
-      { key: "projects", label: "Projects", render: () => <AdminProjects /> },
+      { key: "smart-grid", label: "Smart Grid", render: () => <AdminGridAssistant /> },
+      { key: "projects",   label: "Projects",   render: () => <AdminProjects      /> },
     ],
   },
   {

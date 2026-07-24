@@ -1,0 +1,37 @@
+{
+  "summary": "Iter26 batch test — 3 features across admin thumb-compression + Divisions CMS binding + Smart Grid Assistant. Overall: PASS with 1 spec-vs-impl mismatch on the Divisions blank-fallback default source. AdminPortfolio: 334 preview buttons rendered, drive-based imgs use thumbUrl(image,300)→'=w300' rewrite (verified sample lh3.googleusercontent.com/d/1zHFe…=w300), loading='lazy'+decoding='async' both set, wrapped in <button data-testid='portfolio-preview-<id>'>. Shared Lightbox opens with all 6 testids (prev/next/share/close/img/counter), ArrowRight & next-click cycle the counter (01/334→02/334→03/334), Escape+close-button both do close (framer-motion exit animation ~2s so DOM element persists briefly with fading opacity — not a bug). AdminVideos: 0 videos in DB so no runtime verification possible; code inspection confirms thumbUrl(v.poster,400)+loading=lazy+decoding=async+preload='metadata' correctly wired. Divisions: all 8 testids (eyebrow, headline, division-title-0/1, division-body-0/1, division-cta-0/1) render on /. Edit d1_title→'INTERIOR ARCHITECTURE' + admin-seo-save yields success toast 'Settings published — visible instantly across the site.' and public / division-title-0 shows 'INTERIOR ARCHITECTURE' on hard reload. Smart Grid Assistant: admin-tab-grid-layouts has both smart-grid + projects sub-tabs; admin-grid-assistant + all 8 grid-preset-<key> cards + all 8 grid-preset-apply-<key> buttons render. Preview img is thumbUrl(src,200)+loading=lazy+decoding=async (uploaded /api/files URLs pass through unchanged as designed). Apply asymmetric-hero-lead then balanced-dual-column: PUT /admin/gallery/home-sequence succeeds, top-12 featured_home ordering differs between applies (verified via GET). Home Sequence still editable post-apply: 14 rows + up/down/remove + save button all render (admin-home-sequence-panel).",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Divisions blank-field fallback",
+        "issue": "Spec expected clearing d1_title to fall back to Divisions.jsx compiled default 'INTERIORS'. Actual: falls back to backend DEFAULT_HOME_COPY['divisions']['d1_title']='Interior Practice' (rendered UPPERCASE as 'INTERIOR PRACTICE'). Root cause: backend _merge_seo (server.py:816) filters blank strings out of the stored overlay and always overlays DEFAULT_HOME_COPY, so the frontend caller-defaults dict in useHomeCopy is effectively shadowed for divisions/hero/sections blocks. Blank-fallback UX still works — just to the backend default, not the frontend one. Decide whether to (a) update backend DEFAULT_HOME_COPY.divisions.d1_title to 'Interiors' to match spec, or (b) update Divisions.jsx expected default to 'INTERIOR PRACTICE' to match backend, or (c) skip backend overlay when field is intentionally cleared.",
+        "affected_selectors": ["division-title-0"]
+      }
+    ],
+    "design_issues": [
+      {
+        "screen": "Shared Lightbox (admin-portfolio-lightbox)",
+        "issues": ["Close/Escape triggers framer-motion exit animation with no explicit duration — DOM element persists ~2s at fading opacity, which is visually fine but can trip fast automation tests. Not a functional bug."]
+      }
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Decide desired blank-fallback behavior for Home Copy fields (backend default vs frontend caller default). Simplest: adjust DEFAULT_HOME_COPY.divisions.d1_title (and peers) to match Divisions.jsx compiled defaults ('Interiors', 'Renovations / Restorations'), OR update Divisions.jsx caller-defaults + spec to match backend. Either way, keep just ONE source of truth."
+  ],
+  "critical_code_review_comments": [
+    "Divisions.jsx passes caller-defaults to useHomeCopy but backend _merge_seo always overlays DEFAULT_HOME_COPY defaults, so the caller defaults never take effect once /api/seo has responded. Consolidate defaults into one place (backend) to avoid drift.",
+    "AdminGridAssistant preset thumbnails only rewrite Google Drive URLs (thumbUrl regex matches /lh3.googleusercontent.com/d/…= only). For uploaded photos served via /api/files/... the full-resolution image is fetched even for the 200px preview. Fine today (few featured photos) but consider a server-side thumb endpoint for scale.",
+    "Lightbox framer-motion <motion.div> has no explicit exit transition — default spring/tween ends up ~1.5–2s for opacity fade. Consider `transition={{ duration: 0.25 }}` on exit for snappier close feel and easier automation."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "100%", "frontend": "95% (1 spec mismatch on blank fallback)" },
+  "test_credentials": "Admin passless: POST /api/auth/passless-login (no body).",
+  "seed_data_creation": "None. DB already had 14 featured_home + 21 featured_portfolio + 334 gallery photos. seo_settings had a pre-existing home_copy.divisions block with 'Interior Practice' / 'Restoration Practice' etc. Test rewrote d1_title to 'INTERIOR ARCHITECTURE' briefly then cleared it — final state: stored d1_title='' which _merge_seo returns as 'Interior Practice' (equivalent to original visible state). home_order sequence was rewritten by asymmetric+balanced preset applies — main agent may want to re-apply the studio's preferred preset if a specific order was expected.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All iter-26 features are functionally green. The only open question is the blank-fallback default source for Home Copy fields — this is a design/spec decision, not a bug. AdminVideos poster-thumb behavior was NOT runtime-verified because DB has 0 videos; if E1 wants coverage, seed 1 video via POST /api/admin/videos and re-run. Also thumbUrl only rewrites Google Drive URLs — uploaded photos via /api/files/... bypass the =w<size> rewrite by design. For future admin thumb performance at scale, consider a server-side thumb endpoint.",
+  "rca of the issue": "Divisions blank-fallback shows 'INTERIOR PRACTICE' instead of 'INTERIORS' because backend server.py:_merge_seo (lines 809-818) filters blank overlay values AND overlays DEFAULT_HOME_COPY on GET /api/seo, so a cleared admin field returns the BACKEND default. The frontend useHomeCopy(block, defaults) merges API values over caller defaults but the caller defaults become dead code once the API has responded. Fix: align DEFAULT_HOME_COPY in server.py with Divisions.jsx compiled defaults (INTERIORS / RENOVATIONS-RESTORATIONS / etc), OR keep backend defaults authoritative and update the spec + Divisions.jsx caller defaults to match. Recommend backend-authoritative + delete Divisions.jsx caller-defaults dict."
+}

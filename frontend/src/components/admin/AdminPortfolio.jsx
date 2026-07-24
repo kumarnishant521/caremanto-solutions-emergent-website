@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api";
 import { toast } from "sonner";
+import { thumbUrl } from "../../lib/thumb";
+import Lightbox from "../Lightbox";
 
 /**
  * Portfolio Feature Manager
@@ -14,6 +16,7 @@ export default function AdminPortfolio() {
   const [loading, setLoading] = useState(true);
   const [filterCat, setFilterCat] = useState("ALL");
   const [showOnly, setShowOnly] = useState("all"); // "all" | "featured"
+  const [lightbox, setLightbox] = useState(null); // { photos, index }
 
   const load = async () => {
     setLoading(true);
@@ -102,14 +105,26 @@ export default function AdminPortfolio() {
         <div className="py-16 text-center text-[#F5EEE0]/60">No photographs match this filter.</div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {filtered.map((p) => (
+          {filtered.map((p, i) => (
             <div key={p.id} className="admin-card p-3">
-              <div className="aspect-square overflow-hidden bg-[#241D16] mb-3 relative">
-                <img src={p.image} alt={p.title || ""} className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={() => setLightbox({ photos: filtered, index: i })}
+                data-testid={`portfolio-preview-${p.id}`}
+                title="Click to preview at full size"
+                className="block w-full aspect-square overflow-hidden bg-[#241D16] mb-3 relative focus:outline focus:outline-1 focus:outline-[var(--gold-hi)]"
+              >
+                <img
+                  src={thumbUrl(p.image, 300)}
+                  alt={p.alt_text || p.title || ""}
+                  loading="lazy"
+                  decoding="async"
+                  className="w-full h-full object-cover"
+                />
                 {p.featured_portfolio && (
                   <span className="absolute top-2 right-2 bg-[var(--gold-hi)] text-black text-[9px] tracking-widest uppercase px-2 py-1 font-medium">★ Portfolio</span>
                 )}
-              </div>
+              </button>
               <div className="overline text-[9px] mb-2">
                 {p.category}{p.subcategory ? ` · ${p.subcategory}` : ""}
               </div>
@@ -124,6 +139,15 @@ export default function AdminPortfolio() {
           ))}
         </div>
       )}
+
+      {/* Shared Lightbox — same prev/next/keyboard/swipe as the public viewer. */}
+      <Lightbox
+        photos={lightbox?.photos || []}
+        index={lightbox?.index}
+        onIndex={(i) => setLightbox((lb) => (lb ? { ...lb, index: i } : lb))}
+        onClose={() => setLightbox(null)}
+        testIdPrefix="admin-portfolio"
+      />
     </section>
   );
 }

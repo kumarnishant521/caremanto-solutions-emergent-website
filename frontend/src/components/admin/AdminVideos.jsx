@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import { toast } from "sonner";
+import { thumbUrl } from "../../lib/thumb";
 
 const EMPTY = { title: "", description: "", url: "", poster: "", featured_home: false };
 
@@ -112,8 +113,22 @@ export default function AdminVideos() {
           {videos.map((v) => (
             <div key={v.id} className="admin-card p-3">
               <div className="aspect-video overflow-hidden bg-[#241D16] mb-3">
-                {v.poster ? <img src={v.poster} alt="" className="w-full h-full object-cover"/> :
-                  <video src={v.url.startsWith("http") ? v.url : `${process.env.REACT_APP_BACKEND_URL}${v.url}`} muted className="w-full h-full object-cover"/>}
+                {v.poster ? (
+                  <img
+                    src={thumbUrl(v.poster, 400)}
+                    alt={v.title || ""}
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <video
+                    src={v.url.startsWith("http") ? v.url : `${process.env.REACT_APP_BACKEND_URL}${v.url}`}
+                    muted
+                    preload="metadata"
+                    className="w-full h-full object-cover"
+                  />
+                )}
               </div>
               {v.title && <div className="font-serif text-[15px] leading-tight mb-2">{v.title}</div>}
               <div className="flex gap-2 mt-2">
